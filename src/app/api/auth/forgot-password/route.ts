@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib/prisma";
 import { forgotPasswordSchema } from "@/lib/validations/auth";
+import { sendPasswordResetEmail } from "@/lib/email";
+import { handleApiError, isZodError } from "@/lib/error-utils";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -26,32 +28,38 @@ export async function POST(request: NextRequest) {
 
     // Generate reset token
     const resetToken = crypto.randomBytes(32).toString("hex");
-    const resetTokenExpiry = new Date(Date.now() + 3600000); // 1 hour from now
+    const tokenExpiry = new Date(Date.now() + 60 * 60 * 1000); // 1 hour from now
 
-    // Store reset token in database
-    // Note: You might want to create a separate PasswordReset table for better security
-    await prisma.user.update({
-      where: { id: user.id },
+    // Delete any existing reset tokens for this user
+    await prisma.passwordReset.deleteMany({
+      where: { userId: user.id }
+    });
+
+    // Create new reset token
+    await prisma.passwordReset.create({
       data: {
-        // You'll need to add these fields to your User model
-        // resetToken,
-        // resetTokenExpiry
+        userId: user.id,
+        token: resetToken,
+        expiresAt: tokenExpiry
       }
     });
 
-    // TODO: Send password reset email
-    // await sendPasswordResetEmail(user.email, resetToken);
-
-    console.log(`Password reset requested for ${email}. Reset token: ${resetToken}`);
+    // Send password reset email
+    try {
+      await sendPasswordResetEmail(user.email, resetToken);
+    } catch (emailError) {
+      console.error("Failed to send password reset email:", emailError);
+      // Don't fail the request if email fails
+    }
 
     return NextResponse.json(
       { message: "If an account with that email exists, we've sent a password reset link." },
       { status: 200 }
     );
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error("Forgot password error:", error);
 
-    if (error.name === "ZodError") {
+    if (isZodError(error)) {
       return NextResponse.json(
         { error: "Invalid email address" },
         { status: 400 }

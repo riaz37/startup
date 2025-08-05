@@ -1,58 +1,123 @@
-"use client";
+"use client"
 
-import { useSearchParams } from "next/navigation";
-import Link from "next/link";
+import { useRouter, useSearchParams } from "next/navigation"
+import { AuthLayout } from "@/components/auth/auth-layout"
+import { LoadingButton } from "@/components/auth/loading-button"
+import { Button } from "@/components/ui/button"
+import { AlertCircle, RefreshCw, Home } from "lucide-react"
+import Link from "next/link"
 
-const errorMessages: Record<string, string> = {
-  Configuration: "There is a problem with the server configuration.",
-  AccessDenied: "You do not have permission to sign in.",
-  Verification: "The verification token has expired or has already been used.",
-  Default: "An error occurred during authentication."
-};
+const errorMessages = {
+  MissingToken: {
+    title: "Missing Verification Token",
+    description: "The verification link is missing required information."
+  },
+  InvalidToken: {
+    title: "Invalid Verification Token", 
+    description: "This verification link is invalid or has already been used."
+  },
+  ExpiredToken: {
+    title: "Expired Verification Token",
+    description: "This verification link has expired. Please request a new one."
+  },
+  ServerError: {
+    title: "Server Error",
+    description: "An unexpected error occurred. Please try again later."
+  },
+  Default: {
+    title: "Authentication Error",
+    description: "An error occurred during authentication. Please try again."
+  }
+}
 
 export default function AuthErrorPage() {
-  const searchParams = useSearchParams();
-  const error = searchParams.get("error");
+  const router = useRouter()
+  const searchParams = useSearchParams()
+  const errorType = searchParams.get("error") as keyof typeof errorMessages || "Default"
   
-  const errorMessage = error && errorMessages[error] 
-    ? errorMessages[error] 
-    : errorMessages.Default;
+  const error = errorMessages[errorType] || errorMessages.Default
+
+  const handleRetry = () => {
+    if (errorType === "ExpiredToken" || errorType === "InvalidToken" || errorType === "MissingToken") {
+      router.push("/auth/resend-verification")
+    } else {
+      router.push("/auth/signin")
+    }
+  }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 py-12 px-4 sm:px-6 lg:px-8">
-      <div className="max-w-md w-full space-y-8">
-        <div className="text-center">
-          <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-red-100">
-            <svg
-              className="h-6 w-6 text-red-600"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M12 9v2m0 4h.01m-6.938 4h13.856c1.54 0 2.502-1.667 1.732-2.5L13.732 4c-.77-.833-1.964-.833-2.732 0L4.082 16.5c-.77.833.192 2.5 1.732 2.5z"
-              />
-            </svg>
-          </div>
-          <h2 className="mt-6 text-center text-3xl font-extrabold text-gray-900">
-            Authentication Error
-          </h2>
-          <p className="mt-2 text-center text-sm text-gray-600">
-            {errorMessage}
+    <AuthLayout
+      title={error.title}
+      subtitle={error.description}
+      showBackToHome={false}
+    >
+      <div className="text-center space-y-6">
+        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-destructive/10">
+          <AlertCircle className="h-8 w-8 text-destructive" />
+        </div>
+        
+        <div className="space-y-2">
+          <p className="text-muted-foreground">
+            {error.description}
           </p>
-          <div className="mt-6">
+          {(errorType === "ExpiredToken" || errorType === "InvalidToken") && (
+            <p className="text-sm text-muted-foreground">
+              You can request a new verification email to continue.
+            </p>
+          )}
+        </div>
+
+        <div className="space-y-3">
+          {(errorType === "ExpiredToken" || errorType === "InvalidToken" || errorType === "MissingToken") ? (
+            <>
+              <LoadingButton
+                onClick={handleRetry}
+                className="w-full"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Request New Verification Email
+              </LoadingButton>
+              
+              <Button
+                variant="outline"
+                onClick={() => router.push("/auth/signin")}
+                className="w-full"
+              >
+                Back to Sign In
+              </Button>
+            </>
+          ) : (
+            <>
+              <LoadingButton
+                onClick={handleRetry}
+                className="w-full"
+              >
+                <RefreshCw className="mr-2 h-4 w-4" />
+                Try Again
+              </LoadingButton>
+              
+              <Button
+                variant="outline"
+                onClick={() => router.push("/")}
+                className="w-full"
+              >
+                <Home className="mr-2 h-4 w-4" />
+                Go Home
+              </Button>
+            </>
+          )}
+          
+          <p className="text-xs text-muted-foreground">
+            Need help?{" "}
             <Link
-              href="/auth/signin"
-              className="font-medium text-indigo-600 hover:text-indigo-500"
+              href="/contact"
+              className="text-primary hover:text-primary/80 font-medium transition-colors"
             >
-              Try signing in again
+              Contact Support
             </Link>
-          </div>
+          </p>
         </div>
       </div>
-    </div>
-  );
+    </AuthLayout>
+  )
 }

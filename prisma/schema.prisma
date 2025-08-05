@@ -36,10 +36,12 @@ model User {
   sessions Session[]
 
   // Relations
-  addresses     Address[]
-  orders        Order[]
-  notifications Notification[]
-  reviews       Review[]
+  addresses       Address[]
+  orders          Order[]
+  notifications   Notification[]
+  reviews         Review[]
+  passwordResets  PasswordReset[]
+  emailVerifications EmailVerification[]
 
   @@map("users")
 }
@@ -387,6 +389,36 @@ model Notification {
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@map("notifications")
+}
+
+// Password reset tokens
+model PasswordReset {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("password_resets")
+}
+
+// Email verification tokens
+model EmailVerification {
+  id        String   @id @default(cuid())
+  userId    String
+  token     String   @unique
+  expiresAt DateTime
+  verified  Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  // Relations
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@map("email_verifications")
 }
 
 // Settings and configuration

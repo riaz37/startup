@@ -6,12 +6,18 @@ import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
 import { AuthLayout } from "@/components/auth/auth-layout"
 import { LoadingButton } from "@/components/auth/loading-button"
-import { toast } from "sonner"
-import { Mail, ArrowLeft } from "lucide-react"
-import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/validations/auth"
 import { Button } from "@/components/ui/button"
+import { toast } from "sonner"
+import { Mail, ArrowLeft, CheckCircle } from "lucide-react"
+import { z } from "zod"
 
-export default function ForgotPasswordPage() {
+const resendSchema = z.object({
+  email: z.string().email("Invalid email address")
+})
+
+type ResendInput = z.infer<typeof resendSchema>
+
+export default function ResendVerificationPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [success, setSuccess] = useState(false)
   const [email, setEmail] = useState("")
@@ -21,18 +27,18 @@ export default function ForgotPasswordPage() {
     handleSubmit,
     formState: { errors },
     watch
-  } = useForm<ForgotPasswordInput>({
-    resolver: zodResolver(forgotPasswordSchema)
+  } = useForm<ResendInput>({
+    resolver: zodResolver(resendSchema)
   })
 
   const watchedEmail = watch("email")
 
-  const onSubmit = async (data: ForgotPasswordInput) => {
+  const onSubmit = async (data: ResendInput) => {
     setIsLoading(true)
     setEmail(data.email)
 
     try {
-      const response = await fetch("/api/auth/forgot-password", {
+      const response = await fetch("/api/auth/resend-verification", {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -47,9 +53,9 @@ export default function ForgotPasswordPage() {
       }
 
       setSuccess(true)
-      toast.success("Password reset email sent!")
+      toast.success("Verification email sent!")
     } catch (error: any) {
-      toast.error(error.message || "Failed to send reset email")
+      toast.error(error.message || "Failed to send verification email")
     } finally {
       setIsLoading(false)
     }
@@ -58,21 +64,21 @@ export default function ForgotPasswordPage() {
   if (success) {
     return (
       <AuthLayout
-        title="Check your email"
-        subtitle="We've sent password reset instructions"
+        title="Verification Email Sent"
+        subtitle="Check your email for the verification link"
         showBackToHome={false}
       >
         <div className="text-center space-y-6">
           <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-primary/10">
-            <Mail className="h-8 w-8 text-primary" />
+            <CheckCircle className="h-8 w-8 text-primary" />
           </div>
           
           <div className="space-y-2">
             <p className="text-muted-foreground">
-              If an account with <strong>{email}</strong> exists, we've sent password reset instructions to your email.
+              We've sent a new verification email to <strong>{email}</strong>.
             </p>
             <p className="text-sm text-muted-foreground">
-              Please check your email (including spam folder) and follow the instructions to reset your password.
+              Please check your email (including spam folder) and click the verification link to activate your account.
             </p>
           </div>
 
@@ -83,7 +89,7 @@ export default function ForgotPasswordPage() {
               className="w-full"
             >
               <ArrowLeft className="mr-2 h-4 w-4" />
-              Back to Reset Form
+              Send to Different Email
             </Button>
             
             <Link
@@ -100,8 +106,8 @@ export default function ForgotPasswordPage() {
 
   return (
     <AuthLayout
-      title="Forgot password?"
-      subtitle="Enter your email to receive reset instructions"
+      title="Resend Verification Email"
+      subtitle="Enter your email to receive a new verification link"
     >
       <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
         <div className="space-y-2">
@@ -120,7 +126,7 @@ export default function ForgotPasswordPage() {
             <p className="text-sm text-destructive">{errors.email.message}</p>
           )}
           <p className="text-xs text-muted-foreground">
-            We'll send password reset instructions to this email address.
+            We'll send a new verification email to this address.
           </p>
         </div>
 
@@ -131,7 +137,7 @@ export default function ForgotPasswordPage() {
           disabled={!watchedEmail}
         >
           <Mail className="mr-2 h-4 w-4" />
-          Send Reset Instructions
+          Send Verification Email
         </LoadingButton>
 
         <div className="text-center space-y-2">

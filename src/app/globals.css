@@ -45,71 +45,116 @@
 
 :root {
   --radius: 0.625rem;
+
+  /* Sohozdaam Brand Colors - Light Mode */
   --background: oklch(1 0 0);
   --foreground: oklch(0.145 0 0);
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.145 0 0);
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
+
+  /* Primary - Fresh Green */
+  --primary: oklch(0.64 0.15 142); /* #22c55e - Fresh Green */
+  --primary-foreground: oklch(1 0 0);
+
+  /* Secondary - Trust Blue */
+  --secondary: oklch(0.61 0.15 252); /* #3b82f6 - Trust Blue */
+  --secondary-foreground: oklch(1 0 0);
+
+  /* Muted */
   --muted: oklch(0.97 0 0);
   --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
-  --destructive: oklch(0.577 0.245 27.325);
+
+  /* Accent - Warm Orange */
+  --accent: oklch(0.75 0.15 65); /* #f59e0b - Warm Orange */
+  --accent-foreground: oklch(1 0 0);
+
+  /* Destructive - Error Red */
+  --destructive: oklch(0.63 0.22 25); /* #ef4444 - Error Red */
+
+  /* Borders and inputs */
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
-  --chart-1: oklch(0.646 0.222 41.116);
-  --chart-2: oklch(0.6 0.118 184.704);
-  --chart-3: oklch(0.398 0.07 227.392);
-  --chart-4: oklch(0.828 0.189 84.429);
-  --chart-5: oklch(0.769 0.188 70.08);
+  --ring: oklch(0.64 0.15 142); /* Primary green for focus rings */
+
+  /* Charts - Group ordering themed */
+  --chart-1: oklch(0.64 0.15 142); /* Primary Green */
+  --chart-2: oklch(0.61 0.15 252); /* Trust Blue */
+  --chart-3: oklch(0.75 0.15 65); /* Warm Orange */
+  --chart-4: oklch(0.67 0.15 162); /* Success Green */
+  --chart-5: oklch(0.58 0.15 285); /* Purple accent */
+
+  /* Sidebar */
   --sidebar: oklch(0.985 0 0);
   --sidebar-foreground: oklch(0.145 0 0);
-  --sidebar-primary: oklch(0.205 0 0);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.64 0.15 142);
+  --sidebar-primary-foreground: oklch(1 0 0);
   --sidebar-accent: oklch(0.97 0 0);
-  --sidebar-accent-foreground: oklch(0.205 0 0);
+  --sidebar-accent-foreground: oklch(0.145 0 0);
   --sidebar-border: oklch(0.922 0 0);
-  --sidebar-ring: oklch(0.708 0 0);
+  --sidebar-ring: oklch(0.64 0.15 142);
+
+  /* Custom Sohozdaam Colors */
+  --success: oklch(0.67 0.15 162); /* #10b981 - Success Green */
+  --warning: oklch(0.75 0.15 65); /* #f59e0b - Warning Orange */
+  --info: oklch(0.61 0.15 252); /* #3b82f6 - Info Blue */
 }
 
 .dark {
+  /* Sohozdaam Brand Colors - Dark Mode */
   --background: oklch(0.145 0 0);
   --foreground: oklch(0.985 0 0);
   --card: oklch(0.205 0 0);
   --card-foreground: oklch(0.985 0 0);
   --popover: oklch(0.205 0 0);
   --popover-foreground: oklch(0.985 0 0);
-  --primary: oklch(0.922 0 0);
-  --primary-foreground: oklch(0.205 0 0);
-  --secondary: oklch(0.269 0 0);
+
+  /* Primary - Fresh Green (slightly brighter for dark mode) */
+  --primary: oklch(0.68 0.15 142); /* Brighter green for dark mode */
+  --primary-foreground: oklch(0.145 0 0);
+
+  /* Secondary - Trust Blue (adjusted for dark mode) */
+  --secondary: oklch(0.65 0.15 252); /* Brighter blue for dark mode */
   --secondary-foreground: oklch(0.985 0 0);
+
+  /* Muted */
   --muted: oklch(0.269 0 0);
   --muted-foreground: oklch(0.708 0 0);
-  --accent: oklch(0.269 0 0);
-  --accent-foreground: oklch(0.985 0 0);
+
+  /* Accent - Warm Orange (adjusted for dark mode) */
+  --accent: oklch(0.78 0.15 65); /* Brighter orange for dark mode */
+  --accent-foreground: oklch(0.145 0 0);
+
+  /* Destructive - Error Red */
   --destructive: oklch(0.704 0.191 22.216);
+
+  /* Borders and inputs */
   --border: oklch(1 0 0 / 10%);
   --input: oklch(1 0 0 / 15%);
-  --ring: oklch(0.556 0 0);
-  --chart-1: oklch(0.488 0.243 264.376);
-  --chart-2: oklch(0.696 0.17 162.48);
-  --chart-3: oklch(0.769 0.188 70.08);
-  --chart-4: oklch(0.627 0.265 303.9);
-  --chart-5: oklch(0.645 0.246 16.439);
+  --ring: oklch(0.68 0.15 142); /* Primary green for focus rings */
+
+  /* Charts - Group ordering themed (dark mode) */
+  --chart-1: oklch(0.68 0.15 142); /* Primary Green */
+  --chart-2: oklch(0.65 0.15 252); /* Trust Blue */
+  --chart-3: oklch(0.78 0.15 65); /* Warm Orange */
+  --chart-4: oklch(0.7 0.15 162); /* Success Green */
+  --chart-5: oklch(0.62 0.15 285); /* Purple accent */
+
+  /* Sidebar */
   --sidebar: oklch(0.205 0 0);
   --sidebar-foreground: oklch(0.985 0 0);
-  --sidebar-primary: oklch(0.488 0.243 264.376);
-  --sidebar-primary-foreground: oklch(0.985 0 0);
+  --sidebar-primary: oklch(0.68 0.15 142);
+  --sidebar-primary-foreground: oklch(0.145 0 0);
   --sidebar-accent: oklch(0.269 0 0);
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(1 0 0 / 10%);
-  --sidebar-ring: oklch(0.556 0 0);
+  --sidebar-ring: oklch(0.68 0.15 142);
+
+  /* Custom Sohozdaam Colors (dark mode) */
+  --success: oklch(0.7 0.15 162); /* Success Green */
+  --warning: oklch(0.78 0.15 65); /* Warning Orange */
+  --info: oklch(0.65 0.15 252); /* Info Blue */
 }
 
 @layer base {
@@ -119,4 +164,234 @@
   body {
     @apply bg-background text-foreground;
   }
+
+  /* Custom scrollbar for Sohozdaam */
+  ::-webkit-scrollbar {
+    width: 6px;
+    height: 6px;
+  }
+
+  ::-webkit-scrollbar-track {
+    @apply bg-muted;
+  }
+
+  ::-webkit-scrollbar-thumb {
+    @apply bg-muted-foreground/30 rounded-full;
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    @apply bg-muted-foreground/50;
+  }
+}
+
+/* Sohozdaam Custom Components */
+.btn-primary {
+  background-color: var(--primary);
+  color: var(--primary-foreground);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.btn-primary:hover {
+  background-color: color-mix(in srgb, var(--primary) 90%, transparent);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.btn-secondary {
+  background-color: var(--secondary);
+  color: var(--secondary-foreground);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.btn-secondary:hover {
+  background-color: color-mix(in srgb, var(--secondary) 90%, transparent);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.btn-accent {
+  background-color: var(--accent);
+  color: var(--accent-foreground);
+  font-weight: 500;
+  padding: 0.5rem 1rem;
+  border-radius: 0.5rem;
+  transition: all 0.2s;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.btn-accent:hover {
+  background-color: color-mix(in srgb, var(--accent) 90%, transparent);
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+}
+
+.card-sohozdaam {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  transition: all 0.2s;
+}
+
+.card-hover {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  border: 1px solid var(--border);
+  padding: 1.5rem;
+  transition: all 0.2s;
+  cursor: pointer;
+}
+
+.card-hover:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.group-order-card {
+  background-color: var(--card);
+  color: var(--card-foreground);
+  border-radius: 0.75rem;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  border: 1px solid var(--border);
+  border-left: 4px solid var(--primary);
+  padding: 1.5rem;
+  transition: all 0.2s;
+  cursor: pointer;
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--primary) 5%, transparent), transparent);
+}
+
+.group-order-card:hover {
+  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
+  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+.group-order-card.collecting {
+  border-left-color: var(--accent);
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--accent) 5%, transparent), transparent);
+}
+
+.group-order-card.threshold-met {
+  border-left-color: var(--primary);
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--primary) 5%, transparent), transparent);
+}
+
+.group-order-card.completed {
+  border-left-color: oklch(0.67 0.15 162);
+  background-image: linear-gradient(to right, color-mix(in srgb, oklch(0.67 0.15 162) 5%, transparent), transparent);
+}
+
+.group-order-card.cancelled {
+  border-left-color: var(--destructive);
+  background-image: linear-gradient(to right, color-mix(in srgb, var(--destructive) 5%, transparent), transparent);
+}
+
+.threshold-progress {
+  background-color: var(--muted);
+  border-radius: 9999px;
+  height: 0.75rem;
+  overflow: hidden;
+  box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+}
+
+.threshold-progress-bar {
+  background-image: linear-gradient(to right, var(--primary), color-mix(in srgb, var(--primary) 80%, transparent));
+  height: 100%;
+  transition: all 0.5s ease-out;
+  box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+}
+
+.threshold-progress-bar.collecting {
+  background-image: linear-gradient(to right, var(--accent), color-mix(in srgb, var(--accent) 80%, transparent));
+}
+
+.threshold-progress-bar.completed {
+  background-image: linear-gradient(to right, oklch(0.67 0.15 162), oklch(0.70 0.15 162));
+}
+
+.text-gradient {
+  background-image: linear-gradient(to right, var(--primary), var(--secondary));
+  background-clip: text;
+  -webkit-background-clip: text;
+  color: transparent;
+}
+
+.badge-success {
+  background-color: color-mix(in srgb, oklch(0.67 0.15 162) 10%, var(--background));
+  color: oklch(0.67 0.15 162);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.badge-warning {
+  background-color: color-mix(in srgb, var(--accent) 10%, var(--background));
+  color: var(--accent);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.badge-error {
+  background-color: color-mix(in srgb, var(--destructive) 10%, var(--background));
+  color: var(--destructive);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.badge-primary {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--background));
+  color: var(--primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.badge-secondary {
+  background-color: color-mix(in srgb, var(--secondary) 10%, var(--background));
+  color: var(--secondary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-pending {
+  color: oklch(0.75 0.15 65);
+  background-color: color-mix(in srgb, oklch(0.75 0.15 65) 10%, var(--background));
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-confirmed {
+  color: var(--secondary);
+  background-color: color-mix(in srgb, var(--secondary) 10%, var(--background));
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+}
+
+.status-delivered {
+  color: oklch(0.67 0.15 162);
+  background-color: color-mix(in srgb, oklch(0.67 0.15 162) 10%, var(--background));
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
 }

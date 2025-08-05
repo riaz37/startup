@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
+import crypto from "crypto";
 import { prisma } from "@/lib/prisma";
 import { signUpSchema } from "@/lib/validations/auth";
+import { sendVerificationEmail } from "@/lib/email";
+import { handleApiError } from "@/lib/error-utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -26,48 +29,61 @@ export async function POST(request: NextRequest) {
     // Hash password
     const hashedPassword = await bcrypt.hash(password, 12);
 
-    // Create user
-    const user = await prisma.user.create({
-      data: {
-        name,
-        email,
-        password: hashedPassword,
-        isVerified: false, // Email verification required
-        role: "CUSTOMER"
-      },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        role: true,
-        isVerified: true,
-        createdAt: true
-      }
+    // Generate verification token
+    const verificationToken = crypto.randomBytes(32).toString("hex");
+    const tokenExpiry = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
+
+    // Create user and verification token in a transaction
+    const result = await prisma.$transaction(async (tx) => {
+      const user = await tx.user.create({
+        data: {
+          name,
+          email,
+          password: hashedPassword,
+          isVerified: false,
+          role: "CUSTOMER"
+        },
+        select: {
+          id: true,
+          name: true,
+          email: true,
+          role: true,
+          isVerified: true,
+          createdAt: true
+        }
+      });
+
+      await tx.emailVerification.create({
+        data: {
+          userId: user.id,
+          token: verificationToken,
+          expiresAt: tokenExpiry
+        }
+      });
+
+      return user;
     });
 
-    // TODO: Send verification email
-    // await sendVerificationEmail(user.email, user.id);
+    // Send verification email
+    try {
+      await sendVerificationEmail(email, verificationToken);
+    } catch (emailError) {
+      console.error("Failed to send verification email:", emailError);
+      // Don't fail the signup if email fails
+    }
 
     return NextResponse.json(
       {
         message: "Account created successfully. Please check your email to verify your account.",
-        user
+        user: result
       },
       { status: 201 }
     );
-  } catch (error: any) {
-    console.error("Signup error:", error);
-
-    if (error.name === "ZodError") {
-      return NextResponse.json(
-        { error: "Invalid input data", details: error.errors },
-        { status: 400 }
-      );
-    }
-
+  } catch (error: unknown) {
+    const errorResponse = handleApiError(error);
     return NextResponse.json(
-      { error: "Internal server error" },
-      { status: 500 }
+      { error: errorResponse.error, details: errorResponse.details },
+      { status: errorResponse.status }
     );
   }
 }
