@@ -4,11 +4,12 @@ import { getCurrentUser } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    const { id } = await params;
     const groupOrder = await prisma.groupOrder.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         product: {
           select: {
@@ -83,7 +84,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -95,6 +96,7 @@ export async function PATCH(
       );
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { status, actualDelivery } = body;
 
@@ -109,7 +111,7 @@ export async function PATCH(
     }
 
     const groupOrder = await prisma.groupOrder.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         product: {

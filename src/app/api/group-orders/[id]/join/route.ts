@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth-utils";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -16,12 +16,13 @@ export async function POST(
       );
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { quantity, addressId } = body;
 
     // Validate group order exists and is active
     const groupOrder = await prisma.groupOrder.findUnique({
-      where: { id: params.id },
+      where: { id: id },
       include: {
         product: true
       }
@@ -67,7 +68,7 @@ export async function POST(
     const existingOrder = await prisma.order.findFirst({
       where: {
         userId: user.id,
-        groupOrderId: params.id
+        groupOrderId: id
       }
     });
 
@@ -107,7 +108,7 @@ export async function POST(
       const order = await tx.order.create({
         data: {
           userId: user.id,
-          groupOrderId: params.id,
+          groupOrderId: id,
           addressId,
           orderNumber,
           totalAmount,
@@ -129,7 +130,7 @@ export async function POST(
 
       // Update group order totals
       await tx.groupOrder.update({
-        where: { id: params.id },
+        where: { id: id },
         data: {
           currentAmount: {
             increment: totalAmount
@@ -145,12 +146,12 @@ export async function POST(
 
     // Check if threshold is met
     const updatedGroupOrder = await prisma.groupOrder.findUnique({
-      where: { id: params.id }
+      where: { id: id }
     });
 
     if (updatedGroupOrder && updatedGroupOrder.currentAmount >= updatedGroupOrder.minThreshold) {
       await prisma.groupOrder.update({
-        where: { id: params.id },
+        where: { id: id },
         data: { status: "THRESHOLD_MET" }
       });
     }

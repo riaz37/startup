@@ -4,7 +4,7 @@ import { getCurrentUser } from "@/lib/auth-utils";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -16,9 +16,10 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
     const order = await prisma.order.findFirst({
       where: {
-        id: params.id,
+        id: id,
         userId: user.id
       },
       include: {
@@ -80,7 +81,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -92,6 +93,7 @@ export async function PATCH(
       );
     }
 
+    const { id } = await params;
     const body = await request.json();
     const { status, paymentStatus, deliveredAt } = body;
 
@@ -110,7 +112,7 @@ export async function PATCH(
     }
 
     const order = await prisma.order.update({
-      where: { id: params.id },
+      where: { id: id },
       data: updateData,
       include: {
         groupOrder: {
