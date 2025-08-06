@@ -6,10 +6,13 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
 import { AuthLayout } from "@/components/auth/auth-layout"
-import { LoadingButton } from "@/components/auth/loading-button"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { CheckCircle, AlertCircle, Key } from "lucide-react"
+import { CheckCircle, AlertCircle, Key, Loader2 } from "lucide-react"
 import { resetPasswordSchema, type ResetPasswordInput } from "@/lib/validations/auth"
+import { authApi } from "@/lib/auth-api"
 
 export default function ResetPasswordPage() {
   const router = useRouter()
@@ -19,19 +22,12 @@ export default function ResetPasswordPage() {
   const [tokenError, setTokenError] = useState("")
   const token = searchParams.get("token")
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch
-  } = useForm<ResetPasswordInput>({
+  const form = useForm<ResetPasswordInput>({
     resolver: zodResolver(resetPasswordSchema),
     defaultValues: {
-      token: token || ""
+      password: ""
     }
   })
-
-  const watchedPassword = watch("password")
 
   useEffect(() => {
     if (!token) {
@@ -43,22 +39,10 @@ export default function ResetPasswordPage() {
     setIsLoading(true)
 
     try {
-      const response = await fetch("/api/auth/reset-password", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify({
-          token: token,
-          password: data.password
-        })
+      await authApi.resetPassword({
+        token: token || "",
+        password: data.password
       })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || "Something went wrong")
-      }
 
       setSuccess(true)
       toast.success("Password reset successfully!")
@@ -66,8 +50,10 @@ export default function ResetPasswordPage() {
       setTimeout(() => {
         router.push("/auth/signin?message=Password reset successfully")
       }, 3000)
-    } catch (error: any) {
-      toast.error(error.message || "Failed to reset password")
+    } catch (error: unknown) {
+      // Error handling is done by the axios interceptor
+      const errorMessage = error.response?.data?.error || "Failed to reset password"
+      console.error("Reset password error:", errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -95,12 +81,12 @@ export default function ResetPasswordPage() {
           </div>
 
           <div className="space-y-3">
-            <LoadingButton
+            <Button
               onClick={() => router.push("/auth/forgot-password")}
               className="w-full"
             >
               Request New Reset Link
-            </LoadingButton>
+            </Button>
             
             <Link
               href="/auth/signin"
@@ -132,12 +118,12 @@ export default function ResetPasswordPage() {
             </p>
           </div>
 
-          <LoadingButton
+          <Button
             onClick={() => router.push("/auth/signin")}
             className="w-full"
           >
             Continue to Sign In
-          </LoadingButton>
+          </Button>
         </div>
       </AuthLayout>
     )
@@ -148,46 +134,56 @@ export default function ResetPasswordPage() {
       title="Reset your password"
       subtitle="Enter your new password below"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium">
-            New Password <span className="text-destructive">*</span>
-          </label>
-          <input
-            {...register("password")}
-            type="password"
-            autoComplete="new-password"
-            placeholder="Enter your new password"
-            disabled={isLoading}
-            className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 placeholder:text-muted-foreground"
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  New Password <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder="Enter your new password"
+                    autoComplete="new-password"
+                    disabled={isLoading}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+                <p className="text-xs text-muted-foreground">
+                  Must contain at least 8 characters with uppercase, lowercase, number, and special character.
+                </p>
+              </FormItem>
+            )}
           />
-          {errors.password && (
-            <p className="text-sm text-destructive">{errors.password.message}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Must contain at least 8 characters with uppercase, lowercase, number, and special character.
-          </p>
-        </div>
 
-        <LoadingButton
-          type="submit"
-          loading={isLoading}
-          className="w-full"
-          disabled={!watchedPassword}
-        >
-          <Key className="mr-2 h-4 w-4" />
-          Reset Password
-        </LoadingButton>
-
-        <div className="text-center">
-          <Link
-            href="/auth/signin"
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading || !form.watch("password")}
           >
-            Remember your password? Sign in
-          </Link>
-        </div>
-      </form>
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Key className="mr-2 h-4 w-4" />
+            )}
+            Reset Password
+          </Button>
+
+          <div className="text-center">
+            <Link
+              href="/auth/signin"
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            >
+              Remember your password? Sign in
+            </Link>
+          </div>
+        </form>
+      </Form>
     </AuthLayout>
   )
 }

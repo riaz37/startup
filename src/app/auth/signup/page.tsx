@@ -6,10 +6,14 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
 import { AuthLayout } from "@/components/auth/auth-layout"
-import { LoadingButton } from "@/components/auth/loading-button"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Alert, AlertDescription } from "@/components/ui/alert"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { CheckCircle, Mail } from "lucide-react"
+import { CheckCircle, Mail, Loader2 } from "lucide-react"
 import { signUpSchema, type SignUpInput } from "@/lib/validations/auth"
+import { authApi } from "@/lib/auth-api"
 
 export default function SignUpPage() {
   const router = useRouter()
@@ -17,36 +21,22 @@ export default function SignUpPage() {
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch
-  } = useForm<SignUpInput>({
-    resolver: zodResolver(signUpSchema)
+  const form = useForm<SignUpInput>({
+    resolver: zodResolver(signUpSchema),
+    defaultValues: {
+      name: "",
+      email: "",
+      password: ""
+    }
   })
-
-  const watchedFields = watch()
 
   const onSubmit = async (data: SignUpInput) => {
     setIsLoading(true)
     setError("")
 
     try {
-      const response = await fetch("/api/auth/signup", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data)
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || "Something went wrong")
-      }
-
+      await authApi.signUp(data)
+      
       setSuccess(true)
       toast.success("Account created successfully!")
       
@@ -54,8 +44,8 @@ export default function SignUpPage() {
         router.push("/auth/signin?message=Account created successfully")
       }, 3000)
     } catch (error: any) {
-      setError(error.message)
-      toast.error("Failed to create account")
+      const errorMessage = error.response?.data?.error || error.message || "Failed to create account"
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -84,12 +74,12 @@ export default function SignUpPage() {
           </div>
 
           <div className="space-y-3">
-            <LoadingButton
+            <Button
               onClick={() => router.push("/auth/signin")}
               className="w-full"
             >
               Continue to Sign In
-            </LoadingButton>
+            </Button>
             
             <p className="text-xs text-muted-foreground">
               Didn't receive the email?{" "}
@@ -111,88 +101,105 @@ export default function SignUpPage() {
       title="Join Sohozdaam"
       subtitle="Create your account and start saving on group orders"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        {error && (
-          <div className="p-3 text-sm text-destructive bg-destructive/10 border border-destructive/20 rounded-lg">
-            {error}
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          {error && (
+            <Alert variant="destructive">
+              <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+
+          <FormField
+            control={form.control}
+            name="name"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Full Name <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="text"
+                    placeholder="Enter your full name"
+                    autoComplete="name"
+                    disabled={isLoading}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Email address <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email"
+                    autoComplete="email"
+                    disabled={isLoading}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
+          <FormField
+            control={form.control}
+            name="password"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Password <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="password"
+                    placeholder="Create a strong password"
+                    autoComplete="new-password"
+                    disabled={isLoading}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+                <p className="text-xs text-muted-foreground">
+                  Must contain at least 8 characters with uppercase, lowercase, number, and special character.
+                </p>
+              </FormItem>
+            )}
+          />
+
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading || !form.watch("name") || !form.watch("email") || !form.watch("password")}
+          >
+            {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
+            Create Account
+          </Button>
+
+          <div className="text-center">
+            <p className="text-sm text-muted-foreground">
+              Already have an account?{" "}
+              <Link
+                href="/auth/signin"
+                className="text-primary hover:text-primary/80 font-medium transition-colors"
+              >
+                Sign in
+              </Link>
+            </p>
           </div>
-        )}
-
-        <div className="space-y-2">
-          <label htmlFor="name" className="text-sm font-medium">
-            Full Name <span className="text-destructive">*</span>
-          </label>
-          <input
-            {...register("name")}
-            type="text"
-            autoComplete="name"
-            placeholder="Enter your full name"
-            disabled={isLoading}
-            className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 placeholder:text-muted-foreground"
-          />
-          {errors.name && (
-            <p className="text-sm text-destructive">{errors.name.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">
-            Email address <span className="text-destructive">*</span>
-          </label>
-          <input
-            {...register("email")}
-            type="email"
-            autoComplete="email"
-            placeholder="Enter your email"
-            disabled={isLoading}
-            className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 placeholder:text-muted-foreground"
-          />
-          {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
-          )}
-        </div>
-
-        <div className="space-y-2">
-          <label htmlFor="password" className="text-sm font-medium">
-            Password <span className="text-destructive">*</span>
-          </label>
-          <input
-            {...register("password")}
-            type="password"
-            autoComplete="new-password"
-            placeholder="Create a strong password"
-            disabled={isLoading}
-            className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 placeholder:text-muted-foreground"
-          />
-          {errors.password && (
-            <p className="text-sm text-destructive">{errors.password.message}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            Must contain at least 8 characters with uppercase, lowercase, number, and special character.
-          </p>
-        </div>
-
-        <LoadingButton
-          type="submit"
-          loading={isLoading}
-          className="w-full"
-          disabled={!watchedFields.name || !watchedFields.email || !watchedFields.password}
-        >
-          Create Account
-        </LoadingButton>
-
-        <div className="text-center">
-          <p className="text-sm text-muted-foreground">
-            Already have an account?{" "}
-            <Link
-              href="/auth/signin"
-              className="text-primary hover:text-primary/80 font-medium transition-colors"
-            >
-              Sign in
-            </Link>
-          </p>
-        </div>
-      </form>
+        </form>
+      </Form>
     </AuthLayout>
   )
 }

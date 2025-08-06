@@ -13,7 +13,7 @@ export const authOptions: NextAuthOptions = {
       name: "credentials",
       credentials: {
         email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" }
+        password: { label: "Password", type: "password" },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
@@ -21,7 +21,7 @@ export const authOptions: NextAuthOptions = {
         }
 
         const user = await prisma.user.findUnique({
-          where: { email: credentials.email }
+          where: { email: credentials.email },
         });
 
         if (!user || !user.password) {
@@ -44,7 +44,7 @@ export const authOptions: NextAuthOptions = {
         // Update last login
         await prisma.user.update({
           where: { id: user.id },
-          data: { lastLoginAt: new Date() }
+          data: { lastLoginAt: new Date() },
         });
 
         return {
@@ -53,21 +53,21 @@ export const authOptions: NextAuthOptions = {
           name: user.name,
           role: user.role,
           image: user.image,
-          isVerified: user.isVerified
+          isVerified: user.isVerified,
         };
-      }
+      },
     }),
     ...(process.env.GOOGLE_CLIENT_ID && process.env.GOOGLE_CLIENT_SECRET
       ? [
           GoogleProvider({
             clientId: process.env.GOOGLE_CLIENT_ID,
-            clientSecret: process.env.GOOGLE_CLIENT_SECRET
-          })
+            clientSecret: process.env.GOOGLE_CLIENT_SECRET,
+          }),
         ]
-      : [])
+      : []),
   ],
   session: {
-    strategy: "jwt" as const
+    strategy: "jwt" as const,
   },
   callbacks: {
     async jwt({ token, user, account }) {
@@ -80,10 +80,10 @@ export const authOptions: NextAuthOptions = {
       if (account?.provider === "google" && user) {
         await prisma.user.update({
           where: { id: user.id },
-          data: { 
+          data: {
             lastLoginAt: new Date(),
-            isVerified: true // Auto-verify OAuth users
-          }
+            isVerified: true, // Auto-verify OAuth users
+          },
         });
       }
 
@@ -96,12 +96,12 @@ export const authOptions: NextAuthOptions = {
         session.user.isVerified = token.isVerified as boolean;
       }
       return session;
-    }
+    },
   },
   pages: {
     signIn: "/auth/signin",
     signUp: "/auth/signup",
-    error: "/auth/error"
+    error: "/auth/error",
   },
-  secret: process.env.NEXTAUTH_SECRET
+  secret: process.env.NEXTAUTH_SECRET,
 };

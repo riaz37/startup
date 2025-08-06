@@ -2,7 +2,7 @@
 
 import { useRouter } from "next/navigation"
 import { AuthLayout } from "@/components/auth/auth-layout"
-import { LoadingButton } from "@/components/auth/loading-button"
+import { Button } from "@/components/ui/button"
 import { CheckCircle, Sparkles } from "lucide-react"
 
 export default function EmailVerifiedPage() {
@@ -30,12 +30,12 @@ export default function EmailVerifiedPage() {
         </div>
 
         <div className="space-y-3">
-          <LoadingButton
+          <Button
             onClick={() => router.push("/auth/signin?message=Email verified successfully")}
             className="w-full"
           >
             Sign In to Your Account
-          </LoadingButton>
+          </Button>
           
           <p className="text-xs text-muted-foreground">
             Ready to start saving with group orders!

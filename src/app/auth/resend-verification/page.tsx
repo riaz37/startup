@@ -5,11 +5,13 @@ import { useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import Link from "next/link"
 import { AuthLayout } from "@/components/auth/auth-layout"
-import { LoadingButton } from "@/components/auth/loading-button"
 import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { Mail, ArrowLeft, CheckCircle } from "lucide-react"
+import { Mail, ArrowLeft, CheckCircle, Loader2 } from "lucide-react"
 import { z } from "zod"
+import { authApi } from "@/lib/auth-api"
 
 const resendSchema = z.object({
   email: z.string().email("Invalid email address")
@@ -22,40 +24,26 @@ export default function ResendVerificationPage() {
   const [success, setSuccess] = useState(false)
   const [email, setEmail] = useState("")
 
-  const {
-    register,
-    handleSubmit,
-    formState: { errors },
-    watch
-  } = useForm<ResendInput>({
-    resolver: zodResolver(resendSchema)
+  const form = useForm<ResendInput>({
+    resolver: zodResolver(resendSchema),
+    defaultValues: {
+      email: ""
+    }
   })
-
-  const watchedEmail = watch("email")
 
   const onSubmit = async (data: ResendInput) => {
     setIsLoading(true)
     setEmail(data.email)
 
     try {
-      const response = await fetch("/api/auth/resend-verification", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json"
-        },
-        body: JSON.stringify(data)
-      })
-
-      const result = await response.json()
-
-      if (!response.ok) {
-        throw new Error(result.error || "Something went wrong")
-      }
-
+      await authApi.resendVerification(data)
+      
       setSuccess(true)
       toast.success("Verification email sent!")
-    } catch (error: any) {
-      toast.error(error.message || "Failed to send verification email")
+    } catch (error: unknown) {
+      // Error handling is done by the axios interceptor
+      const errorMessage = error.response?.data?.error || "Failed to send verification email"
+      console.error("Resend verification error:", errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -75,7 +63,7 @@ export default function ResendVerificationPage() {
           
           <div className="space-y-2">
             <p className="text-muted-foreground">
-              We've sent a new verification email to <strong>{email}</strong>.
+              We&apos;ve sent a new verification email to <strong>{email}</strong>.
             </p>
             <p className="text-sm text-muted-foreground">
               Please check your email (including spam folder) and click the verification link to activate your account.
@@ -109,57 +97,67 @@ export default function ResendVerificationPage() {
       title="Resend Verification Email"
       subtitle="Enter your email to receive a new verification link"
     >
-      <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
-        <div className="space-y-2">
-          <label htmlFor="email" className="text-sm font-medium">
-            Email address <span className="text-destructive">*</span>
-          </label>
-          <input
-            {...register("email")}
-            type="email"
-            autoComplete="email"
-            placeholder="Enter your email address"
-            disabled={isLoading}
-            className="w-full px-3 py-2 border border-input bg-background rounded-lg focus:ring-2 focus:ring-ring focus:border-ring transition-all duration-200 placeholder:text-muted-foreground"
+      <Form {...form}>
+        <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
+          <FormField
+            control={form.control}
+            name="email"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Email address <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <Input
+                    type="email"
+                    placeholder="Enter your email address"
+                    autoComplete="email"
+                    disabled={isLoading}
+                    {...field}
+                  />
+                </FormControl>
+                <FormMessage />
+                <p className="text-xs text-muted-foreground">
+                  We&apos;ll send a new verification email to this address.
+                </p>
+              </FormItem>
+            )}
           />
-          {errors.email && (
-            <p className="text-sm text-destructive">{errors.email.message}</p>
-          )}
-          <p className="text-xs text-muted-foreground">
-            We'll send a new verification email to this address.
-          </p>
-        </div>
 
-        <LoadingButton
-          type="submit"
-          loading={isLoading}
-          className="w-full"
-          disabled={!watchedEmail}
-        >
-          <Mail className="mr-2 h-4 w-4" />
-          Send Verification Email
-        </LoadingButton>
-
-        <div className="text-center space-y-2">
-          <Link
-            href="/auth/signin"
-            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          <Button
+            type="submit"
+            className="w-full"
+            disabled={isLoading || !form.watch("email")}
           >
-            <ArrowLeft className="mr-2 h-4 w-4" />
-            Back to Sign In
-          </Link>
-          
-          <p className="text-sm text-muted-foreground">
-            Don't have an account?{" "}
+            {isLoading ? (
+              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            ) : (
+              <Mail className="mr-2 h-4 w-4" />
+            )}
+            Send Verification Email
+          </Button>
+
+          <div className="text-center space-y-2">
             <Link
-              href="/auth/signup"
-              className="text-primary hover:text-primary/80 font-medium transition-colors"
+              href="/auth/signin"
+              className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
             >
-              Sign up
+              <ArrowLeft className="mr-2 h-4 w-4" />
+              Back to Sign In
             </Link>
-          </p>
-        </div>
-      </form>
+            
+            <p className="text-sm text-muted-foreground">
+              Don&apos;t have an account?{" "}
+              <Link
+                href="/auth/signup"
+                className="text-primary hover:text-primary/80 font-medium transition-colors"
+              >
+                Sign up
+              </Link>
+            </p>
+          </div>
+        </form>
+      </Form>
     </AuthLayout>
   )
 }
