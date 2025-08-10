@@ -2,6 +2,15 @@
 
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
+import { AdminNavigation } from "@/components/admin";
+import { MainContainer } from "@/components/layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Plus, Package, Calendar, DollarSign, Target } from "lucide-react";
 import Link from "next/link";
 
 interface Product {
@@ -75,7 +84,7 @@ export default function CreateGroupOrderPage() {
       }
 
       router.push("/admin");
-    } catch (error: any) {
+    } catch (error: unknown) {
       setError(error.message);
     } finally {
       setIsLoading(false);
@@ -84,64 +93,57 @@ export default function CreateGroupOrderPage() {
 
   const selectedProduct = products.find(p => p.id === formData.productId);
 
+  // Mock user for AdminNavigation - in real app, get from auth
+  const mockUser = { name: "Admin", role: "ADMIN" };
+
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/admin" className="text-xl font-bold text-gray-900">
-                Admin Dashboard
-              </Link>
-              <div className="ml-10 space-x-8">
-                <Link
-                  href="/admin"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Dashboard
-                </Link>
-                <Link
-                  href="/admin/group-orders/create"
-                  className="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Create Group Order
-                </Link>
-              </div>
-            </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+      <AdminNavigation user={mockUser} />
+
+      <MainContainer className="max-w-4xl">
+        {/* Header Section */}
+        <div className="text-center mb-12">
+          <div className="flex items-center justify-center mb-4">
+            <Plus className="h-8 w-8 text-primary mr-3" />
+            <h1 className="text-4xl font-bold">
+              Create New{" "}
+              <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+                Group Order
+              </span>
+            </h1>
           </div>
+          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
+            Set up a new group order for bulk purchasing and help customers save money together.
+          </p>
         </div>
-      </nav>
 
-      {/* Main Content */}
-      <main className="max-w-3xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Create New Group Order</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Set up a new group order for bulk purchasing
-            </p>
-          </div>
-
-          <div className="bg-white shadow rounded-lg">
-            <form onSubmit={handleSubmit} className="space-y-6 p-6">
+        <Card className="card-sohozdaam">
+          <CardHeader>
+            <CardTitle className="flex items-center">
+              <Package className="h-6 w-6 text-primary mr-2" />
+              Group Order Details
+            </CardTitle>
+          </CardHeader>
+          <CardContent>
+            <form onSubmit={handleSubmit} className="space-y-8">
               {error && (
-                <div className="bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
-                  {error}
-                </div>
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
               )}
 
               {/* Product Selection */}
-              <div>
-                <label htmlFor="productId" className="block text-sm font-medium text-gray-700">
+              <div className="space-y-2">
+                <Label htmlFor="productId" className="flex items-center">
+                  <Package className="h-4 w-4 text-primary mr-2" />
                   Product
-                </label>
+                </Label>
                 <select
                   id="productId"
                   value={formData.productId}
                   onChange={(e) => handleProductChange(e.target.value)}
                   required
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
+                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 >
                   <option value="">Select a product</option>
                   {products.map((product) => (
@@ -153,62 +155,80 @@ export default function CreateGroupOrderPage() {
               </div>
 
               {selectedProduct && (
-                <div className="bg-gray-50 p-4 rounded-lg">
-                  <h3 className="text-sm font-medium text-gray-900 mb-2">Product Details</h3>
-                  <div className="text-sm text-gray-600">
-                    <p>Regular Price: ₹{selectedProduct.sellingPrice} per {selectedProduct.unit}</p>
-                    <p>Unit Size: {selectedProduct.unitSize} {selectedProduct.unit}</p>
-                  </div>
-                </div>
+                <Card className="bg-muted/50 border-l-4 border-primary">
+                  <CardContent className="p-4">
+                    <h3 className="font-semibold mb-2 flex items-center">
+                      <Package className="h-4 w-4 text-primary mr-2" />
+                      Product Details
+                    </h3>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Regular Price:</span>
+                        <span className="ml-2 font-semibold text-primary">
+                          ₹{selectedProduct.sellingPrice} per {selectedProduct.unit}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Unit Size:</span>
+                        <span className="ml-2 font-semibold">
+                          {selectedProduct.unitSize} {selectedProduct.unit}
+                        </span>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
               )}
 
-              {/* Minimum Threshold */}
-              <div>
-                <label htmlFor="minThreshold" className="block text-sm font-medium text-gray-700">
-                  Minimum Threshold Amount (₹)
-                </label>
-                <input
-                  type="number"
-                  id="minThreshold"
-                  value={formData.minThreshold}
-                  onChange={(e) => setFormData(prev => ({ ...prev, minThreshold: e.target.value }))}
-                  required
-                  min="0"
-                  step="0.01"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="e.g., 5000"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Minimum total amount needed to proceed with the order
-                </p>
-              </div>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Minimum Threshold */}
+                <div className="space-y-2">
+                  <Label htmlFor="minThreshold" className="flex items-center">
+                    <DollarSign className="h-4 w-4 text-secondary mr-2" />
+                    Minimum Threshold Amount (₹)
+                  </Label>
+                  <Input
+                    type="number"
+                    id="minThreshold"
+                    value={formData.minThreshold}
+                    onChange={(e) => setFormData(prev => ({ ...prev, minThreshold: e.target.value }))}
+                    required
+                    min="0"
+                    step="0.01"
+                    placeholder="e.g., 5000"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Minimum total amount needed to proceed with the order
+                  </p>
+                </div>
 
-              {/* Target Quantity */}
-              <div>
-                <label htmlFor="targetQuantity" className="block text-sm font-medium text-gray-700">
-                  Target Quantity
-                </label>
-                <input
-                  type="number"
-                  id="targetQuantity"
-                  value={formData.targetQuantity}
-                  onChange={(e) => setFormData(prev => ({ ...prev, targetQuantity: e.target.value }))}
-                  required
-                  min="1"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                  placeholder="e.g., 100"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Total quantity to order from supplier
-                </p>
+                {/* Target Quantity */}
+                <div className="space-y-2">
+                  <Label htmlFor="targetQuantity" className="flex items-center">
+                    <Target className="h-4 w-4 text-accent mr-2" />
+                    Target Quantity
+                  </Label>
+                  <Input
+                    type="number"
+                    id="targetQuantity"
+                    value={formData.targetQuantity}
+                    onChange={(e) => setFormData(prev => ({ ...prev, targetQuantity: e.target.value }))}
+                    required
+                    min="1"
+                    placeholder="e.g., 100"
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Total quantity to order from supplier
+                  </p>
+                </div>
               </div>
 
               {/* Price Per Unit */}
-              <div>
-                <label htmlFor="pricePerUnit" className="block text-sm font-medium text-gray-700">
+              <div className="space-y-2">
+                <Label htmlFor="pricePerUnit" className="flex items-center">
+                  <DollarSign className="h-4 w-4 text-primary mr-2" />
                   Bulk Price Per Unit (₹)
-                </label>
-                <input
+                </Label>
+                <Input
                   type="number"
                   id="pricePerUnit"
                   value={formData.pricePerUnit}
@@ -216,70 +236,74 @@ export default function CreateGroupOrderPage() {
                   required
                   min="0"
                   step="0.01"
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                 />
-                <p className="mt-1 text-sm text-gray-500">
-                  Discounted price for bulk purchase
+                <p className="text-sm text-muted-foreground">
+                  Discounted price for bulk purchase (automatically calculated as 10% off regular price)
                 </p>
               </div>
 
-              {/* Expires At */}
-              <div>
-                <label htmlFor="expiresAt" className="block text-sm font-medium text-gray-700">
-                  Order Expires On
-                </label>
-                <input
-                  type="datetime-local"
-                  id="expiresAt"
-                  value={formData.expiresAt}
-                  onChange={(e) => setFormData(prev => ({ ...prev, expiresAt: e.target.value }))}
-                  required
-                  min={new Date().toISOString().slice(0, 16)}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  When to stop accepting orders
-                </p>
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Expires At */}
+                <div className="space-y-2">
+                  <Label htmlFor="expiresAt" className="flex items-center">
+                    <Calendar className="h-4 w-4 text-secondary mr-2" />
+                    Order Expires On
+                  </Label>
+                  <Input
+                    type="datetime-local"
+                    id="expiresAt"
+                    value={formData.expiresAt}
+                    onChange={(e) => setFormData(prev => ({ ...prev, expiresAt: e.target.value }))}
+                    required
+                    min={new Date().toISOString().slice(0, 16)}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    When to stop accepting orders
+                  </p>
+                </div>
+
+                {/* Estimated Delivery */}
+                <div className="space-y-2">
+                  <Label htmlFor="estimatedDelivery" className="flex items-center">
+                    <Calendar className="h-4 w-4 text-accent mr-2" />
+                    Estimated Delivery Date (Optional)
+                  </Label>
+                  <Input
+                    type="date"
+                    id="estimatedDelivery"
+                    value={formData.estimatedDelivery}
+                    onChange={(e) => setFormData(prev => ({ ...prev, estimatedDelivery: e.target.value }))}
+                    min={new Date().toISOString().split('T')[0]}
+                  />
+                  <p className="text-sm text-muted-foreground">
+                    Expected delivery date for customers
+                  </p>
+                </div>
               </div>
 
-              {/* Estimated Delivery */}
-              <div>
-                <label htmlFor="estimatedDelivery" className="block text-sm font-medium text-gray-700">
-                  Estimated Delivery Date (Optional)
-                </label>
-                <input
-                  type="date"
-                  id="estimatedDelivery"
-                  value={formData.estimatedDelivery}
-                  onChange={(e) => setFormData(prev => ({ ...prev, estimatedDelivery: e.target.value }))}
-                  min={new Date().toISOString().split('T')[0]}
-                  className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
-                />
-                <p className="mt-1 text-sm text-gray-500">
-                  Expected delivery date for customers
-                </p>
-              </div>
-
-              {/* Submit Button */}
-              <div className="flex justify-end space-x-3">
-                <Link
-                  href="/admin"
-                  className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Cancel
-                </Link>
-                <button
-                  type="submit"
-                  disabled={isLoading}
-                  className="bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
-                >
-                  {isLoading ? "Creating..." : "Create Group Order"}
-                </button>
+              {/* Submit Buttons */}
+              <div className="flex flex-col sm:flex-row gap-4 pt-6">
+                <Button variant="outline" className="flex-1" asChild>
+                  <Link href="/admin">Cancel</Link>
+                </Button>
+                <Button type="submit" disabled={isLoading} className="flex-1">
+                  {isLoading ? (
+                    <>
+                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                      Creating...
+                    </>
+                  ) : (
+                    <>
+                      <Plus className="h-4 w-4 mr-2" />
+                      Create Group Order
+                    </>
+                  )}
+                </Button>
               </div>
             </form>
-          </div>
-        </div>
-      </main>
+          </CardContent>
+        </Card>
+      </MainContainer>
     </div>
   );
 }

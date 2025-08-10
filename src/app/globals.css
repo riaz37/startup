@@ -395,3 +395,172 @@
   font-size: 0.875rem;
   font-weight: 500;
 }
+
+/* Enhanced Loading Animations */
+@keyframes sohozdaam-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes sohozdaam-pulse {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.7;
+    transform: scale(1.05);
+  }
+}
+
+@keyframes sohozdaam-bounce {
+  0%, 100% {
+    transform: translateY(0);
+    animation-timing-function: cubic-bezier(0.8, 0, 1, 1);
+  }
+  50% {
+    transform: translateY(-25%);
+    animation-timing-function: cubic-bezier(0, 0, 0.2, 1);
+  }
+}
+
+@keyframes sohozdaam-float {
+  0%, 100% {
+    transform: translateY(0px);
+  }
+  50% {
+    transform: translateY(-10px);
+  }
+}
+
+@keyframes sohozdaam-glow {
+  0%, 100% {
+    box-shadow: 0 0 5px var(--primary), 0 0 10px var(--primary), 0 0 15px var(--primary);
+  }
+  50% {
+    box-shadow: 0 0 10px var(--primary), 0 0 20px var(--primary), 0 0 30px var(--primary);
+  }
+}
+
+@keyframes sohozdaam-gradient-shift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+@keyframes sohozdaam-scale-in {
+  0% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+@keyframes sohozdaam-slide-up {
+  0% {
+    transform: translateY(20px);
+    opacity: 0;
+  }
+  100% {
+    transform: translateY(0);
+    opacity: 1;
+  }
+}
+
+/* Loading specific animations */
+.loading-ring-spin {
+  animation: sohozdaam-spin 2s linear infinite;
+}
+
+.loading-pulse {
+  animation: sohozdaam-pulse 2s ease-in-out infinite;
+}
+
+.loading-bounce {
+  animation: sohozdaam-bounce 1s infinite;
+}
+
+.loading-float {
+  animation: sohozdaam-float 3s ease-in-out infinite;
+}
+
+.loading-glow {
+  animation: sohozdaam-glow 2s ease-in-out infinite;
+}
+
+.loading-gradient {
+  background: linear-gradient(-45deg, var(--primary), var(--secondary), var(--accent), var(--primary));
+  background-size: 400% 400%;
+  animation: sohozdaam-gradient-shift 3s ease infinite;
+}
+
+.loading-scale-in {
+  animation: sohozdaam-scale-in 0.5s ease-out;
+}
+
+.loading-slide-up {
+  animation: sohozdaam-slide-up 0.6s ease-out;
+}
+
+/* Loading dots with staggered animation */
+.loading-dots {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.loading-dots .dot {
+  width: 0.75rem;
+  height: 0.75rem;
+  border-radius: 50%;
+  animation: sohozdaam-bounce 1.4s ease-in-out infinite both;
+}
+
+.loading-dots .dot:nth-child(1) {
+  background-color: var(--primary);
+  animation-delay: -0.32s;
+}
+
+.loading-dots .dot:nth-child(2) {
+  background-color: var(--secondary);
+  animation-delay: -0.16s;
+}
+
+.loading-dots .dot:nth-child(3) {
+  background-color: var(--accent);
+  animation-delay: 0s;
+}
+
+/* Progress bar animation */
+.loading-progress {
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  background-size: 200% 100%;
+  animation: sohozdaam-gradient-shift 2s ease infinite;
+}
+
+/* Floating icons animation */
+.loading-icon-float {
+  animation: sohozdaam-float 2s ease-in-out infinite;
+}
+
+.loading-icon-float:nth-child(2) {
+  animation-delay: 0.5s;
+}
+
+.loading-icon-float:nth-child(3) {
+  animation-delay: 1s;
+}

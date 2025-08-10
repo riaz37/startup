@@ -1,5 +1,5 @@
 import { cn } from "@/lib/utils"
-import { Loader2, ShoppingCart } from "lucide-react"
+import { Loader2, ShoppingCart, Users, Package, Zap } from "lucide-react"
 
 interface GlobalLoadingProps {
   size?: "sm" | "md" | "lg" | "xl"
@@ -23,24 +23,32 @@ export function GlobalLoading({
 
   const containerClasses = {
     default: "flex items-center justify-center space-x-2",
-    overlay: "fixed inset-0 bg-background/80 backdrop-blur-sm flex items-center justify-center z-50",
-    page: "min-h-screen flex flex-col items-center justify-center space-y-4",
+    overlay: "fixed inset-0 bg-background/95 backdrop-blur-md flex items-center justify-center z-50",
+    page: "min-h-screen bg-gradient-to-br from-background via-background to-secondary/20 flex flex-col items-center justify-center",
     inline: "inline-flex items-center space-x-2"
   }
 
   if (variant === "overlay") {
     return (
       <div className={cn(containerClasses.overlay, className)}>
-        <div className="flex flex-col items-center space-y-4">
+        <div className="flex flex-col items-center space-y-6">
+          {/* Enhanced loader with multiple rings */}
           <div className="relative">
-            {/* Outer ring */}
-            <div className="h-16 w-16 rounded-full border-4 border-primary/20 animate-pulse"></div>
-            {/* Inner spinning loader */}
-            <Loader2 className="h-8 w-8 text-primary animate-spin absolute top-1/2 left-1/2 transform -translate-x-1/2 -translate-y-1/2" />
+            {/* Outer rotating ring */}
+            <div className="h-20 w-20 rounded-full border-4 border-transparent border-t-primary border-r-primary/50 animate-spin"></div>
+            {/* Middle pulsing ring */}
+            <div className="absolute inset-2 h-16 w-16 rounded-full border-2 border-secondary/30 animate-pulse"></div>
+            {/* Inner icon */}
+            <div className="absolute inset-0 flex items-center justify-center">
+              <ShoppingCart className="h-8 w-8 text-primary animate-bounce" />
+            </div>
           </div>
-          <div className="text-center space-y-2">
-            <h3 className="text-lg font-semibold text-gradient">Sohozdaam</h3>
-            <p className="text-sm text-muted-foreground">
+          
+          <div className="text-center space-y-3">
+            <h3 className="text-xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+              Sohozdaam
+            </h3>
+            <p className="text-muted-foreground max-w-sm">
               {message || "Loading your group orders..."}
             </p>
           </div>
@@ -52,27 +60,60 @@ export function GlobalLoading({
   if (variant === "page") {
     return (
       <div className={cn(containerClasses.page, className)}>
-        <div className="text-center space-y-6">
-          <div className="relative mx-auto">
-            {/* Sohozdaam branded loader */}
-            <div className="h-20 w-20 rounded-full border-4 border-primary/20 animate-pulse"></div>
+        <div className="text-center space-y-8 max-w-md mx-auto px-4 loading-scale-in">
+          {/* Enhanced main loader with custom animations */}
+          <div className="relative mx-auto w-32 h-32 loading-float">
+            {/* Outer ring with gradient and custom spin */}
+            <div className="absolute inset-0 rounded-full loading-gradient p-1 loading-ring-spin">
+              <div className="h-full w-full rounded-full bg-background"></div>
+            </div>
+            
+            {/* Middle ring with pulse */}
+            <div className="absolute inset-4 rounded-full border-2 border-primary/20 loading-pulse"></div>
+            
+            {/* Inner content with floating icons */}
             <div className="absolute inset-0 flex items-center justify-center">
-              <ShoppingCart className="h-8 w-8 text-primary animate-bounce" />
+              <div className="relative">
+                <ShoppingCart className="h-10 w-10 text-primary loading-bounce" />
+                {/* Small floating icons with custom animations */}
+                <Users className="absolute -top-2 -right-2 h-4 w-4 text-secondary loading-icon-float" />
+                <Package className="absolute -bottom-2 -left-2 h-4 w-4 text-accent loading-icon-float" />
+                <Zap className="absolute -top-2 -left-2 h-3 w-3 text-primary/60 loading-icon-float" />
+              </div>
             </div>
           </div>
           
-          <div className="space-y-2">
-            <h2 className="text-2xl font-bold text-gradient">Sohozdaam</h2>
-            <p className="text-muted-foreground max-w-md">
-              {message || "Preparing your group ordering experience..."}
+          {/* Brand and message with slide-up animation */}
+          <div className="space-y-4 loading-slide-up">
+            <div className="space-y-3">
+              <h1 className="text-4xl font-bold bg-gradient-to-r from-primary via-secondary to-accent bg-clip-text text-transparent">
+                Sohozdaam
+              </h1>
+              <div className="h-1 w-20 loading-gradient rounded-full mx-auto"></div>
+            </div>
+            
+            <p className="text-lg text-muted-foreground leading-relaxed transition-all duration-500">
+              {message || "Loading your Sohozdaam experience..."}
             </p>
           </div>
           
-          {/* Loading dots */}
-          <div className="flex justify-center space-x-1">
-            <div className="h-2 w-2 bg-primary rounded-full animate-bounce [animation-delay:-0.3s]"></div>
-            <div className="h-2 w-2 bg-secondary rounded-full animate-bounce [animation-delay:-0.15s]"></div>
-            <div className="h-2 w-2 bg-accent rounded-full animate-bounce"></div>
+          {/* Enhanced loading dots with custom animations */}
+          <div className="loading-dots">
+            <div className="dot"></div>
+            <div className="dot"></div>
+            <div className="dot"></div>
+          </div>
+          
+          {/* Animated progress indicator */}
+          <div className="w-full max-w-xs mx-auto">
+            <div className="h-1.5 bg-muted rounded-full overflow-hidden">
+              <div className="h-full loading-progress rounded-full"></div>
+            </div>
+          </div>
+          
+          {/* Rotating tips */}
+          <div className="text-sm text-muted-foreground/80 min-h-[1.25rem] transition-all duration-500">
+            <p className="loading-slide-up">Join group orders • Save money • Build community</p>
           </div>
         </div>
       </div>
