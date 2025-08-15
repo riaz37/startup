@@ -10,11 +10,11 @@ import { ShoppingCart, Menu, X } from "lucide-react";
 
 interface NavigationProps {
   user?: {
-    name: string;
-    email?: string;
+    name?: string | null;
+    email?: string | null;
     role: string;
     isVerified: boolean;
-    image?: string;
+    image?: string | null;
   } | null;
 }
 

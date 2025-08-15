@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Send password reset email
     try {
-      await sendPasswordResetEmail(user.email, resetToken);
+      await sendPasswordResetEmail(user.email, resetToken, user.name);
     } catch (emailError) {
       console.error("Failed to send password reset email:", emailError);
       // Don't fail the request if email fails

@@ -9,13 +9,15 @@ import {
   UserProfileCard, 
   RecentActivity 
 } from "@/components/dashboard";
+import { PaymentHistory } from "@/components/payments/payment-history";
 import { 
   ShoppingCart, 
   Users, 
   Package, 
   TrendingUp, 
   Settings,
-  Heart
+  Heart,
+  CreditCard
 } from "lucide-react";
 import OrderHistoryWidget from "@/components/orders/order-history-widget";
 
@@ -147,7 +149,7 @@ export default async function DashboardPage() {
             ! 👋
           </h1>
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Here's what&apos;s happening with your group orders and savings today.
+            Here&apos;s what&apos;s happening with your group orders and savings today.
           </p>
         </div>
 
@@ -173,6 +175,11 @@ export default async function DashboardPage() {
         {/* Order History Widget */}
         <div className="mb-8">
           <OrderHistoryWidget userId={user.id} />
+        </div>
+
+        {/* Payment History */}
+        <div className="mb-8">
+          <PaymentHistory userId={user.id} />
         </div>
       </MainContainer>
 

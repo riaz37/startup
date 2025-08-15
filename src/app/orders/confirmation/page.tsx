@@ -1,324 +1,258 @@
-import { Suspense } from "react";
-import Link from "next/link";
 import { getCurrentUser } from "@/lib/auth-utils";
+import { redirect } from "next/navigation";
 import { prisma } from "@/lib/prisma";
-import { notFound } from "next/navigation";
+import { Navigation } from "@/components/home/navigation";
+import { Footer } from "@/components/home/footer";
+import { MainContainer } from "@/components/layout";
+import { Button } from "@/components/ui/button";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Separator } from "@/components/ui/separator";
+import { formatPrice } from "@/lib/utils";
+import { 
+  CheckCircle, 
+  XCircle, 
+  Package, 
+  MapPin, 
+  Calendar,
+  ArrowRight,
+  Home,
+  ShoppingCart
+} from "lucide-react";
+import Link from "next/link";
 
-interface Order {
-  id: string;
-  orderNumber: string;
-  totalAmount: number;
-  status: string;
-  paymentStatus: string;
-  placedAt: string;
-  groupOrder: {
-    batchNumber: string;
-    estimatedDelivery: string | null;
-    product: {
-      name: string;
-      unit: string;
-      unitSize: number;
-      imageUrl: string | null;
-    };
+interface ConfirmationPageProps {
+  searchParams: {
+    success?: string;
+    canceled?: string;
+    orderId?: string;
   };
-  address: {
-    name: string;
-    phone: string;
-    addressLine1: string;
-    addressLine2: string | null;
-    city: string;
-    state: string;
-    pincode: string;
-  };
-  items: Array<{
-    quantity: number;
-    unitPrice: number;
-    totalPrice: number;
-  }>;
 }
 
-async function getOrder(orderId: string, userId: string): Promise<Order | null> {
-  try {
-    const order = await prisma.order.findFirst({
-      where: {
-        id: orderId,
-        userId: userId
-      },
+export default async function ConfirmationPage({ searchParams }: ConfirmationPageProps) {
+  const user = await getCurrentUser();
+
+  if (!user) {
+    redirect("/auth/signin");
+  }
+
+  const { success, canceled, orderId } = searchParams;
+  const isSuccess = success === "true";
+  const isCanceled = canceled === "true";
+
+  let order = null;
+  if (orderId) {
+    order = await prisma.order.findUnique({
+      where: { id: orderId },
       include: {
         groupOrder: {
           include: {
             product: {
-              select: {
-                name: true,
-                unit: true,
-                unitSize: true,
-                imageUrl: true
-              }
-            }
-          }
+              include: {
+                category: true,
+              },
+            },
+          },
         },
         address: true,
-        items: true
-      }
+        user: true,
+      },
     });
 
-    return order;
-  } catch (error) {
-    console.error("Error fetching order:", error);
-    return null;
-  }
-}
-
-async function OrderConfirmationContent({ orderId }: { orderId: string }) {
-  const user = await getCurrentUser();
-  
-  if (!user) {
-    return (
-      <div className="text-center">
-        <p className="text-gray-600">Please sign in to view your order.</p>
-        <Link
-          href="/auth/signin"
-          className="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
-        >
-          Sign In
-        </Link>
-      </div>
-    );
+    // Verify order belongs to user
+    if (order && order.userId !== user.id) {
+      redirect("/unauthorized");
+    }
   }
 
-  const order = await getOrder(orderId, user.id);
+  const getStatusIcon = () => {
+    if (isSuccess) {
+      return <CheckCircle className="h-16 w-16 text-green-500" />;
+    }
+    if (isCanceled) {
+      return <XCircle className="h-16 w-16 text-red-500" />;
+    }
+    return <Package className="h-16 w-16 text-blue-500" />;
+  };
 
-  if (!order) {
-    notFound();
-  }
+  const getStatusTitle = () => {
+    if (isSuccess) {
+      return "Payment Successful!";
+    }
+    if (isCanceled) {
+      return "Payment Cancelled";
+    }
+    return "Order Status";
+  };
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(price);
+  const getStatusDescription = () => {
+    if (isSuccess) {
+      return "Your payment has been processed successfully. Your order is now confirmed!";
+    }
+    if (isCanceled) {
+      return "Your payment was cancelled. You can try again or contact support if you need help.";
+    }
+    return "Check the status of your order below.";
+  };
+
+  const getStatusColor = () => {
+    if (isSuccess) return "bg-green-100 text-green-800";
+    if (isCanceled) return "bg-red-100 text-red-800";
+    return "bg-blue-100 text-blue-800";
+  };
+
+  const getStatusText = () => {
+    if (isSuccess) return "Confirmed";
+    if (isCanceled) return "Cancelled";
+    return order?.status || "Pending";
   };
 
   return (
-    <div className="max-w-3xl mx-auto">
-      {/* Success Message */}
-      <div className="text-center mb-8">
-        <div className="mx-auto flex items-center justify-center h-16 w-16 rounded-full bg-green-100 mb-4">
-          <svg
-            className="h-8 w-8 text-green-600"
-            fill="none"
-            viewBox="0 0 24 24"
-            stroke="currentColor"
-          >
-            <path
-              strokeLinecap="round"
-              strokeLinejoin="round"
-              strokeWidth={2}
-              d="M5 13l4 4L19 7"
-            />
-          </svg>
-        </div>
-        <h1 className="text-3xl font-bold text-gray-900">Order Confirmed!</h1>
-        <p className="mt-2 text-lg text-gray-600">
-          Thank you for joining the group order
-        </p>
-        <p className="text-sm text-gray-500">
-          Order #{order.orderNumber}
-        </p>
-      </div>
+    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+      <Navigation user={user} />
 
-      {/* Order Details */}
-      <div className="bg-white shadow rounded-lg overflow-hidden">
-        <div className="px-6 py-4 border-b border-gray-200">
-          <h2 className="text-lg font-medium text-gray-900">Order Details</h2>
-        </div>
-        
-        <div className="px-6 py-4">
-          {/* Product Info */}
-          <div className="flex items-start space-x-4 mb-6">
-            {order.groupOrder.product.imageUrl ? (
-              <img
-                src={order.groupOrder.product.imageUrl}
-                alt={order.groupOrder.product.name}
-                className="h-16 w-16 object-cover rounded-lg"
-              />
-            ) : (
-              <div className="h-16 w-16 bg-gray-100 rounded-lg flex items-center justify-center">
-                <svg
-                  className="h-8 w-8 text-gray-400"
-                  fill="none"
-                  viewBox="0 0 24 24"
-                  stroke="currentColor"
-                >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                  />
-                </svg>
-              </div>
-            )}
-            <div className="flex-1">
-              <h3 className="text-lg font-medium text-gray-900">
-                {order.groupOrder.product.name}
-              </h3>
-              <p className="text-sm text-gray-600">
-                Group Order #{order.groupOrder.batchNumber}
-              </p>
-              <div className="mt-2 flex justify-between">
-                <span className="text-sm text-gray-600">
-                  Quantity: {order.items[0]?.quantity} {order.groupOrder.product.unit}
-                </span>
-                <span className="text-lg font-bold text-gray-900">
-                  {formatPrice(order.totalAmount)}
-                </span>
-              </div>
-            </div>
+      <MainContainer>
+        <div className="max-w-2xl mx-auto text-center">
+          {/* Status Icon and Title */}
+          <div className="mb-8">
+            {getStatusIcon()}
+            <h1 className="text-4xl font-bold mt-6 mb-4">
+              {getStatusTitle()}
+            </h1>
+            <p className="text-xl text-muted-foreground">
+              {getStatusDescription()}
+            </p>
           </div>
 
-          {/* Order Status */}
-          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 mb-6">
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Order Status</dt>
-              <dd className="mt-1">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800">
-                  {order.status.replace('_', ' ')}
-                </span>
-              </dd>
-            </div>
-            <div>
-              <dt className="text-sm font-medium text-gray-500">Payment Status</dt>
-              <dd className="mt-1">
-                <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
-                  {order.paymentStatus.replace('_', ' ')}
-                </span>
-              </dd>
-            </div>
-          </div>
-
-          {/* Delivery Information */}
-          <div className="border-t pt-4">
-            <h3 className="text-sm font-medium text-gray-900 mb-3">Delivery Information</h3>
-            <div className="bg-gray-50 rounded-lg p-4">
-              <div className="text-sm">
-                <p className="font-medium text-gray-900">{order.address.name}</p>
-                <p className="text-gray-600">{order.address.phone}</p>
-                <p className="text-gray-600 mt-1">
-                  {order.address.addressLine1}
-                  {order.address.addressLine2 && `, ${order.address.addressLine2}`}
-                </p>
-                <p className="text-gray-600">
-                  {order.address.city}, {order.address.state} - {order.address.pincode}
-                </p>
-              </div>
-              {order.groupOrder.estimatedDelivery && (
-                <div className="mt-3 pt-3 border-t border-gray-200">
-                  <p className="text-sm text-gray-600">
-                    <span className="font-medium">Estimated Delivery:</span>{" "}
-                    {new Date(order.groupOrder.estimatedDelivery).toLocaleDateString()}
-                  </p>
+          {/* Order Details Card */}
+          {order && (
+            <Card className="card-sohozdaam mb-8">
+              <CardHeader>
+                <CardTitle>Order Details</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                {/* Order Status */}
+                <div className="flex items-center justify-center space-x-2">
+                  <span className="text-sm text-muted-foreground">Status:</span>
+                  <Badge className={getStatusColor()}>
+                    {getStatusText()}
+                  </Badge>
                 </div>
-              )}
-            </div>
-          </div>
-        </div>
-      </div>
 
-      {/* Next Steps */}
-      <div className="mt-8 bg-blue-50 border border-blue-200 rounded-lg p-6">
-        <h3 className="text-lg font-medium text-blue-900 mb-2">What happens next?</h3>
-        <ul className="text-sm text-blue-700 space-y-2">
-          <li className="flex items-start">
-            <span className="flex-shrink-0 h-1.5 w-1.5 bg-blue-400 rounded-full mt-2 mr-3"></span>
-            Your order is now part of the group order and will be processed once the minimum threshold is met.
-          </li>
-          <li className="flex items-start">
-            <span className="flex-shrink-0 h-1.5 w-1.5 bg-blue-400 rounded-full mt-2 mr-3"></span>
-            You'll receive email updates about the group order progress and delivery status.
-          </li>
-          <li className="flex items-start">
-            <span className="flex-shrink-0 h-1.5 w-1.5 bg-blue-400 rounded-full mt-2 mr-3"></span>
-            Payment will be processed when the group order is confirmed and ready for delivery.
-          </li>
-        </ul>
-      </div>
+                <Separator />
 
-      {/* Action Buttons */}
-      <div className="mt-8 flex flex-col sm:flex-row gap-4">
-        <Link
-          href="/dashboard"
-          className="flex-1 bg-indigo-600 border border-transparent rounded-md py-3 px-4 flex items-center justify-center text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          View Dashboard
-        </Link>
-        <Link
-          href="/group-orders"
-          className="flex-1 bg-white border border-gray-300 rounded-md py-3 px-4 flex items-center justify-center text-base font-medium text-gray-700 hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-        >
-          Browse More Orders
-        </Link>
-      </div>
-    </div>
-  );
-}
+                {/* Product Info */}
+                <div className="flex items-center space-x-3">
+                  <Package className="h-5 w-5 text-primary" />
+                  <div className="text-left">
+                    <h4 className="font-medium">{order.groupOrder.product.name}</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {order.groupOrder.product.unitSize} {order.groupOrder.product.unit}
+                    </p>
+                  </div>
+                </div>
 
-export default function OrderConfirmationPage({
-  searchParams
-}: {
-  searchParams: { orderId?: string };
-}) {
-  const orderId = searchParams.orderId;
+                {/* Delivery Address */}
+                <div className="flex items-center space-x-3">
+                  <MapPin className="h-5 w-5 text-primary" />
+                  <div className="text-left">
+                    <h4 className="font-medium">Delivery Address</h4>
+                    <p className="text-sm text-muted-foreground">
+                      {order.address.addressLine1}
+                      {order.address.addressLine2 && (
+                        <>, {order.address.addressLine2}</>
+                      )}
+                      <br />
+                      {order.address.city}, {order.address.state} {order.address.pincode}
+                    </p>
+                  </div>
+                </div>
 
-  if (!orderId) {
-    return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <h1 className="text-2xl font-bold text-gray-900">Order Not Found</h1>
-          <p className="mt-2 text-gray-600">No order ID provided.</p>
-          <Link
-            href="/group-orders"
-            className="mt-4 inline-block bg-indigo-600 text-white px-4 py-2 rounded-md hover:bg-indigo-700"
-          >
-            Browse Group Orders
-          </Link>
-        </div>
-      </div>
-    );
-  }
+                {/* Order Details */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
+                  <div className="text-left">
+                    <span className="text-muted-foreground">Order Number:</span>
+                    <p className="font-medium">{order.orderNumber}</p>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-muted-foreground">Order Date:</span>
+                    <p className="font-medium">
+                      {new Date(order.placedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-muted-foreground">Total Amount:</span>
+                    <p className="font-medium text-lg text-primary">
+                      {formatPrice(order.totalAmount)}
+                    </p>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-muted-foreground">Payment Status:</span>
+                    <p className="font-medium">
+                      {order.paymentStatus === "COMPLETED" ? "Paid" : "Pending"}
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          )}
 
-  return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                Your App
+          {/* Action Buttons */}
+          <div className="flex flex-col sm:flex-row gap-4 justify-center">
+            <Button asChild className="flex-1 sm:flex-none">
+              <Link href="/dashboard">
+                <Home className="h-4 w-4 mr-2" />
+                Go to Dashboard
               </Link>
-            </div>
-          </div>
-        </div>
-      </nav>
+            </Button>
+            
+            <Button variant="outline" asChild className="flex-1 sm:flex-none">
+              <Link href="/orders">
+                <ShoppingCart className="h-4 w-4 mr-2" />
+                View Orders
+              </Link>
+            </Button>
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          <Suspense
-            fallback={
-              <div className="text-center">
-                <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-                <p className="mt-4 text-gray-600">Loading order details...</p>
-              </div>
-            }
-          >
-            <OrderConfirmationContent orderId={orderId} />
-          </Suspense>
+            {isCanceled && (
+              <Button variant="outline" asChild className="flex-1 sm:flex-none">
+                <Link href={`/orders/${orderId}/payment`}>
+                  <ArrowRight className="h-4 w-4 mr-2" />
+                  Try Again
+                </Link>
+              </Button>
+            )}
+          </div>
+
+          {/* Additional Information */}
+          {isSuccess && (
+            <div className="mt-8 p-4 bg-green-50 rounded-lg border border-green-200">
+              <h3 className="font-medium text-green-800 mb-2">
+                What happens next?
+              </h3>
+              <ul className="text-sm text-green-700 space-y-1 text-left">
+                <li>• You'll receive an email confirmation shortly</li>
+                <li>• We'll notify you when your order is ready for pickup/delivery</li>
+                <li>• Track your order status in your dashboard</li>
+                <li>• Contact support if you have any questions</li>
+              </ul>
+            </div>
+          )}
+
+          {isCanceled && (
+            <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
+              <h3 className="font-medium text-blue-800 mb-2">
+                Need help?
+              </h3>
+              <p className="text-sm text-blue-700">
+                If you're experiencing issues with payment or have questions, 
+                please contact our support team. We're here to help!
+              </p>
+            </div>
+          )}
         </div>
-      </main>
+      </MainContainer>
+
+      <Footer />
     </div>
   );
 }

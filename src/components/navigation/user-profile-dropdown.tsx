@@ -26,16 +26,17 @@ import Link from "next/link";
 
 interface UserProfileDropdownProps {
   user: {
-    name: string;
-    email?: string;
+    name?: string | null;
+    email?: string | null;
     role: string;
     isVerified: boolean;
-    image?: string;
+    image?: string | null;
   };
 }
 
 export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
-  const getInitials = (name: string) => {
+  const getInitials = (name?: string | null) => {
+    if (!name) return "U";
     return name
       .split(" ")
       .map((n) => n[0])
@@ -50,7 +51,10 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
     <DropdownMenu>
       <DropdownMenuTrigger className="flex items-center space-x-2 hover:opacity-80 transition-opacity">
         <Avatar className="h-8 w-8 border-2 border-primary/20">
-          <AvatarImage src={user.image} alt={user.name} />
+          <AvatarImage
+            src={user.image || undefined}
+            alt={user.name || "User"}
+          />
           <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-sm font-semibold">
             {getInitials(user.name)}
           </AvatarFallback>
@@ -62,15 +66,20 @@ export function UserProfileDropdown({ user }: UserProfileDropdownProps) {
           <div className="flex flex-col space-y-2">
             <div className="flex items-center space-x-2">
               <Avatar className="h-8 w-8">
-                <AvatarImage src={user.image} alt={user.name} />
+                <AvatarImage
+                  src={user.image || undefined}
+                  alt={user.name || "User"}
+                />
                 <AvatarFallback className="bg-gradient-to-br from-primary to-primary/60 text-primary-foreground text-sm">
                   {getInitials(user.name)}
                 </AvatarFallback>
               </Avatar>
               <div className="flex flex-col">
-                <p className="text-sm font-medium leading-none">{user.name}</p>
+                <p className="text-sm font-medium leading-none">
+                  {user.name || "User"}
+                </p>
                 <p className="text-xs leading-none text-muted-foreground mt-1">
-                  {user.email}
+                  {user.email || "No email"}
                 </p>
               </div>
             </div>

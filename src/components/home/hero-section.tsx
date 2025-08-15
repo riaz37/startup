@@ -5,7 +5,11 @@ import { ArrowRight } from "lucide-react";
 
 interface HeroSectionProps {
   user?: {
-    name: string;
+    name?: string | null;
+    email?: string | null;
+    role?: string;
+    isVerified?: boolean;
+    image?: string | null;
   } | null;
 }
 
