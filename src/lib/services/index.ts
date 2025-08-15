@@ -1,0 +1,11 @@
+// Export all service classes and instances
+export { ProductService, productService } from './product-service';
+export { OrderService, orderService } from './order-service';
+export { GroupOrderService, groupOrderService } from './group-order-service';
+export { PaymentService, paymentService } from './payment-service';
+export { UserService, userService } from './user-service';
+export { NotificationService, notificationService } from './notification-service';
+export { DeliveryService, deliveryService } from './delivery-service';
+export { AddressService, addressService } from './address-service';
+export { AnalyticsService, analyticsService } from './analytics-service';
+export { EmailManagementService, emailManagementService } from './email-management-service'; 

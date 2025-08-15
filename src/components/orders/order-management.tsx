@@ -1,123 +1,50 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { formatPrice } from "@/lib/utils";
 import { 
+  Clock, 
+  CheckCircle, 
   Package, 
-  MapPin, 
-  Calendar, 
-  Edit, 
+  Truck, 
+  Home, 
   X, 
-  Eye, 
-  AlertCircle,
-  CheckCircle,
-  Clock,
-  Truck,
-  Home
+  Edit, 
+  Trash2,
+  Calendar,
+  MapPin,
+  User
 } from "lucide-react";
-
-interface OrderItem {
-  id: string;
-  quantity: number;
-  unitPrice: number;
-  totalPrice: number;
-}
-
-interface Address {
-  id: string;
-  type: string;
-  name: string;
-  addressLine1: string;
-  addressLine2?: string;
-  city: string;
-  state: string;
-  pincode: string;
-  landmark?: string;
-}
-
-interface Order {
-  id: string;
-  orderNumber: string;
-  totalAmount: number;
-  status: string;
-  paymentStatus: string;
-  placedAt: string;
-  notes?: string;
-  addressId: string;
-  groupOrder: {
-    batchNumber: string;
-    status: string;
-    estimatedDelivery?: string;
-    product: {
-      name: string;
-      unit: string;
-      unitSize: number;
-      imageUrl?: string;
-    };
-  };
-  address: Address;
-  items: OrderItem[];
-}
+import { useOrders, useAddresses, useUpdateOrder, useCancelOrder } from "@/hooks/api";
+import { Order, Address } from "@/types";
 
 interface OrderManagementProps {
   userId: string;
 }
 
 export function OrderManagement({ userId }: OrderManagementProps) {
-  const [orders, setOrders] = useState<Order[]>([]);
-  const [userAddresses, setUserAddresses] = useState<Address[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
   const [selectedOrder, setSelectedOrder] = useState<Order | null>(null);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
-  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [editForm, setEditForm] = useState({
     quantity: "",
     addressId: "",
     notes: "",
   });
-  const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetchOrders();
-    fetchAddresses();
-  }, [userId]);
-
-  const fetchOrders = async () => {
-    try {
-      const response = await fetch(`/api/orders?userId=${userId}`);
-      if (response.ok) {
-        const data = await response.json();
-        setOrders(data.orders || []);
-      }
-    } catch (error) {
-      console.error("Error fetching orders:", error);
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const fetchAddresses = async () => {
-    try {
-      const response = await fetch("/api/addresses");
-      if (response.ok) {
-        const data = await response.json();
-        setUserAddresses(data.addresses || []);
-      }
-    } catch (error) {
-      console.error("Error fetching addresses:", error);
-    }
-  };
+  // Use the new hooks
+  const { data: orders, isLoading, refetch: refetchOrders } = useOrders();
+  const { data: userAddresses, refetch: refetchAddresses } = useAddresses();
+  const updateOrderMutation = useUpdateOrder();
+  const cancelOrderMutation = useCancelOrder();
 
   const getStatusIcon = (status: string) => {
     switch (status) {
@@ -151,7 +78,7 @@ export function OrderManagement({ userId }: OrderManagementProps) {
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: "outline", text: status };
     
     return (
-      <Badge variant={config.variant as any}>
+      <Badge variant={config.variant as "default" | "secondary" | "destructive" | "outline"}>
         {config.text}
       </Badge>
     );
@@ -169,7 +96,7 @@ export function OrderManagement({ userId }: OrderManagementProps) {
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: "outline", text: status };
     
     return (
-      <Badge variant={config.variant as any}>
+      <Badge variant={config.variant as "default" | "secondary" | "destructive" | "outline"}>
         {config.text}
       </Badge>
     );
@@ -199,215 +126,201 @@ export function OrderManagement({ userId }: OrderManagementProps) {
     e.preventDefault();
     if (!selectedOrder) return;
 
-    setIsSubmitting(true);
-    setError(null);
-    setSuccess(null);
-
-    try {
-      const response = await fetch(`/api/orders/${selectedOrder.id}/edit`, {
-        method: "PATCH",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(editForm),
-      });
-
-      if (response.ok) {
+    updateOrderMutation.mutate({
+      id: selectedOrder.id,
+      data: {
+        status: selectedOrder.status,
+        deliveryAddress: userAddresses.find(addr => addr.id === editForm.addressId)?.addressLine1 || "",
+      },
+    }, {
+      onSuccess: () => {
         setSuccess("Order updated successfully!");
-        await fetchOrders(); // Refresh orders
+        refetchOrders(); // Refresh orders
         setTimeout(() => {
           setIsEditDialogOpen(false);
           setSuccess(null);
         }, 2000);
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to update order");
-      }
-    } catch (error) {
-      setError("An error occurred while updating the order");
-    } finally {
-      setIsSubmitting(false);
-    }
+      },
+      onError: (error) => {
+        setError(error.message || "Failed to update order");
+      },
+    });
   };
 
   const handleCancelOrder = async (order: Order) => {
     if (!confirm("Are you sure you want to cancel this order?")) return;
 
-    try {
-      const response = await fetch(`/api/orders/${order.id}/cancel`, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify({ reason: "Cancelled by user" }),
-      });
-
-      if (response.ok) {
+    cancelOrderMutation.mutate(order.id, {
+      onSuccess: () => {
         setSuccess("Order cancelled successfully!");
-        await fetchOrders(); // Refresh orders
+        refetchOrders(); // Refresh orders
         setTimeout(() => setSuccess(null), 3000);
-      } else {
-        const data = await response.json();
-        setError(data.error || "Failed to cancel order");
+      },
+      onError: (error) => {
+        setError(error.message || "Failed to cancel order");
         setTimeout(() => setError(null), 3000);
-      }
-    } catch (error) {
-      setError("An error occurred while cancelling the order");
-      setTimeout(() => setError(null), 3000);
-    }
+      },
+    });
   };
 
   if (isLoading) {
     return (
-      <Card>
-        <CardHeader>
-          <CardTitle>Order Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">Loading orders...</div>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8">
+        <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-gray-900 mx-auto"></div>
+        <p className="mt-2 text-gray-600">Loading orders...</p>
+      </div>
     );
   }
 
-  if (orders.length === 0) {
+  if (!orders || orders.length === 0) {
     return (
       <Card>
-        <CardHeader>
-          <CardTitle>Order Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="text-center py-8 text-muted-foreground">
-            <Package className="h-12 w-12 mx-auto mb-4 text-muted-foreground" />
-            <p>No orders found</p>
-            <p className="text-sm">Your orders will appear here once you place them.</p>
-          </div>
+        <CardContent className="text-center py-8">
+          <Package className="h-12 w-12 text-gray-400 mx-auto mb-4" />
+          <h3 className="text-lg font-medium text-gray-900 mb-2">No orders found</h3>
+          <p className="text-gray-600">You haven't placed any orders yet.</p>
         </CardContent>
       </Card>
     );
   }
 
   return (
-    <>
-      <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center">
-            <Package className="h-5 w-5 mr-2" />
-            Order Management
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          {error && (
-            <Alert variant="destructive" className="mb-4">
-              <AlertCircle className="h-4 w-4" />
-              <AlertDescription>{error}</AlertDescription>
-            </Alert>
-          )}
+    <div className="space-y-6">
+      {error && (
+        <Alert variant="destructive">
+          <X className="h-4 w-4" />
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      )}
 
-          {success && (
-            <Alert className="mb-4">
-              <CheckCircle className="h-4 w-4" />
-              <AlertDescription>{success}</AlertDescription>
-            </Alert>
-          )}
+      {success && (
+        <Alert>
+          <CheckCircle className="h-4 w-4" />
+          <AlertDescription>{success}</AlertDescription>
+        </Alert>
+      )}
 
-          <div className="space-y-4">
-            {orders.map((order) => (
-              <div
-                key={order.id}
-                className="border rounded-lg p-4 hover:bg-muted/50 transition-colors"
-              >
-                <div className="flex items-start justify-between">
-                  <div className="flex-1">
-                    <div className="flex items-center space-x-3 mb-2">
-                      {getStatusIcon(order.status)}
-                      <div>
-                        <h3 className="font-medium">{order.orderNumber}</h3>
-                        <p className="text-sm text-muted-foreground">
-                          {order.groupOrder.product.name}
-                        </p>
-                      </div>
-                    </div>
+      <div className="grid gap-6">
+        {orders.map((order) => (
+          <Card key={order.id} className="overflow-hidden">
+            <CardHeader className="bg-gray-50 px-6 py-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-3">
+                  {getStatusIcon(order.status)}
+                  <div>
+                    <CardTitle className="text-lg">Order #{order.orderNumber}</CardTitle>
+                    <p className="text-sm text-gray-600">
+                      Placed on {new Date(order.placedAt).toLocaleDateString()}
+                    </p>
+                  </div>
+                </div>
+                <div className="flex items-center space-x-3">
+                  {getStatusBadge(order.status)}
+                  {getPaymentStatusBadge(order.paymentStatus)}
+                </div>
+              </div>
+            </CardHeader>
 
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
-                      <div>
-                        <p className="text-muted-foreground">Status</p>
-                        {getStatusBadge(order.status)}
-                      </div>
-                      
-                      <div>
-                        <p className="text-muted-foreground">Payment</p>
-                        {getPaymentStatusBadge(order.paymentStatus)}
-                      </div>
-                      
-                      <div>
-                        <p className="text-muted-foreground">Amount</p>
-                        <p className="font-medium">{formatPrice(order.totalAmount)}</p>
-                      </div>
-                      
-                      <div>
-                        <p className="text-muted-foreground">Quantity</p>
-                        <p className="font-medium">
-                          {order.items[0]?.quantity || 1} {order.groupOrder.product.unit}
-                        </p>
-                      </div>
-                    </div>
-
-                    <div className="mt-3 text-sm text-muted-foreground">
-                      <p>Placed: {new Date(order.placedAt).toLocaleDateString()}</p>
-                      {order.groupOrder.estimatedDelivery && (
-                        <p>Estimated Delivery: {new Date(order.groupOrder.estimatedDelivery).toLocaleDateString()}</p>
-                      )}
+            <CardContent className="p-6">
+              <div className="grid md:grid-cols-2 gap-6">
+                {/* Order Details */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Product Details</h4>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="font-medium">{order.groupOrder.product.name}</p>
+                      <p className="text-sm text-gray-600">
+                        {order.items[0]?.quantity} x {order.items[0]?.product.unitSize} {order.items[0]?.product.unit}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Unit Price: ₹{order.items[0]?.unitPrice}
+                      </p>
                     </div>
                   </div>
 
-                  <div className="flex items-center space-x-2 ml-4">
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={() => {
-                        setSelectedOrder(order);
-                        setIsViewDialogOpen(true);
-                      }}
-                    >
-                      <Eye className="h-4 w-4" />
-                    </Button>
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Group Order</h4>
+                    <div className="bg-blue-50 p-3 rounded-lg">
+                      <p className="text-sm text-blue-800">
+                        Batch: {order.groupOrder.batchNumber}
+                      </p>
+                      <p className="text-sm text-blue-600">
+                        Status: {order.groupOrder.status}
+                      </p>
+                      {order.groupOrder.estimatedDelivery && (
+                        <p className="text-sm text-blue-600">
+                          Est. Delivery: {new Date(order.groupOrder.estimatedDelivery).toLocaleDateString()}
+                        </p>
+                      )}
+                    </div>
+                  </div>
+                </div>
 
+                {/* Address & Actions */}
+                <div className="space-y-4">
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Delivery Address</h4>
+                    <div className="bg-gray-50 p-3 rounded-lg">
+                      <p className="text-sm text-gray-800">{order.address.addressLine1}</p>
+                      {order.address.addressLine2 && (
+                        <p className="text-sm text-gray-800">{order.address.addressLine2}</p>
+                      )}
+                      <p className="text-sm text-gray-600">
+                        {order.address.city}, {order.address.state} {order.address.pincode}
+                      </p>
+                      <p className="text-sm text-gray-600">
+                        Contact: {order.address.contactPerson} - {order.address.contactPhone}
+                      </p>
+                    </div>
+                  </div>
+
+                  <div>
+                    <h4 className="font-medium text-gray-900 mb-2">Order Total</h4>
+                    <div className="bg-green-50 p-3 rounded-lg">
+                      <p className="text-2xl font-bold text-green-600">
+                        ₹{order.totalAmount.toFixed(2)}
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* Action Buttons */}
+                  <div className="flex space-x-2">
                     {canEditOrder(order) && (
                       <Button
-                        variant="ghost"
+                        variant="outline"
                         size="sm"
                         onClick={() => openEditDialog(order)}
+                        className="flex-1"
                       >
-                        <Edit className="h-4 w-4" />
+                        <Edit className="h-4 w-4 mr-2" />
+                        Edit
                       </Button>
                     )}
-
                     {canCancelOrder(order) && (
                       <Button
-                        variant="ghost"
+                        variant="destructive"
                         size="sm"
                         onClick={() => handleCancelOrder(order)}
-                        className="text-red-600 hover:text-red-700"
+                        className="flex-1"
                       >
-                        <X className="h-4 w-4" />
+                        <Trash2 className="h-4 w-4 mr-2" />
+                        Cancel
                       </Button>
                     )}
                   </div>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        ))}
+      </div>
 
       {/* Edit Order Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent>
           <DialogHeader>
             <DialogTitle>Edit Order</DialogTitle>
           </DialogHeader>
-          
           <form onSubmit={handleEditSubmit} className="space-y-4">
             <div>
               <Label htmlFor="quantity">Quantity</Label>
@@ -416,12 +329,10 @@ export function OrderManagement({ userId }: OrderManagementProps) {
                 type="number"
                 value={editForm.quantity}
                 onChange={(e) => setEditForm({ ...editForm, quantity: e.target.value })}
-                min={selectedOrder?.groupOrder.product.minOrderQty || 1}
-                max={selectedOrder?.groupOrder.product.maxOrderQty || 100}
+                min="1"
                 required
               />
             </div>
-
             <div>
               <Label htmlFor="addressId">Delivery Address</Label>
               <Select
@@ -434,24 +345,25 @@ export function OrderManagement({ userId }: OrderManagementProps) {
                 <SelectContent>
                   {userAddresses.map((address) => (
                     <SelectItem key={address.id} value={address.id}>
-                      {address.name} - {address.addressLine1}, {address.city}
+                      {address.name} - {address.addressLine1}
                     </SelectItem>
                   ))}
                 </SelectContent>
               </Select>
             </div>
-
             <div>
               <Label htmlFor="notes">Notes</Label>
-              <Textarea
+              <Input
                 id="notes"
                 value={editForm.notes}
                 onChange={(e) => setEditForm({ ...editForm, notes: e.target.value })}
                 placeholder="Any special instructions..."
               />
             </div>
-
-            <div className="flex justify-end space-x-2">
+            <div className="flex space-x-2">
+              <Button type="submit" disabled={updateOrderMutation.isPending}>
+                {updateOrderMutation.isPending ? "Updating..." : "Update Order"}
+              </Button>
               <Button
                 type="button"
                 variant="outline"
@@ -459,64 +371,10 @@ export function OrderManagement({ userId }: OrderManagementProps) {
               >
                 Cancel
               </Button>
-              <Button type="submit" disabled={isSubmitting}>
-                {isSubmitting ? "Updating..." : "Update Order"}
-              </Button>
             </div>
           </form>
         </DialogContent>
       </Dialog>
-
-      {/* View Order Dialog */}
-      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
-        <DialogContent className="max-w-2xl">
-          <DialogHeader>
-            <DialogTitle>Order Details - {selectedOrder?.orderNumber}</DialogTitle>
-          </DialogHeader>
-          
-          {selectedOrder && (
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h4 className="font-medium mb-2">Product Information</h4>
-                  <p><strong>Name:</strong> {selectedOrder.groupOrder.product.name}</p>
-                  <p><strong>Quantity:</strong> {selectedOrder.items[0]?.quantity || 1} {selectedOrder.groupOrder.product.unit}</p>
-                  <p><strong>Unit Price:</strong> {formatPrice(selectedOrder.items[0]?.unitPrice || 0)}</p>
-                  <p><strong>Total Amount:</strong> {formatPrice(selectedOrder.totalAmount)}</p>
-                </div>
-                
-                <div>
-                  <h4 className="font-medium mb-2">Order Information</h4>
-                  <p><strong>Status:</strong> {getStatusBadge(selectedOrder.status)}</p>
-                  <p><strong>Payment Status:</strong> {getPaymentStatusBadge(selectedOrder.paymentStatus)}</p>
-                  <p><strong>Placed:</strong> {new Date(selectedOrder.placedAt).toLocaleDateString()}</p>
-                  {selectedOrder.groupOrder.estimatedDelivery && (
-                    <p><strong>Estimated Delivery:</strong> {new Date(selectedOrder.groupOrder.estimatedDelivery).toLocaleDateString()}</p>
-                  )}
-                </div>
-              </div>
-
-              <div>
-                <h4 className="font-medium mb-2">Delivery Address</h4>
-                <div className="bg-muted p-3 rounded-lg">
-                  <p><strong>{selectedOrder.address.name}</strong></p>
-                  <p>{selectedOrder.address.addressLine1}</p>
-                  {selectedOrder.address.addressLine2 && <p>{selectedOrder.address.addressLine2}</p>}
-                  <p>{selectedOrder.address.city}, {selectedOrder.address.state} {selectedOrder.address.pincode}</p>
-                  {selectedOrder.address.landmark && <p>Landmark: {selectedOrder.address.landmark}</p>}
-                </div>
-              </div>
-
-              {selectedOrder.notes && (
-                <div>
-                  <h4 className="font-medium mb-2">Notes</h4>
-                  <p className="bg-muted p-3 rounded-lg">{selectedOrder.notes}</p>
-                </div>
-              )}
-            </div>
-          )}
-        </DialogContent>
-      </Dialog>
-    </>
+    </div>
   );
 } 

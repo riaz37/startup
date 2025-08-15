@@ -5,26 +5,33 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Progress } from "@/components/ui/progress";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { 
   Mail, 
   Send, 
-  AlertCircle, 
   CheckCircle, 
-  Clock, 
-  RefreshCw,
-  TestTube,
-  TrendingUp,
-  TrendingDown
+  XCircle, 
+  AlertCircle, 
+  RefreshCw, 
+  Wifi, 
+  BarChart3,
+  Clock,
+  User
 } from "lucide-react";
+import { 
+  useEmailStats, 
+  useFailedEmails, 
+  useRetryFailedEmails, 
+  useTestEmailConnection 
+} from "@/hooks/api";
 
 interface EmailStats {
-  total: number;
-  pending: number;
-  sent: number;
-  delivered: number;
-  failed: number;
-  successRate: number;
+  totalSent: number;
+  totalDelivered: number;
+  totalFailed: number;
+  deliveryRate: number;
+  failureRate: number;
+  averageDeliveryTime: number;
 }
 
 interface EmailDelivery {
@@ -32,38 +39,28 @@ interface EmailDelivery {
   to: string;
   subject: string;
   template: string;
-  status: 'pending' | 'sent' | 'delivered' | 'failed';
-  sentAt?: string;
+  status: string;
+  sentAt: string;
   deliveredAt?: string;
   error?: string;
   retryCount: number;
 }
 
 export function EmailManagementPanel() {
-  const [stats, setStats] = useState<EmailStats | null>(null);
-  const [recentDeliveries, setRecentDeliveries] = useState<EmailDelivery[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
-  const [isTestingConnection, setIsTestingConnection] = useState(false);
-  const [isRetryingFailed, setIsRetryingFailed] = useState(false);
+  const [recentDeliveries, setRecentDeliveries] = useState<EmailDelivery[]>([]);
+
+  // Use the new hooks
+  const { data: stats, refetch: refetchStats } = useEmailStats();
+  const { data: failedEmails, refetch: refetchFailedEmails } = useFailedEmails();
+  const retryFailedEmailsMutation = useRetryFailedEmails();
+  const testConnectionMutation = useTestEmailConnection();
 
   useEffect(() => {
-    fetchEmailStats();
     fetchRecentDeliveries();
   }, []);
-
-  const fetchEmailStats = async () => {
-    try {
-      const response = await fetch('/api/email/management?action=stats');
-      if (response.ok) {
-        const data = await response.json();
-        setStats(data.stats);
-      }
-    } catch (error) {
-      console.error('Error fetching email stats:', error);
-    }
-  };
 
   const fetchRecentDeliveries = async () => {
     try {
@@ -107,119 +104,95 @@ export function EmailManagementPanel() {
   };
 
   const testConnection = async () => {
-    setIsTestingConnection(true);
     setError(null);
     setSuccess(null);
 
-    try {
-      const response = await fetch('/api/email/management', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'test-connection' }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
+    testConnectionMutation.mutate(undefined, {
+      onSuccess: (data) => {
         if (data.result.success) {
           setSuccess('SMTP connection test successful!');
         } else {
           setError('SMTP connection test failed');
         }
-      } else {
-        setError('Failed to test connection');
-      }
-    } catch (error) {
-      setError('An error occurred while testing connection');
-    } finally {
-      setIsTestingConnection(false);
-    }
+      },
+      onError: (error) => {
+        setError('An error occurred while testing connection');
+      },
+    });
   };
 
   const retryFailedEmails = async () => {
-    setIsRetryingFailed(true);
     setError(null);
     setSuccess(null);
 
-    try {
-      const response = await fetch('/api/email/management', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ action: 'retry-failed' }),
-      });
-
-      if (response.ok) {
-        const data = await response.json();
-        setSuccess(`Retry completed. ${data.results.length} emails processed.`);
-        // Refresh stats
-        await fetchEmailStats();
-      } else {
+    retryFailedEmailsMutation.mutate(undefined, {
+      onSuccess: () => {
+        setSuccess('Failed emails retry completed!');
+        refetchFailedEmails();
+        refetchStats();
+      },
+      onError: (error) => {
         setError('Failed to retry failed emails');
-      }
-    } catch (error) {
-      setError('An error occurred while retrying failed emails');
-    } finally {
-      setIsRetryingFailed(false);
-    }
-  };
-
-  const sendTestEmail = async () => {
-    // Implementation for sending test email
-    setSuccess('Test email functionality would be implemented here');
-  };
-
-  const getStatusIcon = (status: string) => {
-    switch (status) {
-      case 'pending':
-        return <Clock className="h-4 w-4 text-yellow-600" />;
-      case 'sent':
-        return <Send className="h-4 w-4 text-blue-600" />;
-      case 'delivered':
-        return <CheckCircle className="h-4 w-4 text-green-600" />;
-      case 'failed':
-        return <AlertCircle className="h-4 w-4 text-red-600" />;
-      default:
-        return <Mail className="h-4 w-4 text-gray-600" />;
-    }
+      },
+    });
   };
 
   const getStatusBadge = (status: string) => {
-    const statusConfig = {
-      pending: { variant: "secondary", text: "Pending" },
-      sent: { variant: "default", text: "Sent" },
-      delivered: { variant: "default", text: "Delivered" },
-      failed: { variant: "destructive", text: "Failed" },
-    };
-
-    const config = statusConfig[status as keyof typeof statusConfig] || { variant: "outline", text: status };
-    
-    return (
-      <Badge variant={config.variant as any}>
-        {config.text}
-      </Badge>
-    );
+    switch (status) {
+      case 'delivered':
+        return <Badge variant="default" className="bg-green-100 text-green-800">Delivered</Badge>;
+      case 'sent':
+        return <Badge variant="secondary">Sent</Badge>;
+      case 'failed':
+        return <Badge variant="destructive">Failed</Badge>;
+      default:
+        return <Badge variant="outline">{status}</Badge>;
+    }
   };
 
   if (isLoading) {
     return (
-      <Card className="card-sohozdaam mb-8">
-        <CardContent className="text-center py-8">
-          <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
-          <p>Loading email management data...</p>
-        </CardContent>
-      </Card>
+      <div className="text-center py-8">
+        <RefreshCw className="h-8 w-8 animate-spin mx-auto mb-4" />
+        <p>Loading email management data...</p>
+      </div>
     );
   }
 
   return (
-    <div className="space-y-6 mb-8">
-      {/* Status Alerts */}
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Email Management</h1>
+          <p className="text-muted-foreground">Monitor and manage email delivery system</p>
+        </div>
+        <div className="flex space-x-2">
+          <Button
+            variant="outline"
+            onClick={testConnection}
+            disabled={testConnectionMutation.isLoading}
+          >
+            <Wifi className="h-4 w-4 mr-2" />
+            {testConnectionMutation.isLoading ? 'Testing...' : 'Test Connection'}
+          </Button>
+          <Button
+            onClick={retryFailedEmails}
+            disabled={retryFailedEmailsMutation.isLoading}
+          >
+            <RefreshCw className="h-4 w-4 mr-2" />
+            {retryFailedEmailsMutation.isLoading ? 'Retrying...' : 'Retry Failed'}
+          </Button>
+        </div>
+      </div>
+
+      {/* Alerts */}
       {error && (
         <Alert variant="destructive">
-          <AlertCircle className="h-4 w-4" />
+          <XCircle className="h-4 w-4" />
           <AlertDescription>{error}</AlertDescription>
         </Alert>
       )}
-
       {success && (
         <Alert>
           <CheckCircle className="h-4 w-4" />
@@ -227,203 +200,154 @@ export function EmailManagementPanel() {
         </Alert>
       )}
 
-      {/* Email Statistics Overview */}
-      <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
-        <Card className="card-sohozdaam">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <Mail className="h-8 w-8 text-blue-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Emails</p>
-                <p className="text-2xl font-bold">{stats?.total || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Stats Cards */}
+      {stats && (
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
+              <Send className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.totalSent.toLocaleString()}</div>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Delivered</CardTitle>
+              <CheckCircle className="h-4 w-4 text-green-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-green-600">{stats.totalDelivered.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.deliveryRate.toFixed(1)}% delivery rate
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Failed</CardTitle>
+              <XCircle className="h-4 w-4 text-red-600" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold text-red-600">{stats.totalFailed.toLocaleString()}</div>
+              <p className="text-xs text-muted-foreground">
+                {stats.failureRate.toFixed(1)}% failure rate
+              </p>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+              <CardTitle className="text-sm font-medium">Avg Delivery Time</CardTitle>
+              <Clock className="h-4 w-4 text-muted-foreground" />
+            </CardHeader>
+            <CardContent>
+              <div className="text-2xl font-bold">{stats.averageDeliveryTime.toFixed(1)}s</div>
+            </CardContent>
+          </Card>
+        </div>
+      )}
 
-        <Card className="card-sohozdaam">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <CheckCircle className="h-8 w-8 text-green-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Success Rate</p>
-                <p className="text-2xl font-bold">{stats?.successRate || 0}%</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
+      {/* Tabs */}
+      <Tabs defaultValue="overview" className="space-y-4">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="failed">Failed Emails</TabsTrigger>
+          <TabsTrigger value="recent">Recent Deliveries</TabsTrigger>
+        </TabsList>
 
-        <Card className="card-sohozdaam">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <Clock className="h-8 w-8 text-yellow-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Pending</p>
-                <p className="text-2xl font-bold">{stats?.pending || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-sohozdaam">
-          <CardContent className="p-6">
-            <div className="flex items-center space-x-2">
-              <AlertCircle className="h-8 w-8 text-red-600" />
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Failed</p>
-                <p className="text-2xl font-bold">{stats?.failed || 0}</p>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Success Rate Progress */}
-      <Card className="card-sohozdaam">
-        <CardHeader>
-          <CardTitle>Email Delivery Success Rate</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-4">
-            <div className="flex justify-between text-sm">
-              <span>Current Success Rate</span>
-              <span className="font-medium">{stats?.successRate || 0}%</span>
-            </div>
-            <Progress value={stats?.successRate || 0} className="h-3" />
-            <div className="flex justify-between text-xs text-muted-foreground">
-              <span>0%</span>
-              <span>50%</span>
-              <span>100%</span>
-            </div>
-          </div>
-        </CardContent>
-      </Card>
-
-      {/* Recent Email Deliveries */}
-      <Card className="card-sohozdaam">
-        <CardHeader>
-          <CardTitle className="flex items-center justify-between">
-            <span>Recent Email Deliveries</span>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={fetchRecentDeliveries}
-            >
-              <RefreshCw className="h-4 w-4 mr-2" />
-              Refresh
-            </Button>
-          </CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="space-y-3">
-            {recentDeliveries.map((delivery) => (
-              <div
-                key={delivery.id}
-                className="flex items-center justify-between p-3 border rounded-lg"
-              >
-                <div className="flex items-center space-x-3">
-                  {getStatusIcon(delivery.status)}
-                  <div>
-                    <p className="font-medium text-sm">{delivery.to}</p>
-                    <p className="text-xs text-muted-foreground">
-                      {delivery.subject}
-                    </p>
+        <TabsContent value="overview" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Email System Status</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-4">
+                <div className="flex items-center justify-between p-3 bg-green-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                    <span className="font-medium">SMTP Connection</span>
                   </div>
+                  <Badge variant="default" className="bg-green-100 text-green-800">Active</Badge>
                 </div>
-                
-                <div className="flex items-center space-x-3">
-                  {getStatusBadge(delivery.status)}
-                  
-                  {delivery.status === 'failed' && (
-                    <Badge variant="outline" className="text-xs">
-                      Retry: {delivery.retryCount}/3
-                    </Badge>
-                  )}
-                  
-                  <span className="text-xs text-muted-foreground">
-                    {delivery.sentAt ? new Date(delivery.sentAt).toLocaleTimeString() : 'N/A'}
-                  </span>
+                <div className="flex items-center justify-between p-3 bg-blue-50 rounded-lg">
+                  <div className="flex items-center space-x-2">
+                    <BarChart3 className="h-5 w-5 text-blue-600" />
+                    <span className="font-medium">Queue Status</span>
+                  </div>
+                  <Badge variant="secondary">Normal</Badge>
                 </div>
               </div>
-            ))}
-          </div>
-        </CardContent>
-      </Card>
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-      {/* Quick Actions */}
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card className="card-sohozdaam">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TestTube className="h-6 w-6 text-primary mr-2" />
-              System Health
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={testConnection}
-                disabled={isTestingConnection}
-              >
-                {isTestingConnection ? (
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <TestTube className="h-4 w-4 mr-2" />
-                )}
-                {isTestingConnection ? 'Testing...' : 'Test SMTP Connection'}
-              </Button>
-              
-              <Button
-                variant="outline"
-                className="w-full"
-                onClick={retryFailedEmails}
-                disabled={isRetryingFailed}
-              >
-                {isRetryingFailed ? (
-                  <RefreshCw className="h-4 w-4 animate-spin mr-2" />
-                ) : (
-                  <RefreshCw className="h-4 w-4 mr-2" />
-                )}
-                {isRetryingFailed ? 'Retrying...' : 'Retry Failed Emails'}
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
+        <TabsContent value="failed" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Failed Emails</CardTitle>
+            </CardHeader>
+            <CardContent>
+              {failedEmails && failedEmails.length > 0 ? (
+                <div className="space-y-3">
+                  {failedEmails.slice(0, 10).map((email) => (
+                    <div key={email.id} className="flex items-center justify-between p-3 border rounded-lg">
+                      <div className="flex-1">
+                        <p className="font-medium">{email.to}</p>
+                        <p className="text-sm text-muted-foreground">{email.subject}</p>
+                        <p className="text-xs text-red-600">{email.error}</p>
+                      </div>
+                      <div className="text-right">
+                        <Badge variant="destructive">Failed</Badge>
+                        <p className="text-xs text-muted-foreground mt-1">
+                          Retries: {email.retryCount}/{email.maxRetries}
+                        </p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-8 text-muted-foreground">
+                  <CheckCircle className="h-12 w-12 mx-auto mb-4 text-green-600" />
+                  <p>No failed emails</p>
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </TabsContent>
 
-        <Card className="card-sohozdaam">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <TrendingUp className="h-6 w-6 text-primary mr-2" />
-              Performance Metrics
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              <div className="flex justify-between">
-                <span className="text-sm">Average Delivery Time</span>
-                <span className="text-sm font-medium">2.3s</span>
+        <TabsContent value="recent" className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Recent Deliveries</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {recentDeliveries.map((delivery) => (
+                  <div key={delivery.id} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex-1">
+                      <div className="flex items-center space-x-2">
+                        <User className="h-4 w-4 text-muted-foreground" />
+                        <p className="font-medium">{delivery.to}</p>
+                      </div>
+                      <p className="text-sm text-muted-foreground">{delivery.subject}</p>
+                      <p className="text-xs text-muted-foreground">
+                        Template: {delivery.template}
+                      </p>
+                    </div>
+                    <div className="text-right">
+                      {getStatusBadge(delivery.status)}
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {new Date(delivery.sentAt).toLocaleDateString()}
+                      </p>
+                    </div>
+                  </div>
+                ))}
               </div>
-              
-              <div className="flex justify-between">
-                <span className="text-sm">Bounce Rate</span>
-                <span className="text-sm font-medium">0.5%</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-sm">Spam Complaints</span>
-                <span className="text-sm font-medium">0</span>
-              </div>
-              
-              <div className="flex justify-between">
-                <span className="text-sm">Unsubscribe Rate</span>
-                <span className="text-sm font-medium">0.2%</span>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 } 

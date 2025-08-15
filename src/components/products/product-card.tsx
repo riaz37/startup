@@ -3,102 +3,71 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Package, ShoppingCart, Tag } from "lucide-react";
 import Link from "next/link";
-
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  imageUrl: string | null;
-  unit: string;
-  unitSize: number;
-  mrp: number;
-  sellingPrice: number;
-  minOrderQty: number;
-  maxOrderQty: number | null;
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-}
-
-interface ProductCardProps {
-  product: Product;
-  formatPrice: (price: number) => string;
-  calculateDiscount: (mrp: number, sellingPrice: number) => number;
-}
+import { ProductCardProps } from "@/types";
 
 export function ProductCard({ product, formatPrice, calculateDiscount }: ProductCardProps) {
+  const discount = calculateDiscount(product.mrp, product.sellingPrice);
+
   return (
-    <Card className="card-hover overflow-hidden">
-      <div className="aspect-square w-full overflow-hidden bg-muted">
+    <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden">
+      <div className="relative">
         {product.imageUrl ? (
           <img
             src={product.imageUrl}
             alt={product.name}
-            className="h-full w-full object-cover object-center transition-transform duration-300 hover:scale-105"
+            className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
           />
         ) : (
-          <div className="h-full w-full bg-muted flex items-center justify-center">
-            <Package className="h-12 w-12 text-muted-foreground" />
+          <div className="w-full h-48 bg-gray-200 flex items-center justify-center">
+            <Package className="h-16 w-16 text-gray-400" />
           </div>
         )}
-      </div>
-      
-      <CardContent className="p-6">
-        <div className="flex items-center justify-between mb-3">
-          <Badge variant="secondary">
-            {product.category.name}
+        
+        {discount > 0 && (
+          <Badge className="absolute top-2 right-2 bg-red-500 text-white">
+            {discount}% OFF
           </Badge>
-          {calculateDiscount(product.mrp, product.sellingPrice) > 0 && (
-            <Badge className="badge-success">
-              <Tag className="h-3 w-3 mr-1" />
-              {calculateDiscount(product.mrp, product.sellingPrice)}% OFF
-            </Badge>
-          )}
-        </div>
-        
-        <h3 className="text-lg font-semibold mb-2 line-clamp-2">
-          {product.name}
-        </h3>
-        
-        <p className="text-sm text-muted-foreground mb-3">
-          {product.unitSize} {product.unit}
-        </p>
-        
-        {product.description && (
-          <p className="text-sm text-muted-foreground mb-4 line-clamp-2">
-            {product.description}
-          </p>
         )}
-        
+      </div>
+
+      <CardContent className="p-4">
+        <div className="mb-3">
+          <h3 className="font-semibold text-lg mb-1 line-clamp-2 group-hover:text-blue-600 transition-colors">
+            {product.name}
+          </h3>
+          <p className="text-sm text-gray-600 mb-2">
+            {product.unitSize} {product.unit}
+          </p>
+        </div>
+
         <div className="flex items-center justify-between mb-4">
           <div className="flex items-center space-x-2">
-            <span className="text-xl font-bold text-primary">
+            <span className="text-lg font-bold text-green-600">
               {formatPrice(product.sellingPrice)}
             </span>
-            {product.mrp > product.sellingPrice && (
-              <span className="text-sm text-muted-foreground line-through">
+            {discount > 0 && (
+              <span className="text-sm text-gray-500 line-through">
                 {formatPrice(product.mrp)}
               </span>
             )}
           </div>
+          <Badge variant="outline" className="text-xs">
+            {product.category.name}
+          </Badge>
         </div>
-        
-        <div className="text-xs text-muted-foreground mb-4 p-2 bg-muted/50 rounded">
-          Min: {product.minOrderQty} {product.unit}
-          {product.maxOrderQty && (
-            <span> • Max: {product.maxOrderQty} {product.unit}</span>
-          )}
+
+        <div className="flex items-center justify-between">
+          <div className="text-sm text-gray-600">
+            Min: {product.minOrderQty} {product.unit}
+            {product.maxOrderQty && (
+              <span className="ml-2">Max: {product.maxOrderQty} {product.unit}</span>
+            )}
+          </div>
+          <Button size="sm" className="flex items-center space-x-1">
+            <ShoppingCart className="h-4 w-4" />
+            <span>Add to Cart</span>
+          </Button>
         </div>
-        
-        <Button className="w-full" asChild>
-          <Link href={`/products/${product.id}`}>
-            <ShoppingCart className="h-4 w-4 mr-2" />
-            View Details
-          </Link>
-        </Button>
       </CardContent>
     </Card>
   );

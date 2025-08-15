@@ -1,63 +1,14 @@
-import { getCurrentUser } from "@/lib/auth-utils";
+'use client';
+
+
 import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { EmptyState } from "@/components/common";
 import { ProductCard } from "@/components/products/product-card";
-import { Package, Zap } from "lucide-react";
+import { Package } from "lucide-react";
+import { useProducts } from "@/hooks/api";
 
-interface Product {
-  id: string;
-  name: string;
-  slug: string;
-  description: string | null;
-  imageUrl: string | null;
-  unit: string;
-  unitSize: number;
-  mrp: number;
-  sellingPrice: number;
-  minOrderQty: number;
-  maxOrderQty: number | null;
-  category: {
-    id: string;
-    name: string;
-    slug: string;
-  };
-}
-
-interface ProductsResponse {
-  products: Product[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
-async function getProducts(): Promise<ProductsResponse> {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  
-  try {
-    const response = await fetch(`${baseUrl}/api/products`, {
-      cache: "no-store"
-    });
-    
-    if (!response.ok) {
-      throw new Error("Failed to fetch products");
-    }
-    
-    return response.json();
-  } catch (error) {
-    console.error("Error fetching products:", error);
-    return {
-      products: [],
-      pagination: { page: 1, limit: 10, total: 0, pages: 0 }
-    };
-  }
-}
-
-export default async function ProductsPage() {
-  const user = await getCurrentUser();
-  const { products } = await getProducts();
+export default function ProductsPage() {
+  const { data: productsResponse, isPending: loading, error, refetch } = useProducts();
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -71,6 +22,49 @@ export default async function ProductsPage() {
   const calculateDiscount = (mrp: number, sellingPrice: number) => {
     return Math.round(((mrp - sellingPrice) / mrp) * 100);
   };
+
+  const handleSeedProducts = async () => {
+    try {
+      await fetch("/api/seed", { method: "POST" });
+      refetch(); // Refetch products after seeding
+    } catch (error) {
+      console.error("Failed to seed products:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <PageLayout>
+        <MainContainer>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+          </div>
+        </MainContainer>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout>
+        <MainContainer>
+          <div className="flex items-center justify-center min-h-[400px]">
+                      <div className="text-center">
+            <p className="text-red-600 mb-4">Error loading products: {error?.message || 'Unknown error'}</p>
+            <button 
+              onClick={() => refetch()}
+              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
+            >
+              Try Again
+            </button>
+          </div>
+          </div>
+        </MainContainer>
+      </PageLayout>
+    );
+  }
+
+  const products = productsResponse?.products || [];
 
   return (
     <PageLayout>
@@ -89,11 +83,7 @@ export default async function ProductsPage() {
             title="No Products Available"
             description="Products will appear here once they are added to our catalog."
             actionLabel="Seed Sample Products"
-            onAction={() => {
-              fetch("/api/seed", { method: "POST" })
-                .then(() => window.location.reload())
-                .catch(console.error);
-            }}
+            onAction={handleSeedProducts}
           />
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

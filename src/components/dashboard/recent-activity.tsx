@@ -4,67 +4,60 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/common";
 import { Activity, Package, Users, ShoppingCart, Clock } from "lucide-react";
 import Link from "next/link";
-
-interface ActivityItem {
-  id: string;
-  type: "order" | "group_order" | "product";
-  title: string;
-  description: string;
-  timestamp: string;
-  status?: string;
-}
-
-interface RecentActivityProps {
-  activities: ActivityItem[];
-}
+import { RecentActivityProps } from "@/types";
 
 export function RecentActivity({ activities }: RecentActivityProps) {
   const getActivityIcon = (type: string) => {
     switch (type) {
       case "order":
-        return ShoppingCart;
+        return <ShoppingCart className="h-4 w-4" />;
       case "group_order":
-        return Users;
+        return <Users className="h-4 w-4" />;
       case "product":
-        return Package;
+        return <Package className="h-4 w-4" />;
       default:
-        return Activity;
+        return <Activity className="h-4 w-4" />;
     }
   };
 
-  const getStatusBadge = (status?: string) => {
-    if (!status) return null;
-    
-    switch (status.toLowerCase()) {
-      case "pending":
-        return <Badge className="badge-warning">Pending</Badge>;
-      case "confirmed":
-        return <Badge className="badge-primary">Confirmed</Badge>;
-      case "delivered":
-        return <Badge className="badge-success">Delivered</Badge>;
-      case "cancelled":
-        return <Badge className="badge-error">Cancelled</Badge>;
+  const getActivityColor = (type: string) => {
+    switch (type) {
+      case "order":
+        return "bg-blue-100 text-blue-800";
+      case "group_order":
+        return "bg-green-100 text-green-800";
+      case "product":
+        return "bg-purple-100 text-purple-800";
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return "bg-gray-100 text-gray-800";
+    }
+  };
+
+  const formatTimestamp = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const now = new Date();
+    const diffInHours = Math.floor((now.getTime() - date.getTime()) / (1000 * 60 * 60));
+
+    if (diffInHours < 1) {
+      return "Just now";
+    } else if (diffInHours < 24) {
+      return `${diffInHours} hour${diffInHours > 1 ? 's' : ''} ago`;
+    } else {
+      return date.toLocaleDateString();
     }
   };
 
   if (activities.length === 0) {
     return (
-      <Card className="card-sohozdaam">
+      <Card>
         <CardHeader>
-          <CardTitle className="flex items-center">
-            <Activity className="h-6 w-6 text-primary mr-2" />
-            Recent Activity
-          </CardTitle>
+          <CardTitle>Recent Activity</CardTitle>
         </CardHeader>
         <CardContent>
           <EmptyState
             icon={Activity}
             title="No Recent Activity"
-            description="Your recent orders and group order activities will appear here."
-            actionLabel="Browse Group Orders"
-            actionHref="/group-orders"
+            description="Your recent activities will appear here."
           />
         </CardContent>
       </Card>
@@ -72,45 +65,41 @@ export function RecentActivity({ activities }: RecentActivityProps) {
   }
 
   return (
-    <Card className="card-sohozdaam">
-      <CardHeader className="flex flex-row items-center justify-between">
-        <CardTitle className="flex items-center">
-          <Activity className="h-6 w-6 text-primary mr-2" />
-          Recent Activity
-        </CardTitle>
+    <Card>
+      <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+        <CardTitle className="text-sm font-medium">Recent Activity</CardTitle>
         <Button variant="outline" size="sm" asChild>
-          <Link href="/orders">View All</Link>
+          <Link href="/dashboard/activity">View All</Link>
         </Button>
       </CardHeader>
       <CardContent>
         <div className="space-y-4">
-          {activities.slice(0, 5).map((activity) => {
-            const IconComponent = getActivityIcon(activity.type);
-            return (
-              <div key={activity.id} className="flex items-start space-x-4 p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors">
-                <div className="flex-shrink-0">
-                  <div className="p-2 bg-primary/10 rounded-lg">
-                    <IconComponent className="h-4 w-4 text-primary" />
-                  </div>
-                </div>
-                <div className="flex-1 min-w-0">
-                  <div className="flex items-center justify-between">
-                    <p className="text-sm font-semibold text-foreground truncate">
-                      {activity.title}
-                    </p>
-                    {getStatusBadge(activity.status)}
-                  </div>
-                  <p className="text-sm text-muted-foreground mt-1">
-                    {activity.description}
-                  </p>
-                  <div className="flex items-center mt-2 text-xs text-muted-foreground">
-                    <Clock className="h-3 w-3 mr-1" />
-                    {activity.timestamp}
-                  </div>
+          {activities.slice(0, 5).map((activity) => (
+            <div key={activity.id} className="flex items-start space-x-3">
+              <div className={`p-2 rounded-full ${getActivityColor(activity.type)}`}>
+                {getActivityIcon(activity.type)}
+              </div>
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-medium text-gray-900">
+                  {activity.title}
+                </p>
+                <p className="text-sm text-gray-600">
+                  {activity.description}
+                </p>
+                <div className="flex items-center space-x-2 mt-1">
+                  <Clock className="h-3 w-3 text-gray-400" />
+                  <span className="text-xs text-gray-500">
+                    {formatTimestamp(activity.timestamp)}
+                  </span>
+                  {activity.status && (
+                    <Badge variant="outline" className="text-xs">
+                      {activity.status}
+                    </Badge>
+                  )}
                 </div>
               </div>
-            );
-          })}
+            </div>
+          ))}
         </div>
       </CardContent>
     </Card>

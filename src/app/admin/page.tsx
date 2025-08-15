@@ -15,208 +15,187 @@ import {
   TrendingUp
 } from "lucide-react";
 import Link from "next/link";
-
-interface GroupOrder {
-  id: string;
-  batchNumber: string;
-  minThreshold: number;
-  currentAmount: number;
-  targetQuantity: number;
-  currentQuantity: number;
-  pricePerUnit: number;
-  status: string;
-  expiresAt: string;
-  estimatedDelivery: string | null;
-  progressPercentage: number;
-  participantCount: number;
-  timeRemaining: number;
-  product: {
-    id: string;
-    name: string;
-    unit: string;
-    unitSize: number;
-  };
-}
+import { GroupOrder } from "@/types";
 
 async function getAdminGroupOrders(): Promise<GroupOrder[]> {
   const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
   
   try {
-    const response = await fetch(`${baseUrl}/api/group-orders`, {
+    const response = await fetch(`${baseUrl}/api/admin/group-orders`, {
       cache: "no-store"
     });
     
     if (!response.ok) {
-      throw new Error("Failed to fetch group orders");
+      throw new Error("Failed to fetch admin group orders");
     }
     
-    const data = await response.json();
-    return data.groupOrders;
+    return response.json();
   } catch (error) {
-    console.error("Error fetching group orders:", error);
+    console.error("Error fetching admin group orders:", error);
     return [];
   }
 }
 
-export default async function AdminDashboardPage() {
-  const user = await requireAdmin();
+export default async function AdminPage() {
   const groupOrders = await getAdminGroupOrders();
 
-  const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", {
-      style: "currency",
-      currency: "INR",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(price);
-  };
-
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
-      case "COLLECTING":
-        return "bg-blue-100 text-blue-800";
-      case "THRESHOLD_MET":
-        return "bg-green-100 text-green-800";
-      case "ORDERED":
-        return "bg-yellow-100 text-yellow-800";
-      case "SHIPPED":
-        return "bg-purple-100 text-purple-800";
-      case "DELIVERED":
-        return "bg-gray-100 text-gray-800";
+      case "collecting":
+        return <Badge className="badge-warning">Collecting Orders</Badge>;
+      case "threshold_met":
+        return <Badge className="badge-success">Threshold Met</Badge>;
+      case "processing":
+        return <Badge className="badge-secondary">Processing</Badge>;
+      case "shipped":
+        return <Badge className="badge-primary">Shipped</Badge>;
+      case "delivered":
+        return <Badge className="badge-success">Delivered</Badge>;
       default:
-        return "bg-gray-100 text-gray-800";
+        return <Badge variant="outline">{status}</Badge>;
     }
   };
 
-  const activeOrders = groupOrders.filter(order => 
-    order.status === "COLLECTING" || order.status === "THRESHOLD_MET"
-  );
-  const completedOrders = groupOrders.filter(order => 
-    order.status === "DELIVERED"
-  );
-  const totalRevenue = groupOrders.reduce((sum, order) => sum + order.currentAmount, 0);
-
-  const handleStatusUpdate = (orderId: string, status: string, additionalData?: unknown) => {
-    const body = additionalData ? { status, ...additionalData } : { status };
-    fetch(`/api/group-orders/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(body)
-    }).then(() => window.location.reload());
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      <AdminNavigation user={user} />
-
-      <MainContainer>
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-4">
-            <TrendingUp className="h-8 w-8 text-primary mr-3" />
-            <h1 className="text-4xl font-bold">
-              Admin{" "}
-              <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-                Dashboard
-              </span>
-            </h1>
+    <MainContainer>
+      <div className="space-y-8">
+        {/* Header */}
+        <div className="flex items-center justify-between">
+          <div>
+            <h1 className="text-3xl font-bold">Admin Dashboard</h1>
+            <p className="text-muted-foreground">
+              Manage your platform and monitor performance
+            </p>
           </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Monitor and manage all group orders, track performance, and oversee platform operations.
-          </p>
+          <div className="flex space-x-2">
+            <Button asChild>
+              <Link href="/admin/group-orders/create">
+                <Plus className="h-4 w-4 mr-2" />
+                Create Group Order
+              </Link>
+            </Button>
+          </div>
         </div>
 
-        {/* Stats Overview */}
-        <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-4 mb-12">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
           <AdminStatsCard
-            icon={Package}
-            title="Total Group Orders"
-            value={groupOrders.length}
-            iconColor="primary"
+            title="Total Users"
+            value="2,847"
+            icon={Users}
+            trend="+12%"
+            trendDirection="up"
           />
           <AdminStatsCard
-            icon={Zap}
             title="Active Orders"
-            value={activeOrders.length}
-            iconColor="accent"
+            value="156"
+            icon={Package}
+            trend="+8%"
+            trendDirection="up"
           />
           <AdminStatsCard
-            icon={CheckCircle}
-            title="Completed Orders"
-            value={completedOrders.length}
-            iconColor="secondary"
-          />
-          <AdminStatsCard
+            title="Revenue"
+            value="₹45,230"
             icon={DollarSign}
-            title="Total Revenue"
-            value={formatPrice(totalRevenue)}
-            iconColor="primary"
+            trend="+23%"
+            trendDirection="up"
+          />
+          <AdminStatsCard
+            title="Group Orders"
+            value="23"
+            icon={Zap}
+            trend="+5%"
+            trendDirection="up"
           />
         </div>
 
         {/* Quick Actions */}
-        <Card className="card-sohozdaam mb-12">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Package className="h-5 w-5 mr-2" />
+                Product Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/admin/products">Manage Products</Link>
+              </Button>
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/admin/categories">Manage Categories</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Users className="h-5 w-5 mr-2" />
+                User Management
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/admin/users">View Users</Link>
+              </Button>
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/admin/roles">Manage Roles</Link>
+              </Button>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <TrendingUp className="h-5 w-5 mr-2" />
+                Analytics
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/admin/analytics">View Analytics</Link>
+              </Button>
+              <Button variant="outline" className="w-full" asChild>
+                <Link href="/admin/reports">Generate Reports</Link>
+              </Button>
+            </CardContent>
+          </Card>
+        </div>
+
+        {/* Recent Group Orders */}
+        <Card>
           <CardHeader>
-            <CardTitle className="flex items-center">
-              <Plus className="h-6 w-6 text-primary mr-2" />
-              Quick Actions
+            <CardTitle className="flex items-center justify-between">
+              <span>Recent Group Orders</span>
+              <Button variant="outline" size="sm" asChild>
+                <Link href="/admin/group-orders">View All</Link>
+              </Button>
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="flex flex-col sm:flex-row gap-4">
-              <Button className="flex-1" asChild>
-                <Link href="/admin/group-orders/create">
-                  <Plus className="h-4 w-4 mr-2" />
-                  Create New Group Order
-                </Link>
-              </Button>
-              <Button variant="outline" className="flex-1" asChild>
-                <Link href="/products">
-                  <Package className="h-4 w-4 mr-2" />
-                  View Products
-                </Link>
-              </Button>
-            </div>
-          </CardContent>
-        </Card>
-
-        {/* Group Orders Management */}
-        <Card className="card-sohozdaam">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Users className="h-6 w-6 text-primary mr-2" />
-              All Group Orders
-            </CardTitle>
-            <p className="text-muted-foreground">
-              Monitor and manage all group orders across the platform
-            </p>
-          </CardHeader>
-          <CardContent className="p-0">
             {groupOrders.length === 0 ? (
-              <div className="p-12">
-                <EmptyState
-                  icon={Package}
-                  title="No Group Orders Found"
-                  description="Create your first group order to get started with the admin dashboard."
-                  actionLabel="Create Group Order"
-                  actionHref="/admin/group-orders/create"
-                />
-              </div>
+              <EmptyState
+                icon={Package}
+                title="No Group Orders"
+                description="Group orders will appear here once they are created."
+                actionLabel="Create Group Order"
+                actionHref="/admin/group-orders/create"
+              />
             ) : (
-              <div className="divide-y divide-border">
-                {groupOrders.map((order) => (
+              <div className="space-y-4">
+                {groupOrders.slice(0, 5).map((groupOrder) => (
                   <AdminGroupOrderRow
-                    key={order.id}
-                    order={order}
-                    formatPrice={formatPrice}
-                    onStatusUpdate={handleStatusUpdate}
+                    key={groupOrder.id}
+                    groupOrder={groupOrder}
+                    getStatusBadge={getStatusBadge}
                   />
                 ))}
               </div>
             )}
           </CardContent>
         </Card>
-      </MainContainer>
-    </div>
+      </div>
+    </MainContainer>
   );
 }

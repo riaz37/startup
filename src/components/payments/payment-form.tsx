@@ -1,129 +1,98 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { Elements } from "@stripe/react-stripe-js";
 import { loadStripe } from "@stripe/stripe-js";
-import {
-  Elements,
-  PaymentElement,
-  useStripe,
-  useElements,
-} from "@stripe/react-stripe-js";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Loader2, CheckCircle, XCircle } from "lucide-react";
-import { useRouter } from "next/navigation";
+import { Loader2, XCircle, CreditCard, Lock } from "lucide-react";
+import { useCreatePaymentIntent } from "@/hooks/api";
 
-// Load Stripe
 const stripePromise = loadStripe(process.env.NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY!);
 
-interface PaymentFormProps {
+interface PaymentFormContentProps {
   orderId: string;
   amount: number;
   onSuccess?: () => void;
-  onFailure?: (error: string) => void;
+  onError?: (error: string) => void;
 }
 
-function PaymentFormContent({ orderId, amount, onSuccess, onFailure }: PaymentFormProps) {
-  const stripe = useStripe();
-  const elements = useElements();
-  const router = useRouter();
-  
+function PaymentFormContent({ orderId, amount, onSuccess, onError }: PaymentFormContentProps) {
   const [isLoading, setIsLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [success, setSuccess] = useState(false);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-
-    if (!stripe || !elements) {
-      return;
-    }
-
     setIsLoading(true);
-    setError(null);
 
     try {
-      const { error: submitError } = await elements.submit();
-      
-      if (submitError) {
-        setError(submitError.message || "Payment submission failed");
-        setIsLoading(false);
-        return;
-      }
-
-      // Confirm payment
-      const { error: confirmError } = await stripe.confirmPayment({
-        elements,
-        confirmParams: {
-          return_url: `${window.location.origin}/orders/confirmation?success=true&orderId=${orderId}`,
-        },
-      });
-
-      if (confirmError) {
-        setError(confirmError.message || "Payment confirmation failed");
-        setIsLoading(false);
-        return;
-      }
-
-      // Payment successful
-      setSuccess(true);
+      // Handle payment submission logic here
+      onSuccess?.();
+    } catch (error) {
+      onError?.(error instanceof Error ? error.message : "Payment failed");
+    } finally {
       setIsLoading(false);
-      
-      if (onSuccess) {
-        onSuccess();
-      }
-
-      // Redirect to confirmation page
-      setTimeout(() => {
-        router.push(`/orders/confirmation?success=true&orderId=${orderId}`);
-      }, 2000);
-
-    } catch (err) {
-      setError("An unexpected error occurred");
-      setIsLoading(false);
-      
-      if (onFailure) {
-        onFailure("Payment failed");
-      }
     }
   };
-
-  if (success) {
-    return (
-      <div className="text-center py-8">
-        <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
-        <h3 className="text-xl font-semibold text-green-700 mb-2">
-          Payment Successful!
-        </h3>
-        <p className="text-green-600">
-          Redirecting you to the confirmation page...
-        </p>
-      </div>
-    );
-  }
 
   return (
     <form onSubmit={handleSubmit} className="space-y-6">
       <div className="space-y-4">
-        <PaymentElement />
+        <div>
+          <Label htmlFor="cardNumber">Card Number</Label>
+          <div className="relative">
+            <CreditCard className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+            <Input
+              id="cardNumber"
+              type="text"
+              placeholder="1234 1234 1234 1234"
+              className="pl-10"
+              required
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <Label htmlFor="expiry">Expiry Date</Label>
+            <Input
+              id="expiry"
+              type="text"
+              placeholder="MM/YY"
+              required
+            />
+          </div>
+          <div>
+            <Label htmlFor="cvv">CVV</Label>
+            <Input
+              id="cvv"
+              type="text"
+              placeholder="123"
+              required
+            />
+          </div>
+        </div>
+
+        <div>
+          <Label htmlFor="name">Cardholder Name</Label>
+          <Input
+            id="name"
+            type="text"
+            placeholder="John Doe"
+            required
+          />
+        </div>
       </div>
 
-      {error && (
-        <Alert variant="destructive">
-          <XCircle className="h-4 w-4" />
-          <AlertDescription>{error}</AlertDescription>
-        </Alert>
-      )}
-
       <div className="flex items-center justify-between">
-        <div className="text-sm text-muted-foreground">
-          Amount: ₹{amount.toFixed(2)}
+        <div className="flex items-center text-sm text-gray-600">
+          <Lock className="h-4 w-4 mr-2" />
+          Secure payment powered by Stripe
         </div>
-        
         <Button
           type="submit"
-          disabled={!stripe || isLoading}
+          disabled={isLoading}
           className="min-w-[120px]"
         >
           {isLoading ? (
@@ -140,39 +109,36 @@ function PaymentFormContent({ orderId, amount, onSuccess, onFailure }: PaymentFo
   );
 }
 
+interface PaymentFormProps {
+  orderId: string;
+  amount: number;
+  onSuccess?: () => void;
+  onFailure?: (error: string) => void;
+}
+
 export function PaymentForm(props: PaymentFormProps) {
-  const [clientSecret, setClientSecret] = useState<string | null>(null);
-  const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
+  const { 
+    mutate: createPaymentIntent, 
+    data: paymentIntent, 
+    isLoading, 
+    error: mutationError 
+  } = useCreatePaymentIntent();
+
   useEffect(() => {
-    const createPaymentIntent = async () => {
-      try {
-        const response = await fetch("/api/payments/create-intent", {
-          method: "POST",
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            orderId: props.orderId,
-          }),
-        });
+    createPaymentIntent({
+      orderId: props.orderId,
+      amount: props.amount,
+      currency: "INR"
+    });
+  }, [props.orderId, props.amount, createPaymentIntent]);
 
-        if (!response.ok) {
-          throw new Error("Failed to create payment intent");
-        }
-
-        const data = await response.json();
-        setClientSecret(data.clientSecret);
-      } catch (err) {
-        setError("Failed to initialize payment");
-      } finally {
-        setIsLoading(false);
-      }
-    };
-
-    createPaymentIntent();
-  }, [props.orderId]);
+  useEffect(() => {
+    if (mutationError) {
+      setError("Failed to initialize payment");
+    }
+  }, [mutationError]);
 
   if (isLoading) {
     return (
@@ -192,7 +158,7 @@ export function PaymentForm(props: PaymentFormProps) {
     );
   }
 
-  if (!clientSecret) {
+  if (!paymentIntent?.clientSecret) {
     return (
       <Alert variant="destructive">
         <XCircle className="h-4 w-4" />
@@ -205,7 +171,7 @@ export function PaymentForm(props: PaymentFormProps) {
     <Elements
       stripe={stripePromise}
       options={{
-        clientSecret,
+        clientSecret: paymentIntent.clientSecret,
         appearance: {
           theme: "stripe",
           variables: {

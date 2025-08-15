@@ -1,9 +1,10 @@
-import { getCurrentUser } from "@/lib/auth-utils";
+'use client';
+
 import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { EmptyState } from "@/components/common";
 import { GroupOrderCard } from "@/components/group-orders/group-order-card";
-import { Users } from "lucide-react";
-import Link from "next/link";
+import { Users, Badge } from "lucide-react";
+import { useActiveGroupOrders } from "@/hooks/api";
 
 interface GroupOrder {
   id: string;
@@ -31,41 +32,11 @@ interface GroupOrder {
   };
 }
 
-interface GroupOrdersResponse {
-  groupOrders: GroupOrder[];
-  pagination: {
-    page: number;
-    limit: number;
-    total: number;
-    pages: number;
-  };
-}
-
-async function getGroupOrders(): Promise<GroupOrdersResponse> {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
+export default function GroupOrdersPage() {
+  // Use the new hook
+  const { data: groupOrdersResponse, isLoading, error } = useActiveGroupOrders();
   
-  try {
-    const response = await fetch(`${baseUrl}/api/group-orders?status=COLLECTING`, {
-      cache: "no-store"
-    });
-    
-    if (!response.ok) {
-      throw new Error("Failed to fetch group orders");
-    }
-    
-    return response.json();
-  } catch (error) {
-    console.error("Error fetching group orders:", error);
-    return {
-      groupOrders: [],
-      pagination: { page: 1, limit: 10, total: 0, pages: 0 }
-    };
-  }
-}
-
-export default async function GroupOrdersPage() {
-  const user = await getCurrentUser();
-  const { groupOrders } = await getGroupOrders();
+  const groupOrders = groupOrdersResponse || [];
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -78,20 +49,46 @@ export default async function GroupOrdersPage() {
 
   const getStatusBadge = (status: string) => {
     switch (status) {
-      case "COLLECTING":
+      case "collecting":
         return <Badge className="badge-warning">Collecting Orders</Badge>;
-      case "THRESHOLD_MET":
+      case "threshold_met":
         return <Badge className="badge-success">Threshold Met</Badge>;
-      case "ORDERED":
-        return <Badge className="badge-secondary">Ordered</Badge>;
-      case "SHIPPED":
+      case "processing":
+        return <Badge className="badge-secondary">Processing</Badge>;
+      case "shipped":
         return <Badge className="badge-primary">Shipped</Badge>;
-      case "DELIVERED":
+      case "delivered":
         return <Badge className="badge-success">Delivered</Badge>;
       default:
         return <Badge variant="outline">{status}</Badge>;
     }
   };
+
+  if (isLoading) {
+    return (
+      <PageLayout>
+        <MainContainer>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
+          </div>
+        </MainContainer>
+      </PageLayout>
+    );
+  }
+
+  if (error) {
+    return (
+      <PageLayout>
+        <MainContainer>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <p className="text-red-600 mb-4">Error loading group orders: {error.message}</p>
+            </div>
+          </div>
+        </MainContainer>
+      </PageLayout>
+    );
+  }
 
   return (
     <PageLayout>
@@ -109,8 +106,8 @@ export default async function GroupOrdersPage() {
             icon={Users}
             title="No Active Group Orders"
             description="Check back later for new group ordering opportunities, or create your own!"
-            actionLabel={user ? "Create Group Order" : undefined}
-            actionHref={user ? "/admin/group-orders/create" : undefined}
+            actionLabel="Create Group Order"
+            actionHref="/admin/group-orders/create"
           />
         ) : (
           <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
@@ -118,7 +115,6 @@ export default async function GroupOrdersPage() {
               <GroupOrderCard
                 key={groupOrder.id}
                 groupOrder={groupOrder}
-                user={user}
                 formatPrice={formatPrice}
               />
             ))}

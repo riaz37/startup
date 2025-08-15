@@ -5,6 +5,7 @@ import { ThemeProvider } from "@/components/theme-provider";
 import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { WebSocketProvider } from "@/contexts/websocket-context";
+import { QueryProvider } from "@/providers/query-provider";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -27,12 +28,14 @@ export default function RootLayout({
           enableSystem
           disableTransitionOnChange
         >
-          <AuthProvider>
-            <WebSocketProvider>
-              {children}
-              <Toaster />
-            </WebSocketProvider>
-          </AuthProvider>
+          <QueryProvider>
+            <AuthProvider>
+              <WebSocketProvider>
+                {children}
+                <Toaster />
+              </WebSocketProvider>
+            </AuthProvider>
+          </QueryProvider>
         </ThemeProvider>
       </body>
     </html>

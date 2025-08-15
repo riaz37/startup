@@ -1,0 +1,46 @@
+---
+description: Project structure guidelines and organization
+globs: 
+alwaysApply: false
+---
+# Project Structure Guidelines
+
+## Directory Organization
+- Project Type: monorepo
+- Source Directory: src/
+- Component Organization: feature-based
+
+## File Naming Conventions
+- Components: PascalCase
+- Files: kebab-case
+- Import Style: absolute
+
+## Structure Requirements
+
+- Use monorepo structure with clear package boundaries
+- Shared utilities in common packages
+- Independent deployment capabilities
+
+
+## Best Practices
+- Keep related files together
+- Use consistent naming across the project
+- Maintain clear import/export patterns
+- Document architectural decisions
+
+## Code Examples:
+
+```
+src/
+
+├── features/
+│   ├── auth/
+│   │   ├── components/
+│   │   ├── hooks/
+│   │   └── services/
+│   └── dashboard/
+│       ├── components/
+│       ├── hooks/
+│       └── services/
+
+```
