@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth-utils";
-import { emailService } from "@/lib/email-service";
+import { requireAdmin } from "@/lib/auth";
+import { emailService } from "@/lib/email/email-service";
 
 export async function GET(request: NextRequest) {
   try {

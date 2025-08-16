@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
-import { prisma } from "@/lib/prisma";
-import { sendVerificationEmail } from "@/lib/email";
-import { handleApiError, isZodError } from "@/lib/error-utils";
+import { prisma } from "@/lib";
+import { emailService } from "@/lib/email/email-service";
+import { handleApiError, isZodError } from "@/lib/utils";
 import { z } from "zod";
 
 const resendSchema = z.object({
@@ -59,7 +59,11 @@ export async function POST(request: NextRequest) {
 
     // Send verification email
     try {
-      await sendVerificationEmail(email, verificationToken);
+      await emailService.sendWelcomeEmail({
+        to: email,
+        userName: user.name || 'there',
+        verificationUrl: `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}`
+      });
     } catch (emailError) {
       console.error("Failed to send verification email:", emailError);
       // Don't fail the request if email fails

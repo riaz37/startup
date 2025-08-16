@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { signIn, getSession } from "next-auth/react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { useForm } from "react-hook-form"
@@ -14,7 +14,7 @@ import { Separator } from "@/components/ui/separator"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { Loader2, Chrome } from "lucide-react"
+import { Loader2, Chrome, CheckCircle } from "lucide-react"
 import { signInSchema, type SignInInput } from "@/lib/validations/auth"
 
 export default function SignInPage() {
@@ -23,8 +23,19 @@ export default function SignInPage() {
   const [isLoading, setIsLoading] = useState(false)
   const [googleLoading, setGoogleLoading] = useState(false)
   const [error, setError] = useState("")
+  const [success, setSuccess] = useState("")
   
   const callbackUrl = searchParams.get("callbackUrl") || "/dashboard"
+  
+  // Check for success message from URL params
+  useEffect(() => {
+    const message = searchParams.get("message")
+    if (message) {
+      setSuccess(message)
+      // Clear the message from URL
+      router.replace("/auth/signin", { scroll: false })
+    }
+  }, [searchParams, router])
 
   const form = useForm<SignInInput>({
     resolver: zodResolver(signInSchema),
@@ -48,6 +59,10 @@ export default function SignInPage() {
       if (result?.error) {
         if (result.error === "Account is deactivated") {
           setError("Your account has been deactivated. Please contact support.")
+        } else if (result.error === "Email not verified") {
+          // Redirect to verification page with context
+          router.push(`/auth/verify-email?from=login&email=${encodeURIComponent(data.email)}`)
+          return
         } else {
           setError("Invalid email or password. Please try again.")
         }
@@ -94,6 +109,13 @@ export default function SignInPage() {
           {error && (
             <Alert variant="destructive">
               <AlertDescription>{error}</AlertDescription>
+            </Alert>
+          )}
+          
+          {success && (
+            <Alert>
+              <CheckCircle className="h-4 w-4" />
+              <AlertDescription>{success}</AlertDescription>
             </Alert>
           )}
 

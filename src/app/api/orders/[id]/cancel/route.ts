@@ -1,7 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-utils";
-import { prisma } from "@/lib/prisma";
-import { orderService } from "@/lib/order-service";
+import { getCurrentUser } from "@/lib";
+import { prisma } from "@/lib";
 
 export async function POST(
   request: NextRequest,
@@ -125,7 +124,7 @@ export async function POST(
 
     // Send cancellation email
     try {
-      const { emailService } = await import("@/lib/email-service");
+      const { emailService } = await import("@/lib");
       await emailService.sendCustomEmail({
         to: order.user.email,
         subject: `Order Cancelled - ${order.orderNumber}`,

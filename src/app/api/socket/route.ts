@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { websocketManager } from "@/lib/websocket";
+import { websocketManager } from "@/lib/websocket/websocket";
+import type { WebSocketEvents } from "@/lib/websocket/websocket";
 
 export async function GET(request: NextRequest) {
   try {
@@ -25,18 +26,18 @@ export async function POST(request: NextRequest) {
     switch (action) {
       case "broadcast":
         // Broadcast message to all connected users
-        websocketManager.emitToAll(data.event as any, data.payload);
+        websocketManager.emitToAll(data.event as keyof WebSocketEvents, data.payload);
         return NextResponse.json({ success: true, message: "Message broadcasted" });
 
       case "notifyUser":
         // Send notification to specific user
         const { userId, event, payload } = data;
-        websocketManager.emitToUser(userId, event as any, payload);
+        websocketManager.emitToUser(userId, event as keyof WebSocketEvents, payload);
         return NextResponse.json({ success: true, message: "User notified" });
 
       case "notifyAdmins":
         // Send notification to admin users
-        websocketManager.emitToAdmins(data.event as any, data.payload);
+        websocketManager.emitToAdmins(data.event as keyof WebSocketEvents, data.payload);
         return NextResponse.json({ success: true, message: "Admins notified" });
 
       case "getStats":

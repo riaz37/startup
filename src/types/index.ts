@@ -147,6 +147,7 @@ export interface GroupOrder {
   targetQuantity: number;
   currentQuantity: number;
   currentAmount: number;
+  pricePerUnit: number;
   status: string;
   expiresAt: string;
   estimatedDelivery: string | null;
@@ -592,6 +593,9 @@ export interface ActivityItem {
   description: string;
   timestamp: string;
   status?: string;
+  href?: string;
+  amount?: number;
+  progress?: number;
 }
 
 // ============================================================================

@@ -1,6 +1,5 @@
+import { getCurrentUser, prisma } from "@/lib";
 import Link from "next/link";
-import { getCurrentUser } from "@/lib/auth-utils";
-import { prisma } from "@/lib/prisma";
 import { redirect } from "next/navigation";
 
 interface Order {

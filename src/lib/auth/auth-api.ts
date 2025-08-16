@@ -1,5 +1,5 @@
-import apiClient from './api-client'
-import type { SignUpInput, ForgotPasswordInput } from './validations/auth'
+import apiClient from '../api/api-client'
+import type { SignUpInput, ForgotPasswordInput } from '@/lib/validations/auth'
 
 // Auth API endpoints
 export const authApi = {

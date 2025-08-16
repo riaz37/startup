@@ -1,6 +1,7 @@
+import { getCurrentUser } from "@/lib";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth-utils";
+import { prisma } from "@/lib/database";
 
 interface Product {
   id: string;
@@ -33,18 +34,70 @@ interface Product {
 }
 
 async function getProduct(id: string): Promise<Product | null> {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  
   try {
-    const response = await fetch(`${baseUrl}/api/products/${id}`, {
-      cache: "no-store"
+    const product = await prisma.product.findUnique({
+      where: { id },
+      include: {
+        category: {
+          select: {
+            id: true,
+            name: true,
+            slug: true,
+          },
+        },
+        reviews: {
+          include: {
+            user: {
+              select: {
+                name: true,
+              },
+            },
+          },
+          orderBy: {
+            createdAt: 'desc',
+          },
+        },
+      },
     });
-    
-    if (!response.ok) {
+
+    if (!product) {
       return null;
     }
-    
-    return response.json();
+
+    // Calculate average rating and review count
+    const avgRating = product.reviews.length > 0
+      ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
+      : 0;
+
+    return {
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      imageUrl: product.imageUrl,
+      unit: product.unit,
+      unitSize: product.unitSize,
+      mrp: product.mrp,
+      sellingPrice: product.sellingPrice,
+      minOrderQty: product.minOrderQty,
+      maxOrderQty: product.maxOrderQty,
+      category: {
+        id: product.category.id,
+        name: product.category.name,
+        slug: product.category.slug,
+      },
+      reviews: product.reviews.map((review) => ({
+        id: review.id,
+        rating: review.rating,
+        comment: review.comment,
+        createdAt: review.createdAt.toISOString(),
+        user: {
+          name: review.user.name,
+        },
+      })),
+      avgRating,
+      reviewCount: product.reviews.length,
+    };
   } catch (error) {
     console.error("Error fetching product:", error);
     return null;
@@ -52,7 +105,7 @@ async function getProduct(id: string): Promise<Product | null> {
 }
 
 export default async function ProductDetailPage({
-  params
+  params,
 }: {
   params: { id: string };
 }) {
@@ -68,7 +121,7 @@ export default async function ProductDetailPage({
       style: "currency",
       currency: "INR",
       minimumFractionDigits: 0,
-      maximumFractionDigits: 0
+      maximumFractionDigits: 0,
     }).format(price);
   };
 
@@ -256,7 +309,8 @@ export default async function ProductDetailPage({
                   {renderStars(product.avgRating)}
                 </div>
                 <p className="ml-2 text-sm text-gray-500">
-                  {product.avgRating.toFixed(1)} out of 5 stars ({product.reviewCount} reviews)
+                  {product.avgRating.toFixed(1)} out of 5 stars (
+                  {product.reviewCount} reviews)
                 </p>
               </div>
             )}
@@ -281,7 +335,9 @@ export default async function ProductDetailPage({
             {/* Description */}
             {product.description && (
               <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-900">Description</h3>
+                <h3 className="text-sm font-medium text-gray-900">
+                  Description
+                </h3>
                 <div className="mt-2 prose prose-sm text-gray-500">
                   <p>{product.description}</p>
                 </div>
@@ -290,13 +346,21 @@ export default async function ProductDetailPage({
 
             {/* Order Info */}
             <div className="mt-6 bg-gray-50 rounded-lg p-4">
-              <h3 className="text-sm font-medium text-gray-900 mb-2">Order Information</h3>
+              <h3 className="text-sm font-medium text-gray-900 mb-2">
+                Order Information
+              </h3>
               <div className="space-y-1 text-sm text-gray-600">
-                <p>Minimum order quantity: {product.minOrderQty} {product.unit}</p>
+                <p>
+                  Minimum order quantity: {product.minOrderQty} {product.unit}
+                </p>
                 {product.maxOrderQty && (
-                  <p>Maximum order quantity: {product.maxOrderQty} {product.unit}</p>
+                  <p>
+                    Maximum order quantity: {product.maxOrderQty} {product.unit}
+                  </p>
                 )}
-                <p>Unit size: {product.unitSize} {product.unit}</p>
+                <p>
+                  Unit size: {product.unitSize} {product.unit}
+                </p>
               </div>
             </div>
 
@@ -321,13 +385,17 @@ export default async function ProductDetailPage({
         {/* Reviews Section */}
         {product.reviews.length > 0 && (
           <div className="mt-16">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Customer Reviews</h2>
+            <h2 className="text-2xl font-bold text-gray-900 mb-6">
+              Customer Reviews
+            </h2>
             <div className="space-y-6">
               {product.reviews.map((review) => (
                 <div key={review.id} className="bg-white p-6 rounded-lg shadow">
                   <div className="flex items-center justify-between mb-4">
                     <div className="flex items-center space-x-2">
-                      <span className="font-medium text-gray-900">{review.user.name}</span>
+                      <span className="font-medium text-gray-900">
+                        {review.user.name}
+                      </span>
                       <div className="flex items-center">
                         {renderStars(review.rating)}
                       </div>

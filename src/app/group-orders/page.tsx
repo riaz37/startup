@@ -1,42 +1,68 @@
-'use client';
-
 import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { EmptyState } from "@/components/common";
 import { GroupOrderCard } from "@/components/group-orders/group-order-card";
-import { Users, Badge } from "lucide-react";
-import { useActiveGroupOrders } from "@/hooks/api";
+import { Users } from "lucide-react";
+import { prisma } from "@/lib/database";
+import { GroupOrder } from "@/types";
 
-interface GroupOrder {
-  id: string;
-  batchNumber: string;
-  minThreshold: number;
-  currentAmount: number;
-  targetQuantity: number;
-  currentQuantity: number;
-  pricePerUnit: number;
-  status: string;
-  expiresAt: string;
-  estimatedDelivery: string | null;
-  progressPercentage: number;
-  participantCount: number;
-  timeRemaining: number;
-  product: {
-    id: string;
-    name: string;
-    unit: string;
-    unitSize: number;
-    imageUrl: string | null;
-    category: {
-      name: string;
-    };
-  };
-}
-
-export default function GroupOrdersPage() {
-  // Use the new hook
-  const { data: groupOrdersResponse, isLoading, error } = useActiveGroupOrders();
+export default async function GroupOrdersPage() {
+  // Fetch data server-side directly from database
+  let groupOrders: GroupOrder[] = [];
+  let error: Error | null = null;
   
-  const groupOrders = groupOrdersResponse || [];
+  try {
+    const activeGroupOrders = await prisma.groupOrder.findMany({
+      where: {
+        status: 'COLLECTING',
+        expiresAt: {
+          gt: new Date(),
+        },
+      },
+      include: {
+        product: {
+          include: {
+            category: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Transform the data to match the expected GroupOrder type
+    groupOrders = activeGroupOrders.map((go) => ({
+      id: go.id,
+      productId: go.productId,
+      productName: go.product.name,
+      batchNumber: go.batchNumber,
+      minThreshold: go.minThreshold,
+      currentAmount: go.currentAmount,
+      targetQuantity: go.targetQuantity,
+      currentQuantity: go.currentQuantity,
+      pricePerUnit: go.pricePerUnit,
+      status: go.status,
+      expiresAt: go.expiresAt.toISOString(),
+      estimatedDelivery: go.estimatedDelivery?.toISOString() || null,
+      progressPercentage: go.targetQuantity > 0 
+        ? Math.min((go.currentQuantity / go.targetQuantity) * 100, 100)
+        : 0,
+      participantCount: 0, // This would need a separate query to count orders
+      timeRemaining: Math.max(0, go.expiresAt.getTime() - Date.now()),
+      product: {
+        id: go.product.id,
+        name: go.product.name,
+        unit: go.product.unit,
+        unitSize: go.product.unitSize,
+        imageUrl: go.product.imageUrl,
+        category: {
+          name: go.product.category.name,
+        },
+      },
+    }));
+  } catch (err) {
+    error = err instanceof Error ? err : new Error('Failed to fetch group orders');
+  }
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -46,35 +72,6 @@ export default function GroupOrdersPage() {
       maximumFractionDigits: 0
     }).format(price);
   };
-
-  const getStatusBadge = (status: string) => {
-    switch (status) {
-      case "collecting":
-        return <Badge className="badge-warning">Collecting Orders</Badge>;
-      case "threshold_met":
-        return <Badge className="badge-success">Threshold Met</Badge>;
-      case "processing":
-        return <Badge className="badge-secondary">Processing</Badge>;
-      case "shipped":
-        return <Badge className="badge-primary">Shipped</Badge>;
-      case "delivered":
-        return <Badge className="badge-success">Delivered</Badge>;
-      default:
-        return <Badge variant="outline">{status}</Badge>;
-    }
-  };
-
-  if (isLoading) {
-    return (
-      <PageLayout>
-        <MainContainer>
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-          </div>
-        </MainContainer>
-      </PageLayout>
-    );
-  }
 
   if (error) {
     return (

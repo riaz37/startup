@@ -3,7 +3,7 @@ import { PrismaAdapter } from "@next-auth/prisma-adapter";
 import CredentialsProvider from "next-auth/providers/credentials";
 import GoogleProvider from "next-auth/providers/google";
 import bcrypt from "bcryptjs";
-import { prisma } from "./prisma";
+import { prisma } from "@/lib";
 import { Role } from "@/generated/prisma";
 
 export const authOptions: NextAuthOptions = {
@@ -39,6 +39,11 @@ export const authOptions: NextAuthOptions = {
 
         if (!user.isActive) {
           throw new Error("Account is deactivated");
+        }
+
+        // Check if email is verified
+        if (!user.isVerified) {
+          throw new Error("Email not verified");
         }
 
         // Update last login
@@ -100,7 +105,6 @@ export const authOptions: NextAuthOptions = {
   },
   pages: {
     signIn: "/auth/signin",
-    signUp: "/auth/signup",
     error: "/auth/error",
   },
   secret: process.env.NEXTAUTH_SECRET,

@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { updateProfileSchema } from "@/lib/validations/auth";
-import { getCurrentUser } from "@/lib/auth-utils";
-import { handleApiError } from "@/lib/error-utils";
+import { prisma } from "@/lib";
+import { updateProfileSchema } from "@/lib";
+import { getCurrentUser } from "@/lib";
+import { handleApiError } from "@/lib/utils";
 
 export async function GET() {
   try {

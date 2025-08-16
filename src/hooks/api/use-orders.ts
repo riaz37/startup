@@ -59,7 +59,7 @@ export function useUpdateOrder() {
     mutationFn: ({ id, data }: { id: string; data: UpdateOrderRequest }) => 
       orderService.updateOrder(id, data),
     onSuccess: (data, variables) => {
-      // Update the specific order in cache
+      // Update the specific order
       queryClient.setQueryData(['order', variables.id], data);
       // Invalidate orders list
       queryClient.invalidateQueries({ queryKey: ['orders'] });

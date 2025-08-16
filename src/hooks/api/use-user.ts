@@ -29,8 +29,8 @@ export function useUpdateProfile() {
     mutationFn: (profileData: UpdateProfileRequest) =>
       userService.updateProfile(profileData),
     onSuccess: (data) => {
-      // Update the user profile in cache
-      queryClient.setQueryData(["user", "profile"], data);
+      // Update the user profile
+      queryClient.setQueryData(['user', 'profile'], data);
     },
   });
 }

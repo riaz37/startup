@@ -122,7 +122,7 @@ export function PaymentForm(props: PaymentFormProps) {
   const { 
     mutate: createPaymentIntent, 
     data: paymentIntent, 
-    isLoading, 
+    isPending, 
     error: mutationError 
   } = useCreatePaymentIntent();
 
@@ -140,7 +140,7 @@ export function PaymentForm(props: PaymentFormProps) {
     }
   }, [mutationError]);
 
-  if (isLoading) {
+  if (isPending) {
     return (
       <div className="text-center py-8">
         <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />

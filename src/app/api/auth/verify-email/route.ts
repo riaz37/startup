@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { sendWelcomeEmail } from "@/lib/email";
-import { handleApiError } from "@/lib/error-utils";
+import { prisma } from "@/lib";
+import { emailService } from "@/lib/email/email-service";
+import { handleApiError } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
   try {
@@ -53,7 +53,10 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email
     try {
-      await sendWelcomeEmail(verificationRecord.user.email, verificationRecord.user.name);
+      await emailService.sendWelcomeEmail({
+        to: verificationRecord.user.email,
+        userName: verificationRecord.user.name || 'there'
+      });
     } catch (emailError) {
       console.error("Failed to send welcome email:", emailError);
       // Don't fail the verification if welcome email fails
@@ -114,7 +117,10 @@ export async function GET(request: NextRequest) {
 
     // Send welcome email
     try {
-      await sendWelcomeEmail(verificationRecord.user.email, verificationRecord.user.name);
+      await emailService.sendWelcomeEmail({
+        to: verificationRecord.user.email,
+        userName: verificationRecord.user.name || 'there'
+      });
     } catch (emailError) {
       console.error("Failed to send welcome email:", emailError);
     }

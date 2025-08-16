@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth-utils";
-import { prisma } from "@/lib/prisma";
-import { refundPayment } from "@/lib/stripe";
+import { requireAdmin } from "@/lib";
+import { prisma } from "@/lib";
+import { refundPayment } from "@/lib";
 
 export async function POST(request: NextRequest) {
   try {

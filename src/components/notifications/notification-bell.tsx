@@ -25,8 +25,8 @@ export function NotificationBell({ userId }: NotificationBellProps) {
   const [isLoading, setIsLoading] = useState(false);
 
   // Use the new hooks
-  const { data: notificationsResponse, refetch: refetchNotifications } = useNotifications();
-  const { data: unreadCountResponse } = useUnreadNotificationsCount();
+  const { data: notificationsResponse, refetch: refetchNotifications } = useNotifications(userId);
+  const { data: unreadCountResponse } = useUnreadNotificationsCount(userId);
   const markAsReadMutation = useMarkNotificationAsRead();
   const markAllAsReadMutation = useMarkAllNotificationsAsRead();
 
@@ -43,7 +43,7 @@ export function NotificationBell({ userId }: NotificationBellProps) {
 
   const markAllAsRead = async () => {
     setIsLoading(true);
-    markAllAsReadMutation.mutate(undefined, {
+    markAllAsReadMutation.mutate(userId, {
       onSuccess: () => {
         refetchNotifications();
         setIsLoading(false);

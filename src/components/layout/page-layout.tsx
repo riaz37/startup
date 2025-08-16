@@ -1,6 +1,6 @@
-import { getCurrentUser } from "@/lib/auth-utils";
 import { Navigation } from "@/components/home/navigation";
 import { Footer } from "@/components/home/footer";
+import { getCurrentUser } from "@/lib";
 
 interface PageLayoutProps {
   children: React.ReactNode;

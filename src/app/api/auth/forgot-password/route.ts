@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib/prisma";
-import { forgotPasswordSchema } from "@/lib/validations/auth";
-import { sendPasswordResetEmail } from "@/lib/email";
-import { handleApiError, isZodError } from "@/lib/error-utils";
+import { prisma } from "@/lib";
+import { forgotPasswordSchema } from "@/lib";
+import { emailService } from "@/lib/email/email-service";
+import { handleApiError, isZodError } from "@/lib/utils";
 import crypto from "crypto";
 
 export async function POST(request: NextRequest) {
@@ -46,7 +46,11 @@ export async function POST(request: NextRequest) {
 
     // Send password reset email
     try {
-      await sendPasswordResetEmail(user.email, resetToken, user.name);
+      await emailService.sendPasswordReset({
+        to: user.email,
+        userName: user.name || 'there',
+        resetUrl: `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`
+      });
     } catch (emailError) {
       console.error("Failed to send password reset email:", emailError);
       // Don't fail the request if email fails

@@ -1,5 +1,5 @@
 import { websocketManager } from './websocket';
-import { prisma } from './prisma';
+import { prisma } from '@/lib/database';
 
 // WebSocket Integration Service
 export class WebSocketIntegrationService {
@@ -248,7 +248,7 @@ export class WebSocketIntegrationService {
           groupOrderId: groupOrder.id,
           action: 'threshold_met',
           adminId: 'system',
-          participantCount: participants.length,
+          participants,
         });
       }
     } catch (error) {

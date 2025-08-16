@@ -11,22 +11,25 @@ import { Input } from "@/components/ui/input"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
 import { toast } from "sonner"
-import { CheckCircle, Mail, Loader2 } from "lucide-react"
+import { CheckCircle, Mail, Loader2, Eye, EyeOff } from "lucide-react"
 import { signUpSchema, type SignUpInput } from "@/lib/validations/auth"
-import { authApi } from "@/lib/auth-api"
+import { authApi } from "@/lib/auth/auth-api"
 
 export default function SignUpPage() {
   const router = useRouter()
   const [isLoading, setIsLoading] = useState(false)
   const [error, setError] = useState("")
   const [success, setSuccess] = useState(false)
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
 
   const form = useForm<SignUpInput>({
     resolver: zodResolver(signUpSchema),
     defaultValues: {
       name: "",
       email: "",
-      password: ""
+      password: "",
+      confirmPassword: ""
     }
   })
 
@@ -43,8 +46,8 @@ export default function SignUpPage() {
       setTimeout(() => {
         router.push("/auth/signin?message=Account created successfully")
       }, 3000)
-    } catch (error: any) {
-      const errorMessage = error.response?.data?.error || error.message || "Failed to create account"
+    } catch (error: unknown) {
+      const errorMessage = error instanceof Error ? error.message : "Failed to create account"
       setError(errorMessage)
     } finally {
       setIsLoading(false)
@@ -65,7 +68,7 @@ export default function SignUpPage() {
           
           <div className="space-y-2">
             <p className="text-muted-foreground">
-              We've sent a verification email to your inbox. Please check your email and click the verification link to activate your account.
+              We&apos;ve sent a verification email to your inbox. Please check your email and click the verification link to activate your account.
             </p>
             <div className="flex items-center justify-center space-x-2 text-sm text-muted-foreground">
               <Mail className="h-4 w-4" />
@@ -82,7 +85,7 @@ export default function SignUpPage() {
             </Button>
             
             <p className="text-xs text-muted-foreground">
-              Didn't receive the email?{" "}
+              Didn&apos;t receive the email?{" "}
               <Link
                 href="/auth/resend-verification"
                 className="text-primary hover:text-primary/80 font-medium"
@@ -162,13 +165,29 @@ export default function SignUpPage() {
                   Password <span className="text-destructive">*</span>
                 </FormLabel>
                 <FormControl>
-                  <Input
-                    type="password"
-                    placeholder="Create a strong password"
-                    autoComplete="new-password"
-                    disabled={isLoading}
-                    {...field}
-                  />
+                  <div className="relative">
+                    <Input
+                      type={showPassword ? "text" : "password"}
+                      placeholder="Create a strong password"
+                      autoComplete="new-password"
+                      disabled={isLoading}
+                      {...field}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowPassword(!showPassword)}
+                      disabled={isLoading}
+                    >
+                      {showPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
                 </FormControl>
                 <FormMessage />
                 <p className="text-xs text-muted-foreground">
@@ -178,10 +197,48 @@ export default function SignUpPage() {
             )}
           />
 
+          <FormField
+            control={form.control}
+            name="confirmPassword"
+            render={({ field }) => (
+              <FormItem>
+                <FormLabel>
+                  Confirm Password <span className="text-destructive">*</span>
+                </FormLabel>
+                <FormControl>
+                  <div className="relative">
+                    <Input
+                      type={showConfirmPassword ? "text" : "password"}
+                      placeholder="Confirm your password"
+                      autoComplete="new-password"
+                      disabled={isLoading}
+                      {...field}
+                    />
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="absolute right-0 top-0 h-full px-3 py-2 hover:bg-transparent"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      disabled={isLoading}
+                    >
+                      {showConfirmPassword ? (
+                        <EyeOff className="h-4 w-4 text-muted-foreground" />
+                      ) : (
+                        <Eye className="h-4 w-4 text-muted-foreground" />
+                      )}
+                    </Button>
+                  </div>
+                </FormControl>
+                <FormMessage />
+              </FormItem>
+            )}
+          />
+
           <Button
             type="submit"
             className="w-full"
-            disabled={isLoading || !form.watch("name") || !form.watch("email") || !form.watch("password")}
+            disabled={isLoading || !form.watch("name") || !form.watch("email") || !form.watch("password") || !form.watch("confirmPassword")}
           >
             {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
             Create Account

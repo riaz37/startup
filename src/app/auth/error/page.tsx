@@ -1,10 +1,10 @@
 "use client"
 
+import { useState } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
 import { AuthLayout } from "@/components/auth/auth-layout"
-import { LoadingButton } from "@/components/auth/loading-button"
 import { Button } from "@/components/ui/button"
-import { AlertCircle, RefreshCw, Home } from "lucide-react"
+import { AlertCircle, RefreshCw, Home, Loader2 } from "lucide-react"
 import Link from "next/link"
 
 const errorMessages = {
@@ -33,15 +33,21 @@ const errorMessages = {
 export default function AuthErrorPage() {
   const router = useRouter()
   const searchParams = useSearchParams()
+  const [isLoading, setIsLoading] = useState(false)
   const errorType = searchParams.get("error") as keyof typeof errorMessages || "Default"
   
   const error = errorMessages[errorType] || errorMessages.Default
 
-  const handleRetry = () => {
-    if (errorType === "ExpiredToken" || errorType === "InvalidToken" || errorType === "MissingToken") {
-      router.push("/auth/resend-verification")
-    } else {
-      router.push("/auth/signin")
+  const handleRetry = async () => {
+    setIsLoading(true)
+    try {
+      if (errorType === "ExpiredToken" || errorType === "InvalidToken" || errorType === "MissingToken") {
+        router.push("/auth/resend-verification")
+      } else {
+        router.push("/auth/signin")
+      }
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -70,36 +76,58 @@ export default function AuthErrorPage() {
         <div className="space-y-3">
           {(errorType === "ExpiredToken" || errorType === "InvalidToken" || errorType === "MissingToken") ? (
             <>
-              <LoadingButton
+              <Button
                 onClick={handleRetry}
                 className="w-full"
+                disabled={isLoading}
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Request New Verification Email
-              </LoadingButton>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Request New Verification Email
+                  </>
+                )}
+              </Button>
               
               <Button
                 variant="outline"
                 onClick={() => router.push("/auth/signin")}
                 className="w-full"
+                disabled={isLoading}
               >
                 Back to Sign In
               </Button>
             </>
           ) : (
             <>
-              <LoadingButton
+              <Button
                 onClick={handleRetry}
                 className="w-full"
+                disabled={isLoading}
               >
-                <RefreshCw className="mr-2 h-4 w-4" />
-                Try Again
-              </LoadingButton>
+                {isLoading ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Loading...
+                  </>
+                ) : (
+                  <>
+                    <RefreshCw className="mr-2 h-4 w-4" />
+                    Try Again
+                  </>
+                )}
+              </Button>
               
               <Button
                 variant="outline"
                 onClick={() => router.push("/")}
                 className="w-full"
+                disabled={isLoading}
               >
                 <Home className="mr-2 h-4 w-4" />
                 Go Home

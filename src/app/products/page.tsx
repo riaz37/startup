@@ -1,14 +1,51 @@
-'use client';
-
-
 import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { EmptyState } from "@/components/common";
 import { ProductCard } from "@/components/products/product-card";
 import { Package } from "lucide-react";
-import { useProducts } from "@/hooks/api";
+import { prisma } from "@/lib/database";
+import { Product } from "@/types";
 
-export default function ProductsPage() {
-  const { data: productsResponse, isPending: loading, error, refetch } = useProducts();
+export default async function ProductsPage() {
+  // Fetch products server-side
+  let products: Product[] = [];
+  let error: Error | null = null;
+  
+  try {
+    const productsData = await prisma.product.findMany({
+      include: {
+        category: true,
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+    });
+
+    // Transform the data to match the expected Product type
+    products = productsData.map((product) => ({
+      id: product.id,
+      name: product.name,
+      slug: product.slug,
+      description: product.description,
+      mrp: product.mrp,
+      sellingPrice: product.sellingPrice,
+      unit: product.unit,
+      unitSize: product.unitSize,
+      minOrderQty: product.minOrderQty,
+      maxOrderQty: product.maxOrderQty,
+      imageUrl: product.imageUrl,
+      category: {
+        id: product.category.id,
+        name: product.category.name,
+        slug: product.category.slug,
+        description: product.category.description,
+      },
+      isActive: product.isActive,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+    }));
+  } catch (err) {
+    error = err instanceof Error ? err : new Error('Failed to fetch products');
+  }
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-IN", {
@@ -23,48 +60,20 @@ export default function ProductsPage() {
     return Math.round(((mrp - sellingPrice) / mrp) * 100);
   };
 
-  const handleSeedProducts = async () => {
-    try {
-      await fetch("/api/seed", { method: "POST" });
-      refetch(); // Refetch products after seeding
-    } catch (error) {
-      console.error("Failed to seed products:", error);
-    }
-  };
-
-  if (loading) {
-    return (
-      <PageLayout>
-        <MainContainer>
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="animate-spin rounded-full h-32 w-32 border-b-2 border-gray-900"></div>
-          </div>
-        </MainContainer>
-      </PageLayout>
-    );
-  }
-
   if (error) {
     return (
       <PageLayout>
         <MainContainer>
           <div className="flex items-center justify-center min-h-[400px]">
-                      <div className="text-center">
-            <p className="text-red-600 mb-4">Error loading products: {error?.message || 'Unknown error'}</p>
-            <button 
-              onClick={() => refetch()}
-              className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700"
-            >
-              Try Again
-            </button>
-          </div>
+            <div className="text-center">
+              <p className="text-red-600 mb-4">Error loading products: {error.message}</p>
+              <p className="text-gray-600">Please try refreshing the page or contact support if the problem persists.</p>
+            </div>
           </div>
         </MainContainer>
       </PageLayout>
     );
   }
-
-  const products = productsResponse?.products || [];
 
   return (
     <PageLayout>
@@ -83,7 +92,7 @@ export default function ProductsPage() {
             title="No Products Available"
             description="Products will appear here once they are added to our catalog."
             actionLabel="Seed Sample Products"
-            onAction={handleSeedProducts}
+            actionHref="/api/seed"
           />
         ) : (
           <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">

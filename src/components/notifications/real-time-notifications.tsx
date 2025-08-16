@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from "react";
 import { useWebSocket } from "@/hooks/use-websocket";
+import { WebSocketMessage } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
@@ -24,7 +25,7 @@ interface RealTimeNotification {
   title: string;
   message: string;
   timestamp: string;
-  data?: any;
+  data?: Record<string, unknown>;
   isRead: boolean;
 }
 
@@ -33,7 +34,7 @@ export function RealTimeNotifications() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const { isConnected, lastMessage, error, connect, disconnect } = useWebSocket({
+  const { isConnected, lastMessage, connect, disconnect } = useWebSocket({
     onMessage: (message) => {
       handleWebSocketMessage(message);
     },
@@ -43,12 +44,9 @@ export function RealTimeNotifications() {
     onDisconnect: () => {
       toast.warning("Real-time updates disconnected");
     },
-    onError: (error) => {
-      toast.error(`Connection error: ${error.message}`);
-    },
   });
 
-  const handleWebSocketMessage = (message: any) => {
+  const handleWebSocketMessage = (message: WebSocketMessage) => {
     const { type, data, timestamp } = message;
     
     let notification: RealTimeNotification;
@@ -250,7 +248,7 @@ export function RealTimeNotifications() {
     const config = badgeConfig[type as keyof typeof badgeConfig] || { variant: "outline", text: type };
     
     return (
-      <Badge variant={config.variant as any}>
+      <Badge variant={config.variant as "default" | "secondary" | "destructive" | "outline"}>
         {config.text}
       </Badge>
     );
@@ -391,23 +389,7 @@ export function RealTimeNotifications() {
         )}
       </div>
 
-      {/* Connection Error */}
-      {error && (
-        <Alert variant="destructive" className="mt-4">
-          <AlertCircle className="h-4 w-4" />
-          <AlertDescription>
-            WebSocket connection error: {error.message}
-            <Button
-              variant="outline"
-              size="sm"
-              className="ml-2"
-              onClick={connect}
-            >
-              Retry
-            </Button>
-          </AlertDescription>
-        </Alert>
-      )}
+
     </div>
   );
 } 

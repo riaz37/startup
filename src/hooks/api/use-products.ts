@@ -97,7 +97,7 @@ export function useUpdateProduct() {
     mutationFn: ({ id, data }: { id: string; data: UpdateProductRequest }) => 
       productService.updateProduct(id, data),
     onSuccess: (data, variables) => {
-      // Update the specific product in cache
+      // Update the specific product
       queryClient.setQueryData(['product', variables.id], data);
       // Invalidate products list
       queryClient.invalidateQueries({ queryKey: ['products'] });
@@ -112,7 +112,7 @@ export function useDeleteProduct() {
   return useMutation({
     mutationFn: (id: string) => productService.deleteProduct(id),
     onSuccess: (_, id) => {
-      // Remove the product from cache
+      // Remove the product
       queryClient.removeQueries({ queryKey: ['product', id] });
       // Invalidate products list
       queryClient.invalidateQueries({ queryKey: ['products'] });

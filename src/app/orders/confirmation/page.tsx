@@ -1,6 +1,5 @@
-import { getCurrentUser } from "@/lib/auth-utils";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
+import { prisma, getCurrentUser } from "@/lib"
 import { Navigation } from "@/components/home/navigation";
 import { Footer } from "@/components/home/footer";
 import { MainContainer } from "@/components/layout";

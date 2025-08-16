@@ -1,7 +1,7 @@
 import { Server as SocketIOServer } from 'socket.io';
 import { Server as HTTPServer } from 'http';
 import { NextApiRequest, NextApiResponse } from 'next';
-import { prisma } from './prisma';
+import { prisma } from '@/lib/database';
 
 export interface WebSocketEvents {
   // Order events

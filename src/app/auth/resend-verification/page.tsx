@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { toast } from "sonner"
 import { Mail, ArrowLeft, CheckCircle, Loader2 } from "lucide-react"
 import { z } from "zod"
-import { authApi } from "@/lib/auth-api"
+import { authApi } from "@/lib/auth/auth-api"
 
 const resendSchema = z.object({
   email: z.string().email("Invalid email address")

@@ -12,7 +12,8 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { toast } from "sonner"
 import { CheckCircle, AlertCircle, Key, Loader2 } from "lucide-react"
 import { resetPasswordSchema, type ResetPasswordInput } from "@/lib/validations/auth"
-import { authApi } from "@/lib/auth-api"
+import { authApi } from "@/lib/auth/auth-api"
+
 
 export default function ResetPasswordPage() {
   const router = useRouter()

@@ -1,22 +1,21 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
 import crypto from "crypto";
-import { prisma } from "@/lib/prisma";
-import { signUpSchema } from "@/lib/validations/auth";
-import { sendVerificationEmail } from "@/lib/email";
-import { handleApiError } from "@/lib/error-utils";
+import { prisma, signUpSchema } from "@/lib";
+import { handleApiError } from "@/lib/utils";
+import { emailService } from "@/lib/email/email-service";
 
 export async function POST(request: NextRequest) {
   try {
     const body = await request.json();
-    
+
     // Validate input
     const validatedData = signUpSchema.parse(body);
     const { name, email, password } = validatedData;
 
     // Check if user already exists
-    const existingUser = await prisma.user.findUnique({
-      where: { email }
+  const existingUser = await prisma.user.findUnique({
+      where: { email },
     });
 
     if (existingUser) {
@@ -41,7 +40,7 @@ export async function POST(request: NextRequest) {
           email,
           password: hashedPassword,
           isVerified: false,
-          role: "CUSTOMER"
+          role: "CUSTOMER",
         },
         select: {
           id: true,
@@ -49,16 +48,16 @@ export async function POST(request: NextRequest) {
           email: true,
           role: true,
           isVerified: true,
-          createdAt: true
-        }
+          createdAt: true,
+        },
       });
 
       await tx.emailVerification.create({
         data: {
           userId: user.id,
           token: verificationToken,
-          expiresAt: tokenExpiry
-        }
+          expiresAt: tokenExpiry,
+        },
       });
 
       return user;
@@ -66,7 +65,11 @@ export async function POST(request: NextRequest) {
 
     // Send verification email
     try {
-      await sendVerificationEmail(email, verificationToken, name);
+      await emailService.sendWelcomeEmail({
+        to: email,
+        userName: name,
+        verificationUrl: `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}`
+      });
     } catch (emailError) {
       console.error("Failed to send verification email:", emailError);
       // Don't fail the signup if email fails
@@ -74,8 +77,9 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json(
       {
-        message: "Account created successfully. Please check your email to verify your account.",
-        user: result
+        message:
+          "Account created successfully. Please check your email to verify your account.",
+        user: result,
       },
       { status: 201 }
     );

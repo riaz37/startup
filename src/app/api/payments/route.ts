@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getCurrentUser } from "@/lib/auth-utils";
-import { prisma } from "@/lib/prisma";
+import { getCurrentUser } from "@/lib";
+import { prisma } from "@/lib";
 
 export async function GET(request: NextRequest) {
   try {

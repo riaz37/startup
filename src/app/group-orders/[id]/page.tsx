@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth-utils";
+import { getCurrentUser } from "@/lib";
+import { prisma } from "@/lib/database";
 
 interface GroupOrder {
   id: string;
@@ -43,18 +44,93 @@ interface GroupOrder {
 }
 
 async function getGroupOrder(id: string): Promise<GroupOrder | null> {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  
   try {
-    const response = await fetch(`${baseUrl}/api/group-orders/${id}`, {
-      cache: "no-store"
+    const groupOrder = await prisma.groupOrder.findUnique({
+      where: { id },
+      include: {
+        product: {
+          include: {
+            category: {
+              select: {
+                name: true,
+              },
+            },
+          },
+        },
+        orders: {
+          include: {
+            user: {
+              select: {
+                name: true,
+                email: true,
+              },
+            },
+            items: {
+              select: {
+                quantity: true,
+                unitPrice: true,
+                totalPrice: true,
+              },
+            },
+          },
+        },
+      },
     });
-    
-    if (!response.ok) {
+
+    if (!groupOrder) {
       return null;
     }
-    
-    return response.json();
+
+    // Calculate derived fields
+    const currentAmount = groupOrder.orders.reduce((sum, order) => sum + order.totalAmount, 0);
+    const currentQuantity = groupOrder.orders.reduce((sum, order) => 
+      sum + order.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0
+    );
+    const pricePerUnit = currentQuantity > 0 ? currentAmount / currentQuantity : 0;
+    const progressPercentage = groupOrder.targetQuantity > 0 
+      ? Math.min((currentQuantity / groupOrder.targetQuantity) * 100, 100)
+      : 0;
+    const timeRemaining = Math.max(0, groupOrder.expiresAt.getTime() - Date.now());
+
+    return {
+      id: groupOrder.id,
+      batchNumber: groupOrder.batchNumber,
+      minThreshold: groupOrder.minThreshold,
+      currentAmount,
+      targetQuantity: groupOrder.targetQuantity,
+      currentQuantity,
+      pricePerUnit,
+      status: groupOrder.status,
+      expiresAt: groupOrder.expiresAt.toISOString(),
+      estimatedDelivery: groupOrder.estimatedDelivery?.toISOString() || null,
+      progressPercentage,
+      participantCount: groupOrder.orders.length,
+      timeRemaining,
+      product: {
+        id: groupOrder.product.id,
+        name: groupOrder.product.name,
+        unit: groupOrder.product.unit,
+        unitSize: groupOrder.product.unitSize,
+        imageUrl: groupOrder.product.imageUrl,
+        description: groupOrder.product.description,
+        category: {
+          name: groupOrder.product.category.name,
+        },
+      },
+      orders: groupOrder.orders.map((order) => ({
+        id: order.id,
+        totalAmount: order.totalAmount,
+        user: {
+          name: order.user.name,
+          email: order.user.email,
+        },
+        items: order.items.map((item) => ({
+          quantity: item.quantity,
+          unitPrice: item.unitPrice,
+          totalPrice: item.totalPrice,
+        })),
+      })),
+    };
   } catch (error) {
     console.error("Error fetching group order:", error);
     return null;
@@ -351,7 +427,7 @@ export default async function GroupOrderDetailPage({
               {user ? (
                 userHasJoined ? (
                   <div className="flex-1 bg-green-100 border border-green-200 rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-green-800">
-                    ✓ You've joined this group order
+                    ✓ You&apos;ve joined this group order
                   </div>
                 ) : groupOrder.status === "COLLECTING" ? (
                   <Link

@@ -1,5 +1,6 @@
 import Link from "next/link";
-import { prisma } from "@/lib/prisma";
+import { prisma } from "@/lib/database/prisma";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface OrderHistoryProps {
   userId: string;
@@ -51,7 +52,10 @@ async function getRecentOrders(userId: string): Promise<RecentOrder[]> {
       take: 5 // Show only recent 5 orders
     });
 
-    return orders;
+    return orders.map(order => ({
+      ...order,
+      placedAt: order.placedAt.toISOString()
+    }));
   } catch (error) {
     console.error("Error fetching recent orders:", error);
     return [];
@@ -89,21 +93,30 @@ export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) 
 
   if (recentOrders.length === 0) {
     return (
-      <div className="bg-white overflow-hidden shadow rounded-lg">
-        <div className="p-6">
-          <div className="flex items-center justify-between">
-            <h3 className="text-lg font-medium text-gray-900">Recent Orders</h3>
-            <Link
-              href="/orders"
-              className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <svg
+              className="h-5 w-5 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
             >
-              View all
-            </Link>
-          </div>
-          <div className="mt-6 text-center">
-            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-gray-100">
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+              />
+            </svg>
+            Recent Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-muted mb-4">
               <svg
-                className="h-6 w-6 text-gray-400"
+                className="h-6 w-6 text-muted-foreground"
                 fill="none"
                 viewBox="0 0 24 24"
                 stroke="currentColor"
@@ -116,40 +129,48 @@ export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) 
                 />
               </svg>
             </div>
-            <h4 className="mt-2 text-sm font-medium text-gray-900">No orders yet</h4>
-            <p className="mt-1 text-sm text-gray-500">
+            <h4 className="text-sm font-medium">No orders yet</h4>
+            <p className="text-sm">
               Start by joining a group order
             </p>
             <div className="mt-4">
               <Link
                 href="/group-orders"
-                className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-indigo-600 hover:bg-indigo-700"
+                className="inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90"
               >
                 Browse Group Orders
               </Link>
             </div>
           </div>
-        </div>
-      </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white overflow-hidden shadow rounded-lg">
-      <div className="p-6">
-        <div className="flex items-center justify-between mb-4">
-          <h3 className="text-lg font-medium text-gray-900">Recent Orders</h3>
-          <Link
-            href="/orders"
-            className="text-sm font-medium text-indigo-600 hover:text-indigo-500"
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <svg
+            className="h-5 w-5 mr-2"
+            fill="none"
+            viewBox="0 0 24 24"
+            stroke="currentColor"
           >
-            View all
-          </Link>
-        </div>
-        
+            <path
+              strokeLinecap="round"
+              strokeLinejoin="round"
+              strokeWidth={2}
+              d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+            />
+          </svg>
+          Recent Orders
+        </CardTitle>
+      </CardHeader>
+      <CardContent>
         <div className="space-y-4">
           {recentOrders.map((order) => (
-            <div key={order.id} className="flex items-center space-x-4 p-3 bg-gray-50 rounded-lg">
+            <div key={order.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors">
               {order.groupOrder.product.imageUrl ? (
                 <img
                   src={order.groupOrder.product.imageUrl}
@@ -157,9 +178,9 @@ export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) 
                   className="h-12 w-12 object-cover rounded-lg"
                 />
               ) : (
-                <div className="h-12 w-12 bg-gray-200 rounded-lg flex items-center justify-center">
+                <div className="h-12 w-12 bg-muted rounded-lg flex items-center justify-center">
                   <svg
-                    className="h-6 w-6 text-gray-400"
+                    className="h-6 w-6 text-muted-foreground"
                     fill="none"
                     viewBox="0 0 24 24"
                     stroke="currentColor"
@@ -175,10 +196,10 @@ export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) 
               )}
               
               <div className="flex-1 min-w-0">
-                <p className="text-sm font-medium text-gray-900 truncate">
+                <p className="text-sm font-medium text-foreground truncate">
                   {order.groupOrder.product.name}
                 </p>
-                <p className="text-xs text-gray-500">
+                <p className="text-xs text-muted-foreground">
                   #{order.orderNumber} • Qty: {order.items[0]?.quantity || 0}
                 </p>
                 <div className="flex items-center space-x-2 mt-1">
@@ -189,12 +210,12 @@ export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) 
               </div>
               
               <div className="text-right">
-                <p className="text-sm font-medium text-gray-900">
+                <p className="text-sm font-medium text-foreground">
                   {formatPrice(order.totalAmount)}
                 </p>
                 <Link
                   href={`/orders/${order.id}`}
-                  className="text-xs text-indigo-600 hover:text-indigo-500"
+                  className="text-xs text-primary hover:text-primary/80"
                 >
                   Track
                 </Link>
@@ -202,7 +223,7 @@ export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) 
             </div>
           ))}
         </div>
-      </div>
-    </div>
+      </CardContent>
+    </Card>
   );
 }

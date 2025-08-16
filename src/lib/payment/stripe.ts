@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
-import { prisma } from './prisma';
+import { prisma } from '@/lib/database';
 import { OrderStatus, PaymentStatus } from '@/generated/prisma';
-import { emailService } from './email-service';
+import { emailService } from '@/lib/email/email-service';
 
 // Initialize Stripe
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {

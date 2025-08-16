@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { requireAdmin } from "@/lib/auth-utils";
-import { orderService } from "@/lib/order-service";
+import { requireAdmin, prisma } from "@/lib";
 
 export async function POST(
   request: NextRequest,
@@ -8,7 +7,7 @@ export async function POST(
 ) {
   try {
     const user = await requireAdmin();
-    const { action } = await request.json();
+    const { action, reason } = await request.json();
 
     if (!action) {
       return NextResponse.json(
@@ -21,20 +20,59 @@ export async function POST(
 
     switch (action) {
       case "check-threshold":
-        result = await orderService.checkGroupOrderThreshold(params.id);
+        // Check if group order has met threshold
+        const groupOrder = await prisma.groupOrder.findUnique({
+          where: { id: params.id },
+          include: { orders: true }
+        });
+
+        if (!groupOrder) {
+          return NextResponse.json(
+            { error: "Group order not found" },
+            { status: 404 }
+          );
+        }
+
+        const hasMetThreshold = groupOrder.currentAmount >= groupOrder.minThreshold;
+        result = {
+          hasMetThreshold,
+          currentAmount: groupOrder.currentAmount,
+          minThreshold: groupOrder.minThreshold,
+          participantCount: groupOrder.orders.length
+        };
         break;
       
       case "ship":
-        result = await orderService.processGroupOrderForShipping(params.id);
+        // Mark group order as shipped
+        result = await prisma.groupOrder.update({
+          where: { id: params.id },
+          data: { status: "SHIPPED" }
+        });
         break;
       
       case "deliver":
-        result = await orderService.markGroupOrderDelivered(params.id);
+        // Mark group order as delivered
+        result = await prisma.groupOrder.update({
+          where: { id: params.id },
+          data: { status: "DELIVERED" }
+        });
         break;
       
       case "cancel":
-        const { reason } = await request.json();
-        result = await orderService.cancelGroupOrder(params.id, reason);
+        if (!reason) {
+          return NextResponse.json(
+            { error: "Reason is required for cancellation" },
+            { status: 400 }
+          );
+        }
+        // Cancel group order
+        result = await prisma.groupOrder.update({
+          where: { id: params.id },
+          data: { 
+            status: "CANCELLED",
+            // You might want to add a cancellationReason field to your schema
+          }
+        });
         break;
       
       default:

@@ -1,23 +1,19 @@
 import { NextRequest, NextResponse } from "next/server";
 import bcrypt from "bcryptjs";
-import { prisma } from "@/lib/prisma";
-import { changePasswordSchema } from "@/lib/validations/auth";
-import { getCurrentUser } from "@/lib/auth-utils";
-import { handleApiError } from "@/lib/error-utils";
+import { prisma } from "@/lib";
+import { changePasswordSchema } from "@/lib";
+import { getCurrentUser } from "@/lib";
 
 export async function POST(request: NextRequest) {
   try {
     const user = await getCurrentUser();
-    
+
     if (!user) {
-      return NextResponse.json(
-        { error: "Unauthorized" },
-        { status: 401 }
-      );
+      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
     }
 
     const body = await request.json();
-    
+
     // Validate input
     const validatedData = changePasswordSchema.parse(body);
     const { currentPassword, newPassword } = validatedData;
@@ -25,7 +21,7 @@ export async function POST(request: NextRequest) {
     // Get user with password from database
     const dbUser = await prisma.user.findUnique({
       where: { id: user.id },
-      select: { id: true, password: true }
+      select: { id: true, password: true },
     });
 
     if (!dbUser || !dbUser.password) {
@@ -36,8 +32,11 @@ export async function POST(request: NextRequest) {
     }
 
     // Verify current password
-    const isCurrentPasswordValid = await bcrypt.compare(currentPassword, dbUser.password);
-    
+    const isCurrentPasswordValid = await bcrypt.compare(
+      currentPassword,
+      dbUser.password
+    );
+
     if (!isCurrentPasswordValid) {
       return NextResponse.json(
         { error: "Current password is incorrect" },
@@ -51,7 +50,7 @@ export async function POST(request: NextRequest) {
     // Update password
     await prisma.user.update({
       where: { id: user.id },
-      data: { password: hashedNewPassword }
+      data: { password: hashedNewPassword },
     });
 
     return NextResponse.json(
@@ -59,10 +58,6 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   } catch (error: unknown) {
-    const errorResponse = handleApiError(error);
-    return NextResponse.json(
-      { error: errorResponse.error, details: errorResponse.details },
-      { status: errorResponse.status }
-    );
+    return NextResponse.json(error);
   }
 }

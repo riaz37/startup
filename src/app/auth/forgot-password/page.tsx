@@ -11,7 +11,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { toast } from "sonner"
 import { Mail, ArrowLeft, Loader2 } from "lucide-react"
 import { forgotPasswordSchema, type ForgotPasswordInput } from "@/lib/validations/auth"
-import { authApi } from "@/lib/auth-api"
+import { authApi } from "@/lib/auth/auth-api"
 
 export default function ForgotPasswordPage() {
   const [isLoading, setIsLoading] = useState(false)
@@ -58,7 +58,7 @@ export default function ForgotPasswordPage() {
           
           <div className="space-y-2">
             <p className="text-muted-foreground">
-              If an account with <strong>{email}</strong> exists, we've sent password reset instructions to your email.
+              If an account with <strong>{email}</strong> exists, we&apos;ve sent password reset instructions to your email.
             </p>
             <p className="text-sm text-muted-foreground">
               Please check your email (including spam folder) and follow the instructions to reset your password.

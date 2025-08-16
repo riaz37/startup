@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth-utils";
+import { requireAdmin } from "@/lib/auth";
 import { MainContainer } from "@/components/layout";
 import { EmptyState } from "@/components/common";
 import { AdminNavigation, AdminStatsCard, AdminGroupOrderRow } from "@/components/admin";
@@ -16,20 +16,61 @@ import {
 } from "lucide-react";
 import Link from "next/link";
 import { GroupOrder } from "@/types";
+import { prisma } from "@/lib/database";
 
 async function getAdminGroupOrders(): Promise<GroupOrder[]> {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  
   try {
-    const response = await fetch(`${baseUrl}/api/admin/group-orders`, {
-      cache: "no-store"
+    const groupOrders = await prisma.groupOrder.findMany({
+      include: {
+        product: {
+          include: {
+            category: true,
+          },
+        },
+        orders: {
+          select: {
+            id: true,
+            totalAmount: true,
+            status: true,
+          },
+        },
+      },
+      orderBy: {
+        createdAt: 'desc',
+      },
+      take: 10, // Limit to recent orders for admin dashboard
     });
-    
-    if (!response.ok) {
-      throw new Error("Failed to fetch admin group orders");
-    }
-    
-    return response.json();
+
+    // Transform the data to match the expected GroupOrder type
+    return groupOrders.map((go) => ({
+      id: go.id,
+      productId: go.productId,
+      productName: go.product.name,
+      batchNumber: go.batchNumber,
+      minThreshold: go.minThreshold,
+      currentAmount: go.currentAmount,
+      targetQuantity: go.targetQuantity,
+      currentQuantity: go.currentQuantity,
+      pricePerUnit: go.pricePerUnit,
+      status: go.status,
+      expiresAt: go.expiresAt.toISOString(),
+      estimatedDelivery: go.estimatedDelivery?.toISOString() || null,
+      progressPercentage: go.targetQuantity > 0 
+        ? Math.min((go.currentQuantity / go.targetQuantity) * 100, 100)
+        : 0,
+      participantCount: go.orders.length,
+      timeRemaining: Math.max(0, go.expiresAt.getTime() - Date.now()),
+      product: {
+        id: go.product.id,
+        name: go.product.name,
+        unit: go.product.unit,
+        unitSize: go.product.unitSize,
+        imageUrl: go.product.imageUrl,
+        category: {
+          name: go.product.category.name,
+        },
+      },
+    }));
   } catch (error) {
     console.error("Error fetching admin group orders:", error);
     return [];
@@ -83,29 +124,21 @@ export default async function AdminPage() {
             title="Total Users"
             value="2,847"
             icon={Users}
-            trend="+12%"
-            trendDirection="up"
           />
           <AdminStatsCard
             title="Active Orders"
             value="156"
             icon={Package}
-            trend="+8%"
-            trendDirection="up"
           />
           <AdminStatsCard
             title="Revenue"
             value="₹45,230"
             icon={DollarSign}
-            trend="+23%"
-            trendDirection="up"
           />
           <AdminStatsCard
             title="Group Orders"
             value="23"
             icon={Zap}
-            trend="+5%"
-            trendDirection="up"
           />
         </div>
 
@@ -187,8 +220,19 @@ export default async function AdminPage() {
                 {groupOrders.slice(0, 5).map((groupOrder) => (
                   <AdminGroupOrderRow
                     key={groupOrder.id}
-                    groupOrder={groupOrder}
-                    getStatusBadge={getStatusBadge}
+                    order={groupOrder}
+                    formatPrice={(price: number) => 
+                      new Intl.NumberFormat("en-IN", {
+                        style: "currency",
+                        currency: "INR",
+                        minimumFractionDigits: 0,
+                        maximumFractionDigits: 0
+                      }).format(price)
+                    }
+                    onStatusUpdate={(orderId: string, status: string) => {
+                      // TODO: Implement status update functionality
+                      console.log(`Update order ${orderId} to status: ${status}`);
+                    }}
                   />
                 ))}
               </div>

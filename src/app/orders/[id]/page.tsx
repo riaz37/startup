@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { getCurrentUser } from "@/lib/auth-utils";
+import { getCurrentUser } from "@/lib";
+import { prisma } from "@/lib/database";
 
 interface OrderDetail {
   id: string;
@@ -60,18 +61,121 @@ interface OrderDetail {
 }
 
 async function getOrderDetail(orderId: string): Promise<OrderDetail | null> {
-  const baseUrl = process.env.NEXTAUTH_URL || "http://localhost:3000";
-  
   try {
-    const response = await fetch(`${baseUrl}/api/orders/${orderId}`, {
-      cache: "no-store"
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        groupOrder: {
+          include: {
+            product: {
+              select: {
+                name: true,
+                unit: true,
+                unitSize: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+        address: true,
+        items: true,
+        delivery: {
+          include: {
+            pickupLocation: true,
+          },
+        },
+      },
     });
-    
-    if (!response.ok) {
+
+    if (!order) {
       return null;
     }
     
-    return response.json();
+    // Define status steps
+    const statusSteps = [
+      { key: 'placed', label: 'Order Placed', description: 'Your order has been placed successfully' },
+      { key: 'confirmed', label: 'Order Confirmed', description: 'Payment received and order confirmed' },
+      { key: 'processing', label: 'Processing', description: 'Order is being prepared for delivery' },
+      { key: 'shipped', label: 'Shipped', description: 'Order has been shipped' },
+      { key: 'delivered', label: 'Delivered', description: 'Order has been delivered' },
+    ];
+
+    // Calculate current step and progress
+    let currentStepIndex = 0;
+    switch (order.status) {
+      case 'PENDING':
+        currentStepIndex = 0;
+        break;
+      case 'CONFIRMED':
+        currentStepIndex = 1;
+        break;
+      case 'PROCESSING':
+        currentStepIndex = 2;
+        break;
+      case 'SHIPPED':
+        currentStepIndex = 3;
+        break;
+      case 'DELIVERED':
+        currentStepIndex = 4;
+        break;
+      default:
+        currentStepIndex = 0;
+    }
+
+    const progress = ((currentStepIndex + 1) / statusSteps.length) * 100;
+
+    return {
+      id: order.id,
+      orderNumber: order.orderNumber,
+      totalAmount: order.totalAmount,
+      status: order.status,
+      paymentStatus: order.paymentStatus,
+      placedAt: order.placedAt.toISOString(),
+      confirmedAt: order.confirmedAt?.toISOString() || null,
+      deliveredAt: order.deliveredAt?.toISOString() || null,
+      groupOrder: {
+        id: order.groupOrder.id,
+        batchNumber: order.groupOrder.batchNumber,
+        status: order.groupOrder.status,
+        estimatedDelivery: order.groupOrder.estimatedDelivery?.toISOString() || null,
+        actualDelivery: order.groupOrder.actualDelivery?.toISOString() || null,
+        product: {
+          name: order.groupOrder.product.name,
+          unit: order.groupOrder.product.unit,
+          unitSize: order.groupOrder.product.unitSize,
+          imageUrl: order.groupOrder.product.imageUrl,
+        },
+      },
+      address: {
+        name: order.address.name,
+        phone: order.address.phone,
+        addressLine1: order.address.addressLine1,
+        addressLine2: order.address.addressLine2,
+        city: order.address.city,
+        state: order.address.state,
+        pincode: order.address.pincode,
+      },
+      items: order.items.map((item) => ({
+        quantity: item.quantity,
+        unitPrice: item.unitPrice,
+        totalPrice: item.totalPrice,
+      })),
+      delivery: order.delivery ? {
+        deliveryType: order.delivery.deliveryType,
+        status: order.delivery.status,
+        trackingNumber: order.delivery.trackingNumber,
+        estimatedDate: order.delivery.estimatedDate?.toISOString() || null,
+        actualDate: order.delivery.actualDate?.toISOString() || null,
+        pickupLocation: order.delivery.pickupLocation ? {
+          name: order.delivery.pickupLocation.name,
+          address: order.delivery.pickupLocation.address,
+          contactPhone: order.delivery.pickupLocation.contactPhone,
+        } : null,
+      } : null,
+      statusSteps,
+      currentStepIndex,
+      progress,
+    };
   } catch (error) {
     console.error("Error fetching order detail:", error);
     return null;
