@@ -69,7 +69,7 @@ export function RealTimeNotifications() {
           id: `payment-${data.orderId}-${Date.now()}`,
           type: 'success',
           title: 'Payment Successful',
-          message: `Payment of ₹${data.amount} has been processed successfully`,
+          message: `Payment of ৳${data.amount} has been processed successfully`,
           timestamp,
           data,
           isRead: false,

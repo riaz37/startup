@@ -32,11 +32,23 @@ interface GroupOrder {
 
 interface GroupOrderCardProps {
   groupOrder: GroupOrder;
-  user?: any;
+  user?: {
+    id: string;
+    name: string;
+    role: string;
+  } | null;
   formatPrice: (price: number) => string;
 }
 
 export function GroupOrderCard({ groupOrder, user, formatPrice }: GroupOrderCardProps) {
+  const formatTimeRemaining = (timeRemaining: number) => {
+    if (timeRemaining === 0) return 'Expires today';
+    if (timeRemaining === 1) return '1 day left';
+    if (timeRemaining < 7) return `${timeRemaining} days left`;
+    if (timeRemaining < 30) return `${Math.floor(timeRemaining / 7)} weeks left`;
+    return `${Math.floor(timeRemaining / 30)} months left`;
+  };
+
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "COLLECTING":
@@ -137,12 +149,14 @@ export function GroupOrderCard({ groupOrder, user, formatPrice }: GroupOrderCard
               of {groupOrder.targetQuantity} {groupOrder.product.unit}
             </div>
           </div>
-          <div className="text-center p-3 bg-muted/50 rounded-lg">
+          <div className="text-center p-3 bg-muted/50 rounded-lg" title={`Expires on ${new Date(groupOrder.expiresAt).toLocaleDateString()} at ${new Date(groupOrder.expiresAt).toLocaleTimeString()}`}>
             <div className="flex items-center justify-center mb-1">
               <Clock className="h-4 w-4 text-accent mr-1" />
               <span className="text-lg font-bold">{groupOrder.timeRemaining}</span>
             </div>
-            <div className="text-xs text-muted-foreground">Days left</div>
+            <div className="text-xs text-muted-foreground">
+              {formatTimeRemaining(groupOrder.timeRemaining)}
+            </div>
           </div>
         </div>
 

@@ -70,7 +70,7 @@ export async function POST(request: NextRequest) {
         userId: payment.order.userId,
         type: "GENERAL",
         title: "Payment Refunded",
-        message: `Your payment of ₹${amount || payment.amount} has been refunded${reason ? `: ${reason}` : ''}.`,
+        message: `Your payment of ৳${amount || payment.amount} has been refunded${reason ? `: ${reason}` : ''}.`,
         data: { 
           orderId: payment.orderId, 
           amount: amount || payment.amount,

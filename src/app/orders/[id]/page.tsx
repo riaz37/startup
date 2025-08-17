@@ -2,6 +2,24 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib";
 import { prisma } from "@/lib/database";
+import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Separator } from "@/components/ui/separator";
+import { 
+  Package, 
+  MapPin, 
+  Calendar, 
+  ArrowLeft, 
+  CheckCircle, 
+  Clock, 
+  Truck, 
+  Home,
+  User,
+  CreditCard
+} from "lucide-react";
 
 interface OrderDetail {
   id: string;
@@ -19,10 +37,14 @@ interface OrderDetail {
     estimatedDelivery: string | null;
     actualDelivery: string | null;
     product: {
+      id: string;
       name: string;
       unit: string;
       unitSize: number;
       imageUrl: string | null;
+      category: {
+        name: string;
+      };
     };
   };
   address: {
@@ -69,10 +91,16 @@ async function getOrderDetail(orderId: string): Promise<OrderDetail | null> {
           include: {
             product: {
               select: {
+                id: true,
                 name: true,
                 unit: true,
                 unitSize: true,
                 imageUrl: true,
+                category: {
+                  select: {
+                    name: true,
+                  },
+                },
               },
             },
           },
@@ -140,10 +168,14 @@ async function getOrderDetail(orderId: string): Promise<OrderDetail | null> {
         estimatedDelivery: order.groupOrder.estimatedDelivery?.toISOString() || null,
         actualDelivery: order.groupOrder.actualDelivery?.toISOString() || null,
         product: {
+          id: order.groupOrder.product.id,
           name: order.groupOrder.product.name,
           unit: order.groupOrder.product.unit,
           unitSize: order.groupOrder.product.unitSize,
           imageUrl: order.groupOrder.product.imageUrl,
+          category: {
+            name: order.groupOrder.product.category.name,
+          },
         },
       },
       address: {
@@ -185,26 +217,27 @@ async function getOrderDetail(orderId: string): Promise<OrderDetail | null> {
 export default async function OrderDetailPage({
   params
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const user = await getCurrentUser();
-  const order = await getOrderDetail(params.id);
+  const { id } = await params;
+  const order = await getOrderDetail(id);
 
   if (!order) {
     notFound();
   }
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat("en-BD", {
       style: "currency",
-      currency: "INR",
+      currency: "BDT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(price);
   };
 
   const formatDate = (dateString: string) => {
-    return new Date(dateString).toLocaleDateString("en-IN", {
+    return new Date(dateString).toLocaleDateString("en-BD", {
       year: "numeric",
       month: "long",
       day: "numeric",
@@ -213,382 +246,326 @@ export default async function OrderDetailPage({
     });
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusConfig = (status: string) => {
     switch (status) {
       case "COLLECTING":
-        return "bg-blue-100 text-blue-800";
+        return { color: "bg-blue-100 text-blue-800 border-blue-200", icon: Clock, label: "Collecting" };
       case "THRESHOLD_MET":
-        return "bg-green-100 text-green-800";
+        return { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle, label: "Threshold Met" };
       case "ORDERED":
-        return "bg-yellow-100 text-yellow-800";
+        return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", icon: Package, label: "Ordered" };
       case "SHIPPED":
-        return "bg-purple-100 text-purple-800";
+        return { color: "bg-purple-100 text-purple-800 border-purple-200", icon: Truck, label: "Shipped" };
       case "DELIVERED":
-        return "bg-gray-100 text-gray-800";
+        return { color: "bg-green-100 text-green-800 border-green-200", icon: CheckCircle, label: "Delivered" };
       default:
-        return "bg-gray-100 text-gray-800";
+        return { color: "bg-gray-100 text-gray-800 border-gray-200", icon: Package, label: status.replace('_', ' ') };
+    }
+  };
+
+  const getPaymentStatusConfig = (status: string) => {
+    switch (status) {
+      case "PENDING":
+        return { color: "bg-yellow-100 text-yellow-800 border-yellow-200", label: "Pending" };
+      case "PROCESSING":
+        return { color: "bg-blue-100 text-blue-800 border-blue-200", label: "Processing" };
+      case "COMPLETED":
+        return { color: "bg-green-100 text-green-800 border-green-200", label: "Completed" };
+      case "FAILED":
+        return { color: "bg-red-100 text-red-800 border-red-200", label: "Failed" };
+      default:
+        return { color: "bg-gray-100 text-gray-800 border-gray-200", label: status.replace('_', ' ') };
     }
   };
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                Your App
-              </Link>
-              <div className="ml-10 space-x-8">
-                <Link
-                  href="/orders"
-                  className="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  My Orders
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              {user && (
-                <>
-                  <span className="text-sm text-gray-700">
-                    Welcome, {user.name}
-                  </span>
-                  <Link
-                    href="/dashboard"
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Dashboard
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
+    <PageLayout>
+      <MainContainer>
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link 
+            href="/orders"
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Orders
+          </Link>
         </div>
-      </nav>
 
-      {/* Breadcrumb */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <nav className="flex" aria-label="Breadcrumb">
-          <ol className="flex items-center space-x-4">
-            <li>
-              <Link href="/" className="text-gray-400 hover:text-gray-500">
-                Home
-              </Link>
-            </li>
-            <li>
-              <div className="flex items-center">
-                <svg
-                  className="flex-shrink-0 h-5 w-5 text-gray-300"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <Link
-                  href="/orders"
-                  className="ml-4 text-gray-400 hover:text-gray-500"
-                >
-                  My Orders
-                </Link>
-              </div>
-            </li>
-            <li>
-              <div className="flex items-center">
-                <svg
-                  className="flex-shrink-0 h-5 w-5 text-gray-300"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span className="ml-4 text-gray-500">#{order.orderNumber}</span>
-              </div>
-            </li>
-          </ol>
-        </nav>
-      </div>
-
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Order #{order.orderNumber}</h1>
-          <p className="mt-2 text-sm text-gray-600">
-            Placed on {formatDate(order.placedAt)}
-          </p>
-        </div>
+        {/* Page Header */}
+        <PageHeader
+          badge={`Order #${order.orderNumber}`}
+          title="Order Details"
+          highlightedWord="Details"
+          description={`Order placed on ${formatDate(order.placedAt)} • Group Order #${order.groupOrder.batchNumber}`}
+        />
 
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
           {/* Order Progress */}
-          <div className="lg:col-span-2">
-            <div className="bg-white shadow rounded-lg p-6 mb-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-6">Order Progress</h2>
-              
-              {/* Progress Bar */}
-              <div className="mb-8">
-                <div className="flex justify-between text-sm text-gray-600 mb-2">
-                  <span>Progress</span>
-                  <span>{Math.round(order.progress)}% Complete</span>
+          <div className="lg:col-span-2 space-y-6">
+            {/* Progress Card */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Package className="h-5 w-5 mr-2" />
+                  Order Progress
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {/* Progress Bar */}
+                <div>
+                  <div className="flex justify-between text-sm text-muted-foreground mb-2">
+                    <span>Progress</span>
+                    <span>{Math.round(order.progress)}% Complete</span>
+                  </div>
+                  <Progress value={order.progress} className="h-3" />
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-3">
-                  <div
-                    className="bg-indigo-600 h-3 rounded-full transition-all duration-300"
-                    style={{ width: `${order.progress}%` }}
-                  ></div>
-                </div>
-              </div>
 
-              {/* Status Steps */}
-              <div className="space-y-4">
-                {order.statusSteps.map((step, index) => {
-                  const isCompleted = index <= order.currentStepIndex;
-                  const isCurrent = index === order.currentStepIndex;
-                  
-                  return (
-                    <div key={step.key} className="flex items-start">
-                      <div className="flex-shrink-0">
-                        <div
-                          className={`h-8 w-8 rounded-full flex items-center justify-center ${
-                            isCompleted
-                              ? "bg-indigo-600 text-white"
-                              : "bg-gray-200 text-gray-400"
-                          }`}
-                        >
-                          {isCompleted ? (
-                            <svg
-                              className="h-5 w-5"
-                              fill="currentColor"
-                              viewBox="0 0 20 20"
-                            >
-                              <path
-                                fillRule="evenodd"
-                                d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z"
-                                clipRule="evenodd"
-                              />
-                            </svg>
-                          ) : (
-                            <span className="text-sm font-medium">{index + 1}</span>
+                {/* Status Steps */}
+                <div className="space-y-4">
+                  {order.statusSteps.map((step, index) => {
+                    const isCompleted = index <= order.currentStepIndex;
+                    const isCurrent = index === order.currentStepIndex;
+                    
+                    return (
+                      <div key={step.key} className="flex items-start">
+                        <div className="flex-shrink-0">
+                          <div
+                            className={`h-8 w-8 rounded-full flex items-center justify-center ${
+                              isCompleted
+                                ? "bg-primary text-white"
+                                : "bg-muted text-muted-foreground"
+                            }`}
+                          >
+                            {isCompleted ? (
+                              <CheckCircle className="h-5 w-5" />
+                            ) : (
+                              <span className="text-sm font-medium">{index + 1}</span>
+                            )}
+                          </div>
+                        </div>
+                        <div className="ml-4 flex-1">
+                          <h3
+                            className={`text-sm font-medium ${
+                              isCurrent ? "text-primary" : isCompleted ? "text-foreground" : "text-muted-foreground"
+                            }`}
+                          >
+                            {step.label}
+                          </h3>
+                          <p className="text-sm text-muted-foreground mt-1">
+                            {step.description}
+                          </p>
+                          {isCurrent && (
+                            <div className="mt-2">
+                              <Badge variant="secondary">Current Status</Badge>
+                            </div>
                           )}
                         </div>
                       </div>
-                      <div className="ml-4 flex-1">
-                        <h3
-                          className={`text-sm font-medium ${
-                            isCurrent ? "text-indigo-600" : isCompleted ? "text-gray-900" : "text-gray-500"
-                          }`}
-                        >
-                          {step.label}
-                        </h3>
-                        <p className="text-sm text-gray-500 mt-1">
-                          {step.description}
-                        </p>
-                        {isCurrent && (
-                          <div className="mt-2">
-                            <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
-                              Current Status
-                            </span>
-                          </div>
-                        )}
-                      </div>
-                    </div>
-                  );
-                })}
-              </div>
-            </div>
+                    );
+                  })}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Product Details */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Product Details</h2>
-              
-              <div className="flex items-start space-x-4">
-                {order.groupOrder.product.imageUrl ? (
-                  <img
-                    src={order.groupOrder.product.imageUrl}
-                    alt={order.groupOrder.product.name}
-                    className="h-20 w-20 object-cover rounded-lg"
-                  />
-                ) : (
-                  <div className="h-20 w-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <svg
-                      className="h-10 w-10 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                      />
-                    </svg>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Package className="h-5 w-5 mr-2" />
+                  Product Details
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-start space-x-4">
+                  {order.groupOrder.product.imageUrl ? (
+                    <img
+                      src={order.groupOrder.product.imageUrl}
+                      alt={order.groupOrder.product.name}
+                      className="h-20 w-20 object-cover rounded-lg border"
+                    />
+                  ) : (
+                    <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center border">
+                      <Package className="h-10 w-10 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 space-y-3">
+                    <div>
+                      <h3 className="text-lg font-medium text-foreground">
+                        {order.groupOrder.product.name}
+                      </h3>
+                      <Badge variant="outline" className="mt-1">
+                        {order.groupOrder.product.category?.name}
+                      </Badge>
+                    </div>
+                    
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Quantity:</span>
+                        <span className="ml-2 font-medium text-foreground">
+                          {order.items[0]?.quantity} {order.groupOrder.product.unit}
+                        </span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Unit Price:</span>
+                        <span className="ml-2 font-medium text-foreground">
+                          {formatPrice(order.items[0]?.unitPrice || 0)}
+                        </span>
+                      </div>
+                    </div>
                   </div>
-                )}
-                <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900">
-                    {order.groupOrder.product.name}
-                  </h3>
-                  <p className="text-sm text-gray-600">
-                    Group Order #{order.groupOrder.batchNumber}
-                  </p>
-                  <div className="mt-2 space-y-1">
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Quantity:</span>
-                      <span className="text-gray-900">
-                        {order.items[0]?.quantity} {order.groupOrder.product.unit}
-                      </span>
+                  
+                  <div className="text-right">
+                    <div className="text-2xl font-bold text-primary">
+                      {formatPrice(order.totalAmount)}
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span className="text-gray-600">Unit Price:</span>
-                      <span className="text-gray-900">
-                        {formatPrice(order.items[0]?.unitPrice || 0)}
-                      </span>
-                    </div>
-                    <div className="flex justify-between text-lg font-bold border-t pt-2">
-                      <span>Total:</span>
-                      <span>{formatPrice(order.totalAmount)}</span>
-                    </div>
+                    <p className="text-sm text-muted-foreground">Total Amount</p>
                   </div>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
           </div>
 
           {/* Order Summary */}
           <div className="space-y-6">
             {/* Order Status */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Order Status</h2>
-              
-              <div className="space-y-3">
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Order Status:</span>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.status)}`}>
-                    {order.status.replace('_', ' ')}
-                  </span>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CreditCard className="h-5 w-5 mr-2" />
+                  Order Status
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Order Status:</span>
+                  <Badge className={`${getStatusConfig(order.status).color} border`}>
+                    {getStatusConfig(order.status).label}
+                  </Badge>
                 </div>
                 
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Payment Status:</span>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${
-                    order.paymentStatus === "COMPLETED" ? "bg-green-100 text-green-800" :
-                    order.paymentStatus === "PENDING" ? "bg-yellow-100 text-yellow-800" :
-                    "bg-red-100 text-red-800"
-                  }`}>
-                    {order.paymentStatus.replace('_', ' ')}
-                  </span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Payment Status:</span>
+                  <Badge className={`${getPaymentStatusConfig(order.paymentStatus).color} border`}>
+                    {getPaymentStatusConfig(order.paymentStatus).label}
+                  </Badge>
                 </div>
 
-                <div className="flex justify-between">
-                  <span className="text-sm text-gray-600">Group Status:</span>
-                  <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.groupOrder.status)}`}>
-                    {order.groupOrder.status.replace('_', ' ')}
-                  </span>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm text-muted-foreground">Group Status:</span>
+                  <Badge className={`${getStatusConfig(order.groupOrder.status).color} border`}>
+                    {getStatusConfig(order.groupOrder.status).label}
+                  </Badge>
                 </div>
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Delivery Information */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Delivery Information</h2>
-              
-              <div className="space-y-3 text-sm">
-                <div>
-                  <span className="font-medium text-gray-900">{order.address.name}</span>
-                  <p className="text-gray-600">{order.address.phone}</p>
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <MapPin className="h-5 w-5 mr-2" />
+                  Delivery Information
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <User className="h-4 w-4 text-primary" />
+                    <span className="font-medium text-foreground">{order.address.name}</span>
+                  </div>
+                  <p className="text-sm text-muted-foreground">{order.address.phone}</p>
                 </div>
-                <div className="text-gray-600">
+                
+                <div className="text-sm text-muted-foreground space-y-1">
                   <p>{order.address.addressLine1}</p>
                   {order.address.addressLine2 && <p>{order.address.addressLine2}</p>}
                   <p>{order.address.city}, {order.address.state} - {order.address.pincode}</p>
                 </div>
                 
                 {order.groupOrder.estimatedDelivery && (
-                  <div className="pt-3 border-t">
-                    <div className="flex justify-between">
-                      <span className="text-gray-600">Estimated Delivery:</span>
-                      <span className="text-gray-900">
+                  <>
+                    <Separator />
+                    <div className="flex justify-between items-center">
+                      <span className="text-sm text-muted-foreground">Estimated Delivery:</span>
+                      <span className="text-sm font-medium text-foreground">
                         {new Date(order.groupOrder.estimatedDelivery).toLocaleDateString()}
                       </span>
                     </div>
-                  </div>
+                  </>
                 )}
 
                 {order.groupOrder.actualDelivery && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Actual Delivery:</span>
-                    <span className="text-gray-900">
+                  <div className="flex justify-between items-center">
+                    <span className="text-sm text-muted-foreground">Actual Delivery:</span>
+                    <span className="text-sm font-medium text-foreground">
                       {new Date(order.groupOrder.actualDelivery).toLocaleDateString()}
                     </span>
                   </div>
                 )}
-              </div>
-            </div>
+              </CardContent>
+            </Card>
 
             {/* Order Timeline */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Order Timeline</h2>
-              
-              <div className="space-y-3 text-sm">
-                <div className="flex justify-between">
-                  <span className="text-gray-600">Order Placed:</span>
-                  <span className="text-gray-900">
-                    {new Date(order.placedAt).toLocaleDateString()}
-                  </span>
-                </div>
-                
-                {order.confirmedAt && (
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Calendar className="h-5 w-5 mr-2" />
+                  Order Timeline
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="space-y-3 text-sm">
                   <div className="flex justify-between">
-                    <span className="text-gray-600">Order Confirmed:</span>
-                    <span className="text-gray-900">
-                      {new Date(order.confirmedAt).toLocaleDateString()}
+                    <span className="text-muted-foreground">Order Placed:</span>
+                    <span className="font-medium text-foreground">
+                      {new Date(order.placedAt).toLocaleDateString()}
                     </span>
                   </div>
-                )}
+                  
+                  {order.confirmedAt && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Order Confirmed:</span>
+                      <span className="font-medium text-foreground">
+                        {new Date(order.confirmedAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
 
-                {order.deliveredAt && (
-                  <div className="flex justify-between">
-                    <span className="text-gray-600">Delivered:</span>
-                    <span className="text-gray-900">
-                      {new Date(order.deliveredAt).toLocaleDateString()}
-                    </span>
-                  </div>
-                )}
-              </div>
-            </div>
+                  {order.deliveredAt && (
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Delivered:</span>
+                      <span className="font-medium text-foreground">
+                        {new Date(order.deliveredAt).toLocaleDateString()}
+                      </span>
+                    </div>
+                  )}
+                </div>
+              </CardContent>
+            </Card>
 
             {/* Actions */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Actions</h2>
-              
-              <div className="space-y-3">
-                <Link
-                  href={`/group-orders/${order.groupOrder.id}`}
-                  className="w-full bg-indigo-600 border border-transparent rounded-md py-2 px-4 flex items-center justify-center text-sm font-medium text-white hover:bg-indigo-700"
-                >
-                  View Group Order
-                </Link>
+            <Card>
+              <CardHeader>
+                <CardTitle>Actions</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button asChild className="w-full">
+                  <Link href={`/group-orders/${order.groupOrder.id}`}>
+                    View Group Order
+                  </Link>
+                </Button>
                 
-                <Link
-                  href="/orders"
-                  className="w-full bg-white border border-gray-300 rounded-md py-2 px-4 flex items-center justify-center text-sm font-medium text-gray-700 hover:bg-gray-50"
-                >
-                  Back to Orders
-                </Link>
-              </div>
-            </div>
+                <Button variant="outline" asChild className="w-full">
+                  <Link href="/orders">
+                    Back to Orders
+                  </Link>
+                </Button>
+              </CardContent>
+            </Card>
           </div>
         </div>
-      </main>
-    </div>
+      </MainContainer>
+    </PageLayout>
   );
 }

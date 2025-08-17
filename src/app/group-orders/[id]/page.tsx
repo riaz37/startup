@@ -2,6 +2,12 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { getCurrentUser } from "@/lib";
 import { prisma } from "@/lib/database";
+import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Badge } from "@/components/ui/badge";
+import { Button } from "@/components/ui/button";
+import { Progress } from "@/components/ui/progress";
+import { Users, Clock, Package, TrendingUp, ArrowLeft } from "lucide-react";
 
 interface GroupOrder {
   id: string;
@@ -90,7 +96,24 @@ async function getGroupOrder(id: string): Promise<GroupOrder | null> {
     const progressPercentage = groupOrder.targetQuantity > 0 
       ? Math.min((currentQuantity / groupOrder.targetQuantity) * 100, 100)
       : 0;
-    const timeRemaining = Math.max(0, groupOrder.expiresAt.getTime() - Date.now());
+    
+    // Calculate time remaining using the same logic as the main page
+    const timeRemaining = (() => {
+      const now = new Date();
+      const expiresAt = groupOrder.expiresAt;
+      
+      // Set both dates to start of day for consistent day calculation
+      const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+      const startOfExpiry = new Date(expiresAt.getFullYear(), expiresAt.getMonth(), expiresAt.getDate());
+      
+      // Calculate the difference in days
+      const diffTime = startOfExpiry.getTime() - startOfToday.getTime();
+      const diffDays = diffTime / (1000 * 60 * 60 * 24);
+      
+      if (diffDays <= 0) return 0; // Expired or expires today
+      
+      return Math.round(diffDays);
+    })();
 
     return {
       id: groupOrder.id,
@@ -140,314 +163,216 @@ async function getGroupOrder(id: string): Promise<GroupOrder | null> {
 export default async function GroupOrderDetailPage({
   params
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
+  const { id } = await params;
   const user = await getCurrentUser();
-  const groupOrder = await getGroupOrder(params.id);
+  const groupOrder = await getGroupOrder(id);
 
   if (!groupOrder) {
     notFound();
   }
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat("en-BD", {
       style: "currency",
-      currency: "INR",
+      currency: "BDT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(price);
   };
 
-  const getStatusColor = (status: string) => {
+  const getStatusBadge = (status: string) => {
     switch (status) {
       case "COLLECTING":
-        return "bg-blue-100 text-blue-800";
+        return <Badge className="badge-warning">Collecting Orders</Badge>;
       case "THRESHOLD_MET":
-        return "bg-green-100 text-green-800";
+        return <Badge className="badge-success">Threshold Met</Badge>;
       case "ORDERED":
-        return "bg-yellow-100 text-yellow-800";
+        return <Badge className="badge-secondary">Ordered</Badge>;
       case "SHIPPED":
-        return "bg-purple-100 text-purple-800";
+        return <Badge className="badge-primary">Shipped</Badge>;
       case "DELIVERED":
-        return "bg-gray-100 text-gray-800";
+        return <Badge className="badge-success">Delivered</Badge>;
       default:
-        return "bg-gray-100 text-gray-800";
+        return <Badge variant="outline">{status}</Badge>;
     }
+  };
+
+  const formatTimeRemaining = (timeRemaining: number) => {
+    if (timeRemaining === 0) return 'Expires today';
+    if (timeRemaining === 1) return '1 day left';
+    if (timeRemaining < 7) return `${timeRemaining} days left`;
+    if (timeRemaining < 30) return `${Math.floor(timeRemaining / 7)} weeks left`;
+    return `${Math.floor(timeRemaining / 30)} months left`;
   };
 
   const userHasJoined = user && groupOrder.orders.some(order => order.user.email === user.email);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                Your App
-              </Link>
-              <div className="ml-10 space-x-8">
-                <Link
-                  href="/products"
-                  className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Products
-                </Link>
-                <Link
-                  href="/group-orders"
-                  className="text-indigo-600 hover:text-indigo-500 px-3 py-2 rounded-md text-sm font-medium"
-                >
-                  Group Orders
-                </Link>
-              </div>
-            </div>
-            <div className="flex items-center space-x-4">
-              {user ? (
-                <>
-                  <span className="text-sm text-gray-700">
-                    Welcome, {user.name}
-                  </span>
-                  <Link
-                    href="/dashboard"
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Dashboard
-                  </Link>
-                </>
-              ) : (
-                <>
-                  <Link
-                    href="/auth/signin"
-                    className="text-gray-700 hover:text-gray-900 px-3 py-2 rounded-md text-sm font-medium"
-                  >
-                    Sign in
-                  </Link>
-                  <Link
-                    href="/auth/signup"
-                    className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-md text-sm font-medium"
-                  >
-                    Sign up
-                  </Link>
-                </>
-              )}
-            </div>
-          </div>
+    <PageLayout>
+      <MainContainer>
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link 
+            href="/group-orders" 
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Group Orders
+          </Link>
         </div>
-      </nav>
 
-      {/* Breadcrumb */}
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-        <nav className="flex" aria-label="Breadcrumb">
-          <ol className="flex items-center space-x-4">
-            <li>
-              <Link href="/" className="text-gray-400 hover:text-gray-500">
-                Home
-              </Link>
-            </li>
-            <li>
-              <div className="flex items-center">
-                <svg
-                  className="flex-shrink-0 h-5 w-5 text-gray-300"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <Link
-                  href="/group-orders"
-                  className="ml-4 text-gray-400 hover:text-gray-500"
-                >
-                  Group Orders
-                </Link>
-              </div>
-            </li>
-            <li>
-              <div className="flex items-center">
-                <svg
-                  className="flex-shrink-0 h-5 w-5 text-gray-300"
-                  fill="currentColor"
-                  viewBox="0 0 20 20"
-                >
-                  <path
-                    fillRule="evenodd"
-                    d="M7.293 14.707a1 1 0 010-1.414L10.586 10 7.293 6.707a1 1 0 011.414-1.414l4 4a1 1 0 010 1.414l-4 4a1 1 0 01-1.414 0z"
-                    clipRule="evenodd"
-                  />
-                </svg>
-                <span className="ml-4 text-gray-500">#{groupOrder.batchNumber}</span>
-              </div>
-            </li>
-          </ol>
-        </nav>
-      </div>
+        {/* Page Header */}
+        <PageHeader
+          badge={`#${groupOrder.batchNumber}`}
+          title={groupOrder.product.name}
+          highlightedWord={groupOrder.product.name}
+          description={`Group order for ${groupOrder.product.unitSize} ${groupOrder.product.unit} units at bulk pricing`}
+        />
 
-      {/* Main Content */}
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pb-16">
-        <div className="lg:grid lg:grid-cols-2 lg:gap-x-8 lg:items-start">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
           {/* Product Image */}
-          <div className="flex flex-col-reverse">
-            <div className="aspect-w-1 aspect-h-1 w-full">
-              {groupOrder.product.imageUrl ? (
-                <img
-                  src={groupOrder.product.imageUrl}
-                  alt={groupOrder.product.name}
-                  className="w-full h-full object-center object-cover sm:rounded-lg"
-                />
-              ) : (
-                <div className="w-full h-96 bg-gray-100 flex items-center justify-center sm:rounded-lg">
-                  <svg
-                    className="h-24 w-24 text-gray-400"
-                    fill="none"
-                    viewBox="0 0 24 24"
-                    stroke="currentColor"
-                  >
-                    <path
-                      strokeLinecap="round"
-                      strokeLinejoin="round"
-                      strokeWidth={2}
-                      d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                    />
-                  </svg>
-                </div>
-              )}
-            </div>
+          <div className="space-y-4">
+            {groupOrder.product.imageUrl ? (
+              <img
+                src={groupOrder.product.imageUrl}
+                alt={groupOrder.product.name}
+                className="w-full h-96 object-cover rounded-lg border"
+              />
+            ) : (
+              <div className="w-full h-96 bg-muted rounded-lg flex items-center justify-center border">
+                <Package className="h-24 w-24 text-muted-foreground" />
+              </div>
+            )}
           </div>
 
           {/* Group Order Info */}
-          <div className="mt-10 px-4 sm:px-0 sm:mt-16 lg:mt-0">
-            <div className="flex items-center justify-between mb-4">
-              <span className="inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium bg-blue-100 text-blue-800">
+          <div className="space-y-6">
+            {/* Status and Category */}
+            <div className="flex items-center justify-between">
+              <Badge variant="secondary">
                 {groupOrder.product.category.name}
-              </span>
-              <span className={`inline-flex items-center px-3 py-0.5 rounded-full text-sm font-medium ${getStatusColor(groupOrder.status)}`}>
-                {groupOrder.status.replace('_', ' ')}
-              </span>
+              </Badge>
+              {getStatusBadge(groupOrder.status)}
             </div>
 
-            <h1 className="text-3xl font-extrabold tracking-tight text-gray-900">
-              {groupOrder.product.name}
-            </h1>
-
-            <div className="mt-3">
-              <p className="text-lg text-gray-600">
-                Group Order #{groupOrder.batchNumber}
-              </p>
-              <p className="text-sm text-gray-500">
+            {/* Product Details */}
+            <div>
+              <p className="text-sm text-muted-foreground mb-2">
                 {groupOrder.product.unitSize} {groupOrder.product.unit} per unit
               </p>
+              {groupOrder.product.description && (
+                <p className="text-muted-foreground">
+                  {groupOrder.product.description}
+                </p>
+              )}
             </div>
 
             {/* Price */}
-            <div className="mt-6">
-              <div className="flex items-center space-x-4">
-                <span className="text-3xl font-bold text-gray-900">
+            <div className="space-y-2">
+              <div className="flex items-baseline space-x-2">
+                <span className="text-3xl font-bold text-primary">
                   {formatPrice(groupOrder.pricePerUnit)}
                 </span>
-                <span className="text-sm text-gray-500">
+                <span className="text-muted-foreground">
                   per {groupOrder.product.unit}
                 </span>
               </div>
-              <p className="mt-1 text-sm text-green-600 font-medium">
-                Bulk pricing - Save with group orders!
+              <p className="text-sm text-green-600 font-medium">
+                🎉 Bulk pricing - Save with group orders!
               </p>
             </div>
 
             {/* Progress */}
-            <div className="mt-6">
-              <div className="flex justify-between text-sm text-gray-600 mb-2">
-                <span>Progress to minimum threshold</span>
-                <span>{Math.round(groupOrder.progressPercentage)}%</span>
-              </div>
-              <div className="w-full bg-gray-200 rounded-full h-3">
-                <div
-                  className="bg-indigo-600 h-3 rounded-full transition-all duration-300"
-                  style={{ width: `${Math.min(groupOrder.progressPercentage, 100)}%` }}
-                ></div>
-              </div>
-              <div className="flex justify-between text-sm text-gray-500 mt-1">
-                <span>{formatPrice(groupOrder.currentAmount)} collected</span>
-                <span>{formatPrice(groupOrder.minThreshold)} needed</span>
-              </div>
-            </div>
+            <Card>
+              <CardHeader>
+                <CardTitle className="text-lg">Progress to Goal</CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-4">
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Progress</span>
+                  <span className="font-semibold text-primary">
+                    {Math.round(groupOrder.progressPercentage)}%
+                  </span>
+                </div>
+                <Progress value={groupOrder.progressPercentage} className="h-3" />
+                <div className="flex justify-between text-sm text-muted-foreground">
+                  <span>{formatPrice(groupOrder.currentAmount)} collected</span>
+                  <span>{formatPrice(groupOrder.minThreshold)} goal</span>
+                </div>
+              </CardContent>
+            </Card>
 
-            {/* Stats */}
-            <div className="mt-6 grid grid-cols-3 gap-4">
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <div className="text-lg font-semibold text-gray-900">
-                  {groupOrder.participantCount}
+            {/* Stats Grid */}
+            <div className="grid grid-cols-3 gap-4">
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-center mb-2">
+                  <Users className="h-5 w-5 text-primary mr-2" />
+                  <span className="text-xl font-bold">{groupOrder.participantCount}</span>
                 </div>
-                <div className="text-xs text-gray-500">Participants</div>
+                <div className="text-xs text-muted-foreground">Participants</div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <div className="text-lg font-semibold text-gray-900">
-                  {groupOrder.currentQuantity}
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-center mb-2">
+                  <Package className="h-5 w-5 text-secondary mr-2" />
+                  <span className="text-xl font-bold">{groupOrder.currentQuantity}</span>
                 </div>
-                <div className="text-xs text-gray-500">
+                <div className="text-xs text-muted-foreground">
                   of {groupOrder.targetQuantity} {groupOrder.product.unit}
                 </div>
               </div>
-              <div className="text-center p-3 bg-gray-50 rounded-lg">
-                <div className="text-lg font-semibold text-gray-900">
-                  {groupOrder.timeRemaining}
+              <div className="text-center p-4 bg-muted/50 rounded-lg">
+                <div className="flex items-center justify-center mb-2">
+                  <Clock className="h-5 w-5 text-accent mr-2" />
+                  <span className="text-xl font-bold">{groupOrder.timeRemaining}</span>
                 </div>
-                <div className="text-xs text-gray-500">Days left</div>
+                <div className="text-xs text-muted-foreground">
+                  {formatTimeRemaining(groupOrder.timeRemaining)}
+                </div>
               </div>
             </div>
 
-            {/* Description */}
-            {groupOrder.product.description && (
-              <div className="mt-6">
-                <h3 className="text-sm font-medium text-gray-900">Description</h3>
-                <div className="mt-2 prose prose-sm text-gray-500">
-                  <p>{groupOrder.product.description}</p>
-                </div>
-              </div>
-            )}
-
             {/* Delivery Info */}
             {groupOrder.estimatedDelivery && (
-              <div className="mt-6 bg-blue-50 rounded-lg p-4">
-                <h3 className="text-sm font-medium text-blue-900 mb-2">Delivery Information</h3>
-                <p className="text-sm text-blue-700">
+              <div className="p-4 bg-muted/50 border border-border rounded-lg">
+                <div className="flex items-center space-x-2">
+                  <TrendingUp className="h-4 w-4 text-primary" />
+                  <h3 className="text-sm font-medium text-foreground">Delivery Information</h3>
+                </div>
+                <p className="text-sm text-muted-foreground mt-2">
                   Estimated delivery: {new Date(groupOrder.estimatedDelivery).toLocaleDateString()}
                 </p>
-                <p className="text-xs text-blue-600 mt-1">
+                <p className="text-xs text-muted-foreground mt-1">
                   Delivery date may vary based on order fulfillment
                 </p>
               </div>
             )}
 
             {/* Action Buttons */}
-            <div className="mt-8 flex space-x-4">
+            <div className="space-y-3">
               {user ? (
                 userHasJoined ? (
-                  <div className="flex-1 bg-green-100 border border-green-200 rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-green-800">
+                  <div className="w-full bg-green-100 border border-green-200 rounded-md py-3 px-6 flex items-center justify-center text-base font-medium text-green-800">
                     ✓ You&apos;ve joined this group order
                   </div>
                 ) : groupOrder.status === "COLLECTING" ? (
-                  <Link
-                    href={`/group-orders/${groupOrder.id}/join`}
-                    className="flex-1 bg-indigo-600 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                  >
-                    Join Group Order
-                  </Link>
+                  <Button asChild className="w-full" size="lg">
+                    <Link href={`/group-orders/${groupOrder.id}/join`}>
+                      Join Group Order
+                    </Link>
+                  </Button>
                 ) : (
-                  <div className="flex-1 bg-gray-100 border border-gray-200 rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-gray-500">
+                  <div className="w-full bg-muted border border-border rounded-md py-3 px-6 flex items-center justify-center text-base font-medium text-muted-foreground">
                     Order no longer accepting participants
                   </div>
                 )
               ) : (
-                <Link
-                  href="/auth/signin"
-                  className="flex-1 bg-indigo-600 border border-transparent rounded-md py-3 px-8 flex items-center justify-center text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500"
-                >
-                  Sign in to Join
-                </Link>
+                <Button asChild className="w-full" size="lg">
+                  <Link href="/auth/signin">
+                    Sign in to Join
+                  </Link>
+                </Button>
               )}
             </div>
           </div>
@@ -455,43 +380,46 @@ export default async function GroupOrderDetailPage({
 
         {/* Participants Section */}
         {groupOrder.orders.length > 0 && (
-          <div className="mt-16">
-            <h2 className="text-2xl font-bold text-gray-900 mb-6">Participants</h2>
-            <div className="bg-white shadow overflow-hidden sm:rounded-md">
-              <ul className="divide-y divide-gray-200">
-                {groupOrder.orders.map((order, index) => (
-                  <li key={order.id}>
-                    <div className="px-4 py-4 sm:px-6">
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center">
-                          <div className="flex-shrink-0">
-                            <div className="h-8 w-8 bg-indigo-100 rounded-full flex items-center justify-center">
-                              <span className="text-sm font-medium text-indigo-600">
-                                {order.user.name.charAt(0).toUpperCase()}
-                              </span>
-                            </div>
-                          </div>
-                          <div className="ml-4">
-                            <p className="text-sm font-medium text-gray-900">
-                              {order.user.name}
-                            </p>
-                            <p className="text-sm text-gray-500">
-                              Ordered {order.items[0]?.quantity || 0} {groupOrder.product.unit}
-                            </p>
-                          </div>
+          <div className="mt-12">
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Users className="h-5 w-5 mr-2" />
+                  Participants ({groupOrder.participantCount})
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {groupOrder.orders.map((order, index) => (
+                    <div key={order.id} className="flex items-center justify-between p-4 bg-muted/30 rounded-lg">
+                      <div className="flex items-center space-x-4">
+                        <div className="h-10 w-10 bg-primary/10 rounded-full flex items-center justify-center">
+                          <span className="text-sm font-medium text-primary">
+                            {order.user.name.charAt(0).toUpperCase()}
+                          </span>
                         </div>
-                        <div className="text-sm font-medium text-gray-900">
-                          {formatPrice(order.totalAmount)}
+                        <div>
+                          <p className="font-medium text-foreground">
+                            {order.user.name}
+                          </p>
+                          <p className="text-sm text-muted-foreground">
+                            Ordered {order.items[0]?.quantity || 0} {groupOrder.product.unit}
+                          </p>
                         </div>
                       </div>
+                      <div className="text-right">
+                        <p className="font-semibold text-foreground">
+                          {formatPrice(order.totalAmount)}
+                        </p>
+                      </div>
                     </div>
-                  </li>
-                ))}
-              </ul>
-            </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           </div>
         )}
-      </main>
-    </div>
+      </MainContainer>
+    </PageLayout>
   );
 }

@@ -5,11 +5,11 @@ export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs))
 }
 
-// Format price in Indian Rupees
+// Format price in Bangladeshi Taka
 export function formatPrice(price: number): string {
-  return new Intl.NumberFormat("en-IN", {
+      return new Intl.NumberFormat("en-BD", {
     style: "currency",
-    currency: "INR",
+    currency: "BDT",
     minimumFractionDigits: 0,
     maximumFractionDigits: 2,
   }).format(price);

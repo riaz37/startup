@@ -53,20 +53,20 @@ export function TestimonialsSection() {
       <Star
         key={i}
         className={`h-4 w-4 ${
-          i < rating ? "text-yellow-400 fill-current" : "text-gray-300"
+          i < rating ? "text-yellow-400 fill-current" : "text-gray-300 dark:text-gray-600"
         }`}
       />
     ));
   };
 
   return (
-    <section className="py-16 bg-gray-50">
+    <section className="py-16 bg-muted/50 dark:bg-muted/20">
       <div className="container mx-auto px-4">
         <div className="text-center mb-12">
-          <h2 className="text-3xl font-bold text-gray-900 mb-4">
+          <h2 className="text-3xl font-bold text-foreground mb-4">
             What Our Customers Say
           </h2>
-          <p className="text-lg text-gray-600 max-w-2xl mx-auto">
+          <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
             Join thousands of satisfied customers who trust Sohozdaam for their bulk food ingredient needs.
           </p>
         </div>
@@ -76,16 +76,16 @@ export function TestimonialsSection() {
             <Card key={index} className="h-full">
               <CardContent className="p-6">
                 <div className="flex items-center mb-4">
-                  <div className="w-12 h-12 bg-blue-100 rounded-full flex items-center justify-center mr-4">
-                    <span className="text-blue-600 font-semibold text-lg">
+                  <div className="w-12 h-12 bg-blue-100 dark:bg-blue-900/30 rounded-full flex items-center justify-center mr-4">
+                    <span className="text-blue-600 dark:text-blue-400 font-semibold text-lg">
                       {testimonial.initials}
                     </span>
                   </div>
                   <div>
-                    <h4 className="font-semibold text-gray-900">
+                    <h4 className="font-semibold text-foreground">
                       {testimonial.name}
                     </h4>
-                    <p className="text-sm text-gray-600">{testimonial.role}</p>
+                    <p className="text-sm text-muted-foreground">{testimonial.role}</p>
                   </div>
                 </div>
 
@@ -93,7 +93,7 @@ export function TestimonialsSection() {
                   {renderStars(testimonial.rating)}
                 </div>
 
-                <p className="text-gray-700 leading-relaxed">
+                <p className="text-muted-foreground leading-relaxed">
                   "{testimonial.content}"
                 </p>
               </CardContent>

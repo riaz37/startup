@@ -233,7 +233,7 @@ export function OrderManagement({ userId }: OrderManagementProps) {
                         {order.items[0]?.quantity} x {order.items[0]?.product.unitSize} {order.items[0]?.product.unit}
                       </p>
                       <p className="text-sm text-gray-600">
-                        Unit Price: ₹{order.items[0]?.unitPrice}
+                        Unit Price: ৳{order.items[0]?.unitPrice}
                       </p>
                     </div>
                   </div>
@@ -278,7 +278,7 @@ export function OrderManagement({ userId }: OrderManagementProps) {
                     <h4 className="font-medium text-gray-900 mb-2">Order Total</h4>
                     <div className="bg-green-50 p-3 rounded-lg">
                       <p className="text-2xl font-bold text-green-600">
-                        ₹{order.totalAmount.toFixed(2)}
+                        ৳{order.totalAmount.toFixed(2)}
                       </p>
                     </div>
                   </div>

@@ -154,7 +154,7 @@ export default async function DashboardPage() {
     {
       icon: TrendingUp,
       title: "Total Spent",
-      value: `₹${totalSavingsAmount.toFixed(0)}`,
+              value: `৳${totalSavingsAmount.toFixed(0)}`,
       change: "vs. retail price",
       trend: "up" as const,
       color: "success" as const,
@@ -259,7 +259,7 @@ export default async function DashboardPage() {
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-primary mb-1">
-                ₹{totalSavingsAmount.toFixed(0)}
+                ৳{totalSavingsAmount.toFixed(0)}
               </div>
               <div className="text-sm text-muted-foreground">Total Investment</div>
             </div>

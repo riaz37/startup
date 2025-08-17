@@ -231,7 +231,7 @@ model Payment {
   id               String        @id @default(cuid())
   orderId          String
   amount           Float
-  currency         String        @default("INR")
+  currency         String        @default("BDT")
   paymentMethod    String // UPI, Card, NetBanking, etc.
   gatewayProvider  String // Razorpay, Stripe, etc.
   gatewayOrderId   String? // Gateway's order ID
@@ -433,6 +433,24 @@ model Settings {
   @@map("settings")
 }
 
+// Discount configuration for group orders
+model DiscountConfig {
+  id          String   @id @default(cuid())
+  name        String   // e.g., "Bulk Purchase Discount", "Seasonal Discount"
+  description String?
+  discountType DiscountType
+  discountValue Float  // Percentage (0-100) or fixed amount
+  isActive    Boolean  @default(true)
+  minQuantity Int?     // Minimum quantity to apply discount
+  maxQuantity Int?     // Maximum quantity for discount
+  startDate   DateTime?
+  endDate     DateTime?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  @@map("discount_configs")
+}
+
 // Enums
 enum Role {
   CUSTOMER
@@ -507,4 +525,9 @@ enum NotificationType {
   PAYMENT_SUCCESS
   PAYMENT_FAILED
   GENERAL
+}
+
+enum DiscountType {
+  PERCENTAGE
+  FIXED_AMOUNT
 }

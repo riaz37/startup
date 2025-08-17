@@ -86,7 +86,7 @@ export function PaymentHistory({ userId }: PaymentHistoryProps) {
 
   const formatDate = (dateString: string | null) => {
     if (!dateString) return "N/A";
-    return new Date(dateString).toLocaleDateString("en-IN", {
+          return new Date(dateString).toLocaleDateString("en-BD", {
       year: "numeric",
       month: "short",
       day: "numeric",

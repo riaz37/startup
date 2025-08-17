@@ -1,8 +1,6 @@
 import { redirect } from "next/navigation";
 import { prisma, getCurrentUser } from "@/lib"
-import { Navigation } from "@/components/home/navigation";
-import { Footer } from "@/components/home/footer";
-import { MainContainer } from "@/components/layout";
+import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -21,11 +19,11 @@ import {
 import Link from "next/link";
 
 interface ConfirmationPageProps {
-  searchParams: {
+  searchParams: Promise<{
     success?: string;
     canceled?: string;
     orderId?: string;
-  };
+  }>;
 }
 
 export default async function ConfirmationPage({ searchParams }: ConfirmationPageProps) {
@@ -35,7 +33,7 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
     redirect("/auth/signin");
   }
 
-  const { success, canceled, orderId } = searchParams;
+  const { success, canceled, orderId } = await searchParams;
   const isSuccess = success === "true";
   const isCanceled = canceled === "true";
 
@@ -100,158 +98,141 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
     return "bg-blue-100 text-blue-800";
   };
 
-  const getStatusText = () => {
-    if (isSuccess) return "Confirmed";
-    if (isCanceled) return "Cancelled";
-    return order?.status || "Pending";
-  };
-
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      <Navigation user={user} />
-
+    <PageLayout>
       <MainContainer>
         <div className="max-w-2xl mx-auto text-center">
-          {/* Status Icon and Title */}
+          {/* Status Icon */}
           <div className="mb-8">
             {getStatusIcon()}
-            <h1 className="text-4xl font-bold mt-6 mb-4">
-              {getStatusTitle()}
-            </h1>
-            <p className="text-xl text-muted-foreground">
-              {getStatusDescription()}
-            </p>
           </div>
 
-          {/* Order Details Card */}
+          {/* Status Title */}
+          <h1 className="text-4xl font-bold text-foreground mb-4">
+            {getStatusTitle()}
+          </h1>
+
+          {/* Status Description */}
+          <p className="text-xl text-muted-foreground mb-8">
+            {getStatusDescription()}
+          </p>
+
+          {/* Order Details */}
           {order && (
             <Card className="card-sohozdaam mb-8">
               <CardHeader>
-                <CardTitle>Order Details</CardTitle>
+                <CardTitle className="flex items-center justify-center">
+                  <Package className="h-5 w-5 mr-2" />
+                  Order Details
+                </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                {/* Order Status */}
-                <div className="flex items-center justify-center space-x-2">
-                  <span className="text-sm text-muted-foreground">Status:</span>
-                  <Badge className={getStatusColor()}>
-                    {getStatusText()}
-                  </Badge>
+                {/* Product Info */}
+                <div className="flex items-center space-x-4">
+                  {order.groupOrder.product.imageUrl ? (
+                    <img
+                      src={order.groupOrder.product.imageUrl}
+                      alt={order.groupOrder.product.name}
+                      className="h-16 w-16 object-cover rounded-lg border"
+                    />
+                  ) : (
+                    <div className="h-16 w-16 bg-muted rounded-lg flex items-center justify-center border">
+                      <Package className="h-8 w-8 text-muted-foreground" />
+                    </div>
+                  )}
+                  <div className="flex-1 text-left">
+                    <h3 className="font-medium text-foreground">
+                      {order.groupOrder.product.name}
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Group Order #{order.groupOrder.batchNumber}
+                    </p>
+                    <Badge variant="outline" className="mt-1">
+                      {order.groupOrder.product.category.name}
+                    </Badge>
+                  </div>
                 </div>
 
                 <Separator />
 
-                {/* Product Info */}
-                <div className="flex items-center space-x-3">
-                  <Package className="h-5 w-5 text-primary" />
+                {/* Order Summary */}
+                <div className="grid grid-cols-2 gap-4 text-sm">
                   <div className="text-left">
-                    <h4 className="font-medium">{order.groupOrder.product.name}</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {order.groupOrder.product.unitSize} {order.groupOrder.product.unit}
+                    <span className="text-muted-foreground">Order Number:</span>
+                    <p className="font-medium text-foreground">#{order.orderNumber}</p>
+                  </div>
+                  <div className="text-left">
+                    <span className="text-muted-foreground">Total Amount:</span>
+                    <p className="font-medium text-foreground text-primary">
+                      {formatPrice(order.totalAmount)}
                     </p>
                   </div>
                 </div>
 
                 {/* Delivery Address */}
-                <div className="flex items-center space-x-3">
-                  <MapPin className="h-5 w-5 text-primary" />
-                  <div className="text-left">
-                    <h4 className="font-medium">Delivery Address</h4>
-                    <p className="text-sm text-muted-foreground">
-                      {order.address.addressLine1}
-                      {order.address.addressLine2 && (
-                        <>, {order.address.addressLine2}</>
-                      )}
-                      <br />
-                      {order.address.city}, {order.address.state} {order.address.pincode}
-                    </p>
+                <div className="text-left">
+                  <div className="flex items-center space-x-2 mb-2">
+                    <MapPin className="h-4 w-4 text-primary" />
+                    <span className="text-sm font-medium text-foreground">Delivery Address</span>
                   </div>
-                </div>
-
-                {/* Order Details */}
-                <div className="grid grid-cols-2 gap-4 text-sm">
-                  <div className="text-left">
-                    <span className="text-muted-foreground">Order Number:</span>
-                    <p className="font-medium">{order.orderNumber}</p>
-                  </div>
-                  <div className="text-left">
-                    <span className="text-muted-foreground">Order Date:</span>
-                    <p className="font-medium">
-                      {new Date(order.placedAt).toLocaleDateString()}
-                    </p>
-                  </div>
-                  <div className="text-left">
-                    <span className="text-muted-foreground">Total Amount:</span>
-                    <p className="font-medium text-lg text-primary">
-                      {formatPrice(order.totalAmount)}
-                    </p>
-                  </div>
-                  <div className="text-left">
-                    <span className="text-muted-foreground">Payment Status:</span>
-                    <p className="font-medium">
-                      {order.paymentStatus === "COMPLETED" ? "Paid" : "Pending"}
-                    </p>
-                  </div>
+                  <p className="text-sm text-muted-foreground">
+                    {order.address.addressLine1}
+                    {order.address.addressLine2 && <>, {order.address.addressLine2}</>}
+                    <br />
+                    {order.address.city}, {order.address.state} - {order.address.pincode}
+                  </p>
                 </div>
               </CardContent>
             </Card>
           )}
 
           {/* Action Buttons */}
-          <div className="flex flex-col sm:flex-row gap-4 justify-center">
-            <Button asChild className="flex-1 sm:flex-none">
-              <Link href="/dashboard">
-                <Home className="h-4 w-4 mr-2" />
-                Go to Dashboard
-              </Link>
-            </Button>
-            
-            <Button variant="outline" asChild className="flex-1 sm:flex-none">
-              <Link href="/orders">
-                <ShoppingCart className="h-4 w-4 mr-2" />
-                View Orders
-              </Link>
-            </Button>
+          <div className="space-y-4">
+            {isSuccess && (
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg">
+                  <Link href={`/orders/${order?.id}`}>
+                    <Package className="mr-2 h-4 w-4" />
+                    Track Order
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild size="lg">
+                  <Link href="/orders">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    View All Orders
+                  </Link>
+                </Button>
+              </div>
+            )}
 
             {isCanceled && (
-              <Button variant="outline" asChild className="flex-1 sm:flex-none">
-                <Link href={`/orders/${orderId}/payment`}>
-                  <ArrowRight className="h-4 w-4 mr-2" />
-                  Try Again
+              <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                <Button asChild size="lg">
+                  <Link href={`/orders/${order?.id}/payment`}>
+                    <ArrowRight className="mr-2 h-4 w-4" />
+                    Try Payment Again
+                  </Link>
+                </Button>
+                <Button variant="outline" asChild size="lg">
+                  <Link href="/orders">
+                    <ShoppingCart className="mr-2 h-4 w-4" />
+                    View All Orders
+                  </Link>
+                </Button>
+              </div>
+            )}
+
+            <div className="pt-4">
+              <Button variant="ghost" asChild>
+                <Link href="/">
+                  <Home className="mr-2 h-4 w-4" />
+                  Back to Home
                 </Link>
               </Button>
-            )}
+            </div>
           </div>
-
-          {/* Additional Information */}
-          {isSuccess && (
-            <div className="mt-8 p-4 bg-green-50 rounded-lg border border-green-200">
-              <h3 className="font-medium text-green-800 mb-2">
-                What happens next?
-              </h3>
-              <ul className="text-sm text-green-700 space-y-1 text-left">
-                <li>• You'll receive an email confirmation shortly</li>
-                <li>• We'll notify you when your order is ready for pickup/delivery</li>
-                <li>• Track your order status in your dashboard</li>
-                <li>• Contact support if you have any questions</li>
-              </ul>
-            </div>
-          )}
-
-          {isCanceled && (
-            <div className="mt-8 p-4 bg-blue-50 rounded-lg border border-blue-200">
-              <h3 className="font-medium text-blue-800 mb-2">
-                Need help?
-              </h3>
-              <p className="text-sm text-blue-700">
-                If you're experiencing issues with payment or have questions, 
-                please contact our support team. We're here to help!
-              </p>
-            </div>
-          )}
         </div>
       </MainContainer>
-
-      <Footer />
-    </div>
+    </PageLayout>
   );
 }

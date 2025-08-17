@@ -3,6 +3,13 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import { ArrowLeft, Package, Plus, MapPin, CheckCircle } from "lucide-react";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 
 interface GroupOrder {
   id: string;
@@ -47,12 +54,12 @@ interface Address {
 export default function JoinGroupOrderPage({
   params
 }: {
-  params: { id: string };
+  params: Promise<{ id: string }>;
 }) {
   const router = useRouter();
   const [groupOrder, setGroupOrder] = useState<GroupOrder | null>(null);
   const [addresses, setAddresses] = useState<Address[]>([]);
-  const [quantity, setQuantity] = useState(1);
+  const [quantity, setQuantity] = useState<number>(1);
   const [selectedAddressId, setSelectedAddressId] = useState("");
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -70,17 +77,28 @@ export default function JoinGroupOrderPage({
   });
 
   useEffect(() => {
-    fetchGroupOrder();
-    fetchAddresses();
-  }, [params.id]);
+    const fetchData = async () => {
+      const { id } = await params;
+      await fetchGroupOrder(id);
+      await fetchAddresses();
+    };
+    fetchData();
+  }, [params]);
 
-  const fetchGroupOrder = async () => {
+  // Ensure quantity is always valid
+  useEffect(() => {
+    if (groupOrder && (!quantity || quantity < (groupOrder.product.minOrderQty || 1))) {
+      setQuantity(groupOrder.product.minOrderQty || 1);
+    }
+  }, [groupOrder, quantity]);
+
+  const fetchGroupOrder = async (id: string) => {
     try {
-      const response = await fetch(`/api/group-orders/${params.id}`);
+      const response = await fetch(`/api/group-orders/${id}`);
       if (response.ok) {
         const data = await response.json();
         setGroupOrder(data);
-        setQuantity(data.product.minOrderQty);
+        setQuantity(data.product.minOrderQty || 1);
       }
     } catch (error) {
       console.error("Error fetching group order:", error);
@@ -155,7 +173,8 @@ export default function JoinGroupOrderPage({
     setError("");
 
     try {
-      const response = await fetch(`/api/group-orders/${params.id}/join`, {
+      const { id } = await params;
+      const response = await fetch(`/api/group-orders/${id}/join`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json"
@@ -183,317 +202,336 @@ export default function JoinGroupOrderPage({
 
   if (!groupOrder) {
     return (
-      <div className="min-h-screen bg-gray-50 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-600 mx-auto"></div>
-          <p className="mt-4 text-gray-600">Loading group order...</p>
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto px-4 py-8">
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto"></div>
+              <p className="mt-4 text-muted-foreground">Loading group order...</p>
+            </div>
+          </div>
         </div>
       </div>
     );
   }
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat("en-BD", {
       style: "currency",
-      currency: "INR",
+      currency: "BDT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(price);
   };
 
-  const totalAmount = quantity * groupOrder.pricePerUnit;
+  const totalAmount = (quantity || 0) * (groupOrder.pricePerUnit || 0);
 
   return (
-    <div className="min-h-screen bg-gray-50">
-      {/* Navigation */}
-      <nav className="bg-white shadow">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-          <div className="flex justify-between h-16">
-            <div className="flex items-center">
-              <Link href="/" className="text-xl font-bold text-gray-900">
-                Your App
-              </Link>
-            </div>
-          </div>
+    <div className="min-h-screen bg-background">
+      <div className="container mx-auto px-4 py-8">
+        {/* Back Button */}
+        <div className="mb-6">
+          <Link 
+            href={`/group-orders/${groupOrder.id}`}
+            className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
+          >
+            <ArrowLeft className="h-4 w-4 mr-2" />
+            Back to Group Order
+          </Link>
         </div>
-      </nav>
 
-      {/* Main Content */}
-      <main className="max-w-4xl mx-auto py-6 sm:px-6 lg:px-8">
-        <div className="px-4 py-6 sm:px-0">
-          {/* Header */}
-          <div className="mb-8">
-            <h1 className="text-3xl font-bold text-gray-900">Join Group Order</h1>
-            <p className="mt-2 text-sm text-gray-600">
-              Complete your order for #{groupOrder.batchNumber}
-            </p>
+        {/* Page Header */}
+        <div className="mb-8">
+          <div className="flex items-center space-x-3 mb-2">
+            <Badge variant="secondary" className="text-sm">
+              #{groupOrder.batchNumber}
+            </Badge>
           </div>
+          <h1 className="text-3xl font-bold text-foreground">
+            Join <span className="text-primary">Group Order</span>
+          </h1>
+          <p className="text-muted-foreground mt-2">
+            Complete your order for {groupOrder.product.name} at bulk pricing
+          </p>
+        </div>
 
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            {/* Product Details */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <h2 className="text-lg font-medium text-gray-900 mb-4">Product Details</h2>
-              
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+          {/* Product Details */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center">
+                <Package className="h-5 w-5 mr-2" />
+                Product Details
+              </CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-6">
               <div className="flex items-start space-x-4">
                 {groupOrder.product.imageUrl ? (
                   <img
                     src={groupOrder.product.imageUrl}
                     alt={groupOrder.product.name}
-                    className="h-20 w-20 object-cover rounded-lg"
+                    className="h-20 w-20 object-cover rounded-lg border"
                   />
                 ) : (
-                  <div className="h-20 w-20 bg-gray-100 rounded-lg flex items-center justify-center">
-                    <svg
-                      className="h-10 w-10 text-gray-400"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M20 7l-8-4-8 4m16 0l-8 4m8-4v10l-8 4m0-10L4 7m8 4v10M4 7v10l8 4"
-                      />
-                    </svg>
+                  <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center border">
+                    <Package className="h-10 w-10 text-muted-foreground" />
                   </div>
                 )}
                 <div className="flex-1">
-                  <h3 className="text-lg font-medium text-gray-900">
+                  <h3 className="text-lg font-medium text-foreground">
                     {groupOrder.product.name}
                   </h3>
-                  <p className="text-sm text-gray-600">
+                  <Badge variant="secondary" className="mt-1">
+                    {groupOrder.product.category.name}
+                  </Badge>
+                  <p className="text-sm text-muted-foreground mt-2">
                     {groupOrder.product.unitSize} {groupOrder.product.unit} per unit
                   </p>
-                  <p className="text-lg font-bold text-indigo-600 mt-2">
+                  <p className="text-lg font-bold text-primary mt-2">
                     {formatPrice(groupOrder.pricePerUnit)} per {groupOrder.product.unit}
                   </p>
                 </div>
               </div>
 
               {/* Quantity Selection */}
-              <div className="mt-6">
-                <label htmlFor="quantity" className="block text-sm font-medium text-gray-700">
+              <div className="space-y-3">
+                <Label htmlFor="quantity">
                   Quantity ({groupOrder.product.unit})
-                </label>
-                <div className="mt-1 flex items-center space-x-3">
-                  <button
+                </Label>
+                <div className="flex items-center space-x-3">
+                  <Button
                     type="button"
-                    onClick={() => setQuantity(Math.max(groupOrder.product.minOrderQty, quantity - 1))}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setQuantity(Math.max(groupOrder.product.minOrderQty || 1, (quantity || 1) - 1))}
+                    className="h-10 w-10 p-0"
                   >
                     -
-                  </button>
-                  <input
+                  </Button>
+                  <Input
                     type="number"
                     id="quantity"
-                    value={quantity}
+                    value={quantity || ""}
                     onChange={(e) => {
-                      const val = parseInt(e.target.value) || groupOrder.product.minOrderQty;
-                      setQuantity(Math.max(groupOrder.product.minOrderQty, val));
+                      const val = parseInt(e.target.value) || groupOrder.product.minOrderQty || 1;
+                      setQuantity(Math.max(groupOrder.product.minOrderQty || 1, val));
                     }}
                     min={groupOrder.product.minOrderQty}
                     max={groupOrder.product.maxOrderQty || undefined}
-                    className="block w-20 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm text-center"
+                    className="w-20 text-center"
                   />
-                  <button
+                  <Button
                     type="button"
+                    variant="outline"
+                    size="sm"
                     onClick={() => {
-                      const newQty = quantity + 1;
+                      const newQty = (quantity || 1) + 1;
                       if (!groupOrder.product.maxOrderQty || newQty <= groupOrder.product.maxOrderQty) {
                         setQuantity(newQty);
                       }
                     }}
-                    className="bg-gray-200 hover:bg-gray-300 text-gray-700 font-bold py-2 px-3 rounded"
+                    className="h-10 w-10 p-0"
                   >
                     +
-                  </button>
+                  </Button>
                 </div>
-                <p className="mt-1 text-sm text-gray-500">
-                  Min: {groupOrder.product.minOrderQty} {groupOrder.product.unit}
-                  {groupOrder.product.maxOrderQty && (
-                    <span> • Max: {groupOrder.product.maxOrderQty} {groupOrder.product.unit}</span>
-                  )}
-                </p>
+                                  <p className="text-sm text-muted-foreground">
+                    Min: {groupOrder.product.minOrderQty || 1} {groupOrder.product.unit}
+                    {groupOrder.product.maxOrderQty && (
+                      <span> • Max: {groupOrder.product.maxOrderQty} {groupOrder.product.unit}</span>
+                    )}
+                  </p>
               </div>
 
               {/* Order Summary */}
-              <div className="mt-6 border-t pt-4">
+              <div className="border-t pt-4 space-y-3">
                 <div className="flex justify-between text-sm">
-                  <span>Unit Price:</span>
-                  <span>{formatPrice(groupOrder.pricePerUnit)}</span>
+                  <span className="text-muted-foreground">Unit Price:</span>
+                  <span className="font-medium">{formatPrice(groupOrder.pricePerUnit)}</span>
                 </div>
-                <div className="flex justify-between text-sm mt-2">
-                  <span>Quantity:</span>
-                  <span>{quantity} {groupOrder.product.unit}</span>
+                <div className="flex justify-between text-sm">
+                  <span className="text-muted-foreground">Quantity:</span>
+                  <span className="font-medium">{quantity || 0} {groupOrder.product.unit}</span>
                 </div>
-                <div className="flex justify-between text-lg font-bold mt-4 pt-4 border-t">
+                <div className="flex justify-between text-lg font-bold pt-3 border-t">
                   <span>Total:</span>
-                  <span>{formatPrice(totalAmount)}</span>
+                  <span className="text-primary">{formatPrice(totalAmount)}</span>
                 </div>
               </div>
-            </div>
+            </CardContent>
+          </Card>
 
-            {/* Delivery Address */}
-            <div className="bg-white shadow rounded-lg p-6">
-              <div className="flex justify-between items-center mb-4">
-                <h2 className="text-lg font-medium text-gray-900">Delivery Address</h2>
-                <button
+          {/* Delivery Address */}
+          <Card>
+            <CardHeader>
+              <div className="flex justify-between items-center">
+                <CardTitle className="flex items-center">
+                  <MapPin className="h-5 w-5 mr-2" />
+                  Delivery Address
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
                   onClick={() => setShowAddressForm(!showAddressForm)}
-                  className="text-indigo-600 hover:text-indigo-500 text-sm font-medium"
+                  className="text-sm"
                 >
+                  <Plus className="h-4 w-4 mr-2" />
                   Add New Address
-                </button>
+                </Button>
               </div>
-
+            </CardHeader>
+            <CardContent className="space-y-6">
               {error && (
-                <div className="mb-4 bg-red-50 border border-red-200 text-red-600 px-4 py-3 rounded-md">
+                <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md text-sm">
                   {error}
                 </div>
               )}
 
               {/* Address Selection */}
               {addresses.length > 0 && (
-                <div className="space-y-3 mb-6">
+                <RadioGroup
+                  value={selectedAddressId}
+                  onValueChange={setSelectedAddressId}
+                  className="space-y-3"
+                >
                   {addresses.map((address) => (
-                    <label
-                      key={address.id}
-                      className={`block p-4 border rounded-lg cursor-pointer ${
-                        selectedAddressId === address.id
-                          ? "border-indigo-500 bg-indigo-50"
-                          : "border-gray-300 hover:border-gray-400"
-                      }`}
-                    >
-                      <input
-                        type="radio"
-                        name="address"
-                        value={address.id}
-                        checked={selectedAddressId === address.id}
-                        onChange={(e) => setSelectedAddressId(e.target.value)}
-                        className="sr-only"
-                      />
-                      <div className="flex justify-between items-start">
-                        <div>
-                          <div className="flex items-center space-x-2">
-                            <span className="font-medium text-gray-900">{address.name}</span>
-                            <span className="text-sm text-gray-500">({address.type})</span>
-                            {address.isDefault && (
-                              <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 text-green-800">
-                                Default
-                              </span>
-                            )}
+                    <div key={address.id} className="flex items-start space-x-3">
+                      <RadioGroupItem value={address.id} id={address.id} />
+                      <Label
+                        htmlFor={address.id}
+                        className="flex-1 cursor-pointer"
+                      >
+                        <div className={`p-4 border rounded-lg transition-colors ${
+                          selectedAddressId === address.id
+                            ? "border-primary bg-primary/5"
+                            : "border-border hover:border-border/80"
+                        }`}>
+                          <div className="flex justify-between items-start">
+                            <div>
+                              <div className="flex items-center space-x-2">
+                                <span className="font-medium text-foreground">{address.name}</span>
+                                <Badge variant="outline" className="text-xs">
+                                  {address.type}
+                                </Badge>
+                                {address.isDefault && (
+                                  <Badge variant="secondary" className="text-xs">
+                                    Default
+                                  </Badge>
+                                )}
+                              </div>
+                              <p className="text-sm text-muted-foreground mt-1">
+                                {address.addressLine1}
+                                {address.addressLine2 && `, ${address.addressLine2}`}
+                              </p>
+                              <p className="text-sm text-muted-foreground">
+                                {address.city}, {address.state} - {address.pincode}
+                              </p>
+                              <p className="text-sm text-muted-foreground">Phone: {address.phone}</p>
+                            </div>
                           </div>
-                          <p className="text-sm text-gray-600 mt-1">
-                            {address.addressLine1}
-                            {address.addressLine2 && `, ${address.addressLine2}`}
-                          </p>
-                          <p className="text-sm text-gray-600">
-                            {address.city}, {address.state} - {address.pincode}
-                          </p>
-                          <p className="text-sm text-gray-600">Phone: {address.phone}</p>
                         </div>
-                      </div>
-                    </label>
+                      </Label>
+                    </div>
                   ))}
-                </div>
+                </RadioGroup>
               )}
 
               {/* Add Address Form */}
               {showAddressForm && (
                 <form onSubmit={handleAddAddress} className="space-y-4 border-t pt-4">
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Name</label>
-                      <input
+                    <div className="space-y-2">
+                      <Label htmlFor="name">Name</Label>
+                      <Input
+                        id="name"
                         type="text"
                         required
                         value={newAddress.name}
                         onChange={(e) => setNewAddress(prev => ({ ...prev, name: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">Phone</label>
-                      <input
+                    <div className="space-y-2">
+                      <Label htmlFor="phone">Phone</Label>
+                      <Input
+                        id="phone"
                         type="tel"
                         required
                         value={newAddress.phone}
                         onChange={(e) => setNewAddress(prev => ({ ...prev, phone: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
                   </div>
                   
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Address Line 1</label>
-                    <input
+                  <div className="space-y-2">
+                    <Label htmlFor="addressLine1">Address Line 1</Label>
+                    <Input
+                      id="addressLine1"
                       type="text"
                       required
                       value={newAddress.addressLine1}
                       onChange={(e) => setNewAddress(prev => ({ ...prev, addressLine1: e.target.value }))}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </div>
 
                   <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">City</label>
-                      <input
+                    <div className="space-y-2">
+                      <Label htmlFor="city">City</Label>
+                      <Input
+                        id="city"
                         type="text"
                         required
                         value={newAddress.city}
                         onChange={(e) => setNewAddress(prev => ({ ...prev, city: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
-                    <div>
-                      <label className="block text-sm font-medium text-gray-700">State</label>
-                      <input
+                    <div className="space-y-2">
+                      <Label htmlFor="state">State</Label>
+                      <Input
+                        id="state"
                         type="text"
                         required
                         value={newAddress.state}
                         onChange={(e) => setNewAddress(prev => ({ ...prev, state: e.target.value }))}
-                        className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                       />
                     </div>
                   </div>
 
-                  <div>
-                    <label className="block text-sm font-medium text-gray-700">Pincode</label>
-                    <input
+                  <div className="space-y-2">
+                    <Label htmlFor="pincode">Pincode</Label>
+                    <Input
+                      id="pincode"
                       type="text"
                       required
                       value={newAddress.pincode}
                       onChange={(e) => setNewAddress(prev => ({ ...prev, pincode: e.target.value }))}
-                      className="mt-1 block w-full px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500 sm:text-sm"
                     />
                   </div>
 
                   <div className="flex justify-end space-x-3">
-                    <button
+                    <Button
                       type="button"
+                      variant="outline"
                       onClick={() => setShowAddressForm(false)}
-                      className="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50"
                     >
                       Cancel
-                    </button>
-                    <button
+                    </Button>
+                    <Button
                       type="submit"
                       disabled={isLoading}
-                      className="bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 disabled:opacity-50"
                     >
-                      Add Address
-                    </button>
+                      {isLoading ? "Adding..." : "Add Address"}
+                    </Button>
                   </div>
                 </form>
               )}
 
               {/* Place Order Button */}
-              <div className="mt-6">
-                <button
+              <div className="pt-4 border-t">
+                <Button
                   onClick={handleJoinOrder}
                   disabled={isLoading || !selectedAddressId}
-                  className="w-full bg-indigo-600 border border-transparent rounded-md py-3 px-4 flex items-center justify-center text-base font-medium text-white hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="w-full"
+                  size="lg"
                 >
                   {isLoading ? (
                     <>
@@ -501,14 +539,17 @@ export default function JoinGroupOrderPage({
                       Processing...
                     </>
                   ) : (
-                    `Join Order - ${formatPrice(totalAmount)}`
+                    <>
+                      <CheckCircle className="h-4 w-4 mr-2" />
+                      Join Order - {formatPrice(totalAmount)}
+                    </>
                   )}
-                </button>
+                </Button>
               </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
         </div>
-      </main>
+      </div>
     </div>
   );
 }

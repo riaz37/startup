@@ -48,9 +48,9 @@ export default async function ProductsPage() {
   }
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat("en-BD", {
       style: "currency",
-      currency: "INR",
+      currency: "BDT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(price);

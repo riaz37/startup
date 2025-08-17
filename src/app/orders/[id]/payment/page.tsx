@@ -1,9 +1,6 @@
-import { getCurrentUser } from "@/lib/auth-utils";
+import { getCurrentUser, prisma } from "@/lib";
 import { redirect } from "next/navigation";
-import { prisma } from "@/lib/prisma";
-import { Navigation } from "@/components/home/navigation";
-import { Footer } from "@/components/home/footer";
-import { MainContainer } from "@/components/layout";
+import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { PaymentForm } from "@/components/payments/payment-form";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -14,17 +11,20 @@ import {
   Package, 
   MapPin, 
   Calendar,
-  User
+  User,
+  Shield,
+  CheckCircle
 } from "lucide-react";
 
 interface PaymentPageProps {
-  params: {
+  params: Promise<{
     id: string;
-  };
+  }>;
 }
 
 export default async function PaymentPage({ params }: PaymentPageProps) {
   const user = await getCurrentUser();
+  const { id } = await params;
 
   if (!user) {
     redirect("/auth/signin");
@@ -32,7 +32,7 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
 
   // Fetch order details
   const order = await prisma.order.findUnique({
-    where: { id: params.id },
+    where: { id },
     include: {
       groupOrder: {
         include: {
@@ -68,26 +68,16 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      <Navigation user={user} />
-
+    <PageLayout>
       <MainContainer>
         <div className="max-w-4xl mx-auto">
           {/* Header */}
-          <div className="text-center mb-8">
-            <div className="flex items-center justify-center mb-4">
-              <CreditCard className="h-8 w-8 text-primary mr-3" />
-              <h1 className="text-4xl font-bold">
-                Complete{" "}
-                <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-                  Payment
-                </span>
-              </h1>
-            </div>
-            <p className="text-xl text-muted-foreground">
-              Secure payment powered by Stripe
-            </p>
-          </div>
+          <PageHeader
+            badge="💳 Payment"
+            title="Complete Your"
+            highlightedWord="Payment"
+            description="Secure payment powered by Stripe. Your payment information is encrypted and secure."
+          />
 
           <div className="grid lg:grid-cols-3 gap-8">
             {/* Payment Form */}
@@ -109,7 +99,7 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
             </div>
 
             {/* Order Summary */}
-            <div className="lg:col-span-1">
+            <div className="lg:col-span-1 space-y-4">
               <Card className="card-sohozdaam">
                 <CardHeader>
                   <CardTitle>Order Summary</CardTitle>
@@ -182,11 +172,11 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
               </Card>
 
               {/* Security Notice */}
-              <Card className="card-sohozdaam mt-4">
+              <Card className="card-sohozdaam">
                 <CardContent className="pt-6">
                   <div className="text-center text-sm text-muted-foreground">
                     <div className="flex items-center justify-center mb-2">
-                      <div className="w-2 h-2 bg-green-500 rounded-full mr-2"></div>
+                      <Shield className="h-4 w-4 text-green-500 mr-2" />
                       <span>Secure Payment</span>
                     </div>
                     <p>
@@ -200,8 +190,6 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
           </div>
         </div>
       </MainContainer>
-
-      <Footer />
-    </div>
+    </PageLayout>
   );
 } 

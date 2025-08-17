@@ -65,7 +65,7 @@ export async function POST(request: NextRequest) {
       data: {
         orderId: order.id,
         amount: order.totalAmount,
-        currency: "INR",
+        currency: "BDT",
         paymentMethod: "stripe",
         gatewayProvider: "stripe",
         status: "PENDING",
@@ -95,7 +95,7 @@ export async function POST(request: NextRequest) {
       clientSecret: paymentIntent.client_secret,
       paymentIntentId: paymentIntent.id,
       amount: order.totalAmount,
-      currency: "INR",
+              currency: "BDT",
     });
   } catch (error) {
     console.error("Error creating payment intent:", error);

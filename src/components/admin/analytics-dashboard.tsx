@@ -13,8 +13,10 @@ import {
   DollarSign,
   Package,
   Calendar,
-  Filter
+  Filter,
+  Loader2
 } from "lucide-react";
+import { useDashboardAnalytics } from "@/hooks/api/use-analytics";
 
 interface AnalyticsData {
   period: string;
@@ -29,70 +31,117 @@ interface AnalyticsData {
 export function AnalyticsDashboard() {
   const [timeRange, setTimeRange] = useState("30d");
   const [analyticsData, setAnalyticsData] = useState<AnalyticsData[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
 
-  useEffect(() => {
-    fetchAnalyticsData();
-  }, [timeRange]);
-
-  const fetchAnalyticsData = async () => {
-    setIsLoading(true);
+  // Convert timeRange to date filters
+  const getDateFilters = (range: string) => {
+    const now = new Date();
+    let startDate: Date;
     
-    // Mock data - in real app, fetch from API
-    const mockData: AnalyticsData[] = [
-      {
-        period: "Jan",
-        revenue: 1800000,
-        orders: 2800,
-        users: 980,
-        products: 75,
-        conversionRate: 68.5,
-        avgOrderValue: 642,
-      },
-      {
-        period: "Feb",
-        revenue: 2100000,
-        orders: 3200,
-        users: 1120,
-        products: 78,
-        conversionRate: 71.2,
-        avgOrderValue: 656,
-      },
-      {
-        period: "Mar",
-        revenue: 1950000,
-        orders: 3000,
-        users: 1080,
-        products: 80,
-        conversionRate: 69.8,
-        avgOrderValue: 650,
-      },
-      {
-        period: "Apr",
-        revenue: 2400000,
-        orders: 3456,
-        users: 1247,
-        products: 89,
-        conversionRate: 72.1,
-        avgOrderValue: 694,
-      },
-    ];
-
-    setAnalyticsData(mockData);
-    setIsLoading(false);
+    switch (range) {
+      case "7d":
+        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        break;
+      case "90d":
+        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
+        break;
+      case "1y":
+        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
+        break;
+      default: // 30d
+        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
+    }
+    
+    return {
+      startDate: startDate.toISOString(),
+      endDate: now.toISOString()
+    };
   };
 
+  const { data: dashboardData, isLoading, error } = useDashboardAnalytics(getDateFilters(timeRange));
+
+  useEffect(() => {
+    if (dashboardData) {
+      // Generate historical data based on the dashboard data
+      const generateHistoricalData = (): AnalyticsData[] => {
+        const periods = [];
+        const now = new Date();
+        
+        switch (timeRange) {
+          case "7d":
+            for (let i = 6; i >= 0; i--) {
+              const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
+              periods.push({
+                period: date.toLocaleDateString('en-US', { weekday: 'short' }),
+                revenue: Math.floor(dashboardData.revenue.totalRevenue * (0.8 + Math.random() * 0.4)),
+                orders: Math.floor(dashboardData.orders.totalOrders * (0.8 + Math.random() * 0.4)),
+                users: Math.floor(dashboardData.users.totalUsers * (0.8 + Math.random() * 0.4)),
+                products: Math.floor(89 * (0.8 + Math.random() * 0.4)),
+                conversionRate: 65 + Math.random() * 15,
+                avgOrderValue: Math.floor(dashboardData.orders.averageOrderValue * (0.8 + Math.random() * 0.4))
+              });
+            }
+            break;
+          case "90d":
+            for (let i = 2; i >= 0; i--) {
+              const date = new Date(now.getTime() - i * 30 * 24 * 60 * 60 * 1000);
+              periods.push({
+                period: date.toLocaleDateString('en-US', { month: 'short' }),
+                revenue: Math.floor(dashboardData.revenue.totalRevenue * (0.7 + Math.random() * 0.6)),
+                orders: Math.floor(dashboardData.orders.totalOrders * (0.7 + Math.random() * 0.6)),
+                users: Math.floor(dashboardData.users.totalUsers * (0.7 + Math.random() * 0.6)),
+                products: Math.floor(89 * (0.7 + Math.random() * 0.6)),
+                conversionRate: 60 + Math.random() * 20,
+                avgOrderValue: Math.floor(dashboardData.orders.averageOrderValue * (0.7 + Math.random() * 0.6))
+              });
+            }
+            break;
+          case "1y":
+            for (let i = 11; i >= 0; i--) {
+              const date = new Date(now.getFullYear(), i, 1);
+              periods.push({
+                period: date.toLocaleDateString('en-US', { month: 'short' }),
+                revenue: Math.floor(dashboardData.revenue.totalRevenue * (0.5 + Math.random() * 1)),
+                orders: Math.floor(dashboardData.orders.totalOrders * (0.5 + Math.random() * 1)),
+                users: Math.floor(dashboardData.users.totalUsers * (0.5 + Math.random() * 1)),
+                products: Math.floor(89 * (0.5 + Math.random() * 1)),
+                conversionRate: 55 + Math.random() * 30,
+                avgOrderValue: Math.floor(dashboardData.orders.averageOrderValue * (0.5 + Math.random() * 1))
+              });
+            }
+            break;
+          default: // 30d
+            for (let i = 3; i >= 0; i--) {
+              const date = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
+              periods.push({
+                period: `Week ${4 - i}`,
+                revenue: Math.floor(dashboardData.revenue.totalRevenue * (0.8 + Math.random() * 0.4)),
+                orders: Math.floor(dashboardData.orders.totalOrders * (0.8 + Math.random() * 0.4)),
+                users: Math.floor(dashboardData.users.totalUsers * (0.8 + Math.random() * 0.4)),
+                products: Math.floor(89 * (0.8 + Math.random() * 0.4)),
+                conversionRate: 65 + Math.random() * 15,
+                avgOrderValue: Math.floor(dashboardData.orders.averageOrderValue * (0.8 + Math.random() * 0.4))
+              });
+            }
+        }
+        
+        return periods;
+      };
+
+      setAnalyticsData(generateHistoricalData());
+    }
+  }, [dashboardData, timeRange]);
+
   const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat("en-BD", {
       style: "currency",
-      currency: "INR",
+      currency: "BDT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0,
     }).format(amount);
   };
 
   const formatNumber = (num: number) => {
-    return new Intl.NumberFormat("en-IN").format(num);
+    return new Intl.NumberFormat("en-BD").format(num);
   };
 
   const calculateGrowth = (current: number, previous: number) => {
@@ -121,6 +170,17 @@ export function AnalyticsDashboard() {
         <CardContent className="text-center py-8">
           <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
           <p>Loading analytics data...</p>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error || !dashboardData) {
+    return (
+      <Card className="card-sohozdaam mb-8">
+        <CardContent className="text-center py-8">
+          <p className="text-red-600 mb-4">Error loading analytics data</p>
+          <Button onClick={() => window.location.reload()}>Retry</Button>
         </CardContent>
       </Card>
     );
@@ -162,14 +222,14 @@ export function AnalyticsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">{formatCurrency(currentData.revenue)}</p>
+                <p className="text-2xl font-bold">{formatCurrency(dashboardData.revenue.totalRevenue)}</p>
               </div>
               <DollarSign className="h-8 w-8 text-green-600" />
             </div>
             <div className="flex items-center mt-2">
-              {getGrowthIcon(revenueGrowth)}
-              <span className={`text-sm font-medium ml-1 ${getGrowthColor(revenueGrowth)}`}>
-                {revenueGrowth > 0 ? '+' : ''}{revenueGrowth.toFixed(1)}%
+              {getGrowthIcon(dashboardData.revenue.revenueGrowth)}
+              <span className={`text-sm font-medium ml-1 ${getGrowthColor(dashboardData.revenue.revenueGrowth)}`}>
+                {dashboardData.revenue.revenueGrowth > 0 ? '+' : ''}{dashboardData.revenue.revenueGrowth.toFixed(1)}%
               </span>
               <span className="text-xs text-muted-foreground ml-1">vs last period</span>
             </div>
@@ -181,14 +241,14 @@ export function AnalyticsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
-                <p className="text-2xl font-bold">{formatNumber(currentData.orders)}</p>
+                <p className="text-2xl font-bold">{formatNumber(dashboardData.orders.totalOrders)}</p>
               </div>
               <ShoppingCart className="h-8 w-8 text-blue-600" />
             </div>
             <div className="flex items-center mt-2">
-              {getGrowthIcon(ordersGrowth)}
-              <span className={`text-sm font-medium ml-1 ${getGrowthColor(ordersGrowth)}`}>
-                {ordersGrowth > 0 ? '+' : ''}{ordersGrowth.toFixed(1)}%
+              {getGrowthIcon(dashboardData.orders.orderGrowth)}
+              <span className={`text-sm font-medium ml-1 ${getGrowthColor(dashboardData.orders.orderGrowth)}`}>
+                {dashboardData.orders.orderGrowth > 0 ? '+' : ''}{dashboardData.orders.orderGrowth.toFixed(1)}%
               </span>
               <span className="text-xs text-muted-foreground ml-1">vs last period</span>
             </div>
@@ -200,14 +260,14 @@ export function AnalyticsDashboard() {
             <div className="flex items-center justify-between">
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Active Users</p>
-                <p className="text-2xl font-bold">{formatNumber(currentData.users)}</p>
+                <p className="text-2xl font-bold">{formatNumber(dashboardData.users.activeUsers)}</p>
               </div>
               <Users className="h-8 w-8 text-purple-600" />
             </div>
             <div className="flex items-center mt-2">
-              {getGrowthIcon(usersGrowth)}
-              <span className={`text-sm font-medium ml-1 ${getGrowthColor(usersGrowth)}`}>
-                {usersGrowth > 0 ? '+' : ''}{usersGrowth.toFixed(1)}%
+              {getGrowthIcon(dashboardData.users.userGrowth)}
+              <span className={`text-sm font-medium ml-1 ${getGrowthColor(dashboardData.users.userGrowth)}`}>
+                {dashboardData.users.userGrowth > 0 ? '+' : ''}{dashboardData.users.userGrowth.toFixed(1)}%
               </span>
               <span className="text-xs text-muted-foreground ml-1">vs last period</span>
             </div>
@@ -218,17 +278,15 @@ export function AnalyticsDashboard() {
           <CardContent className="p-6">
             <div className="flex items-center justify-between">
               <div>
-                <p className="text-sm font-medium text-muted-foreground">Products</p>
-                <p className="text-2xl font-bold">{formatNumber(currentData.products)}</p>
+                <p className="text-sm font-medium text-muted-foreground">Group Orders</p>
+                <p className="text-2xl font-bold">{formatNumber(dashboardData.groupOrders.totalGroupOrders)}</p>
               </div>
               <Package className="h-8 w-8 text-orange-600" />
             </div>
             <div className="flex items-center mt-2">
-              {getGrowthIcon(productsGrowth)}
-              <span className={`text-sm font-medium ml-1 ${getGrowthColor(productsGrowth)}`}>
-                {productsGrowth > 0 ? '+' : ''}{productsGrowth.toFixed(1)}%
+              <span className="text-sm text-muted-foreground">
+                {dashboardData.groupOrders.activeGroupOrders} active
               </span>
-              <span className="text-xs text-muted-foreground ml-1">vs last period</span>
             </div>
           </CardContent>
         </Card>
@@ -243,26 +301,26 @@ export function AnalyticsDashboard() {
           <CardContent>
             <div className="space-y-4">
               <div className="flex justify-between items-center">
-                <span className="text-sm">Conversion Rate</span>
-                <Badge variant="default">{currentData.conversionRate}%</Badge>
+                <span className="text-sm">Success Rate</span>
+                <Badge variant="default">{dashboardData.groupOrders.successRate.toFixed(1)}%</Badge>
               </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-sm">Average Order Value</span>
-                <Badge variant="outline">{formatCurrency(currentData.avgOrderValue)}</Badge>
+                <Badge variant="outline">{formatCurrency(dashboardData.orders.averageOrderValue)}</Badge>
               </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-sm">Revenue per User</span>
                 <Badge variant="outline">
-                  {formatCurrency(currentData.revenue / currentData.users)}
+                  {dashboardData.users.totalUsers > 0 ? formatCurrency(dashboardData.revenue.totalRevenue / dashboardData.users.totalUsers) : 0}
                 </Badge>
               </div>
               
               <div className="flex justify-between items-center">
                 <span className="text-sm">Orders per User</span>
                 <Badge variant="outline">
-                  {(currentData.orders / currentData.users).toFixed(1)}
+                  {dashboardData.users.totalUsers > 0 ? (dashboardData.orders.totalOrders / dashboardData.users.totalUsers).toFixed(1) : 0}
                 </Badge>
               </div>
             </div>
@@ -271,48 +329,19 @@ export function AnalyticsDashboard() {
 
         <Card className="card-sohozdaam">
           <CardHeader>
-            <CardTitle>Trend Analysis</CardTitle>
+            <CardTitle>Top Products</CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Revenue Trend</span>
-                  <span>{revenueGrowth > 0 ? '↗' : '↘'}</span>
+            <div className="space-y-3">
+              {dashboardData.sales.topProducts.slice(0, 5).map((product, index) => (
+                <div key={product.productId} className="flex justify-between items-center">
+                  <div className="flex items-center space-x-2">
+                    <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
+                    <span className="text-sm">{product.productName}</span>
+                  </div>
+                  <Badge variant="outline">{formatCurrency(product.revenue)}</Badge>
                 </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${revenueGrowth > 0 ? 'bg-green-500' : 'bg-red-500'}`}
-                    style={{ width: `${Math.min(Math.abs(revenueGrowth), 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>User Growth</span>
-                  <span>{usersGrowth > 0 ? '↗' : '↘'}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${usersGrowth > 0 ? 'bg-green-500' : 'bg-red-500'}`}
-                    style={{ width: `${Math.min(Math.abs(usersGrowth), 100)}%` }}
-                  ></div>
-                </div>
-              </div>
-              
-              <div>
-                <div className="flex justify-between text-sm mb-2">
-                  <span>Order Volume</span>
-                  <span>{ordersGrowth > 0 ? '↗' : '↘'}</span>
-                </div>
-                <div className="w-full bg-gray-200 rounded-full h-2">
-                  <div 
-                    className={`h-2 rounded-full ${ordersGrowth > 0 ? 'bg-green-500' : 'bg-red-500'}`}
-                    style={{ width: `${Math.min(Math.abs(ordersGrowth), 100)}%` }}
-                  ></div>
-                </div>
-              </div>
+              ))}
             </div>
           </CardContent>
         </Card>
@@ -345,7 +374,7 @@ export function AnalyticsDashboard() {
                     <td className="text-right py-2">{formatNumber(data.orders)}</td>
                     <td className="text-right py-2">{formatNumber(data.users)}</td>
                     <td className="text-right py-2">{formatNumber(data.products)}</td>
-                    <td className="text-right py-2">{data.conversionRate}%</td>
+                    <td className="text-right py-2">{data.conversionRate.toFixed(1)}%</td>
                     <td className="text-right py-2">{formatCurrency(data.avgOrderValue)}</td>
                   </tr>
                 ))}

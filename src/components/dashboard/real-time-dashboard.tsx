@@ -106,7 +106,7 @@ export function RealTimeDashboard() {
 
       case 'payment:success':
         updateMetric('payment', data.amount, 'up');
-        addLiveActivity('payment', 'Payment Successful', `Payment of ₹${data.amount} processed`, data.userId, data.orderId);
+        addLiveActivity('payment', 'Payment Successful', `Payment of ৳${data.amount} processed`, data.userId, data.orderId);
         break;
 
       case 'groupOrder:thresholdMet':
@@ -215,14 +215,14 @@ export function RealTimeDashboard() {
   const formatMetricValue = (type: string, value: number) => {
     switch (type) {
       case 'payment':
-        return new Intl.NumberFormat("en-IN", {
+        return new Intl.NumberFormat("en-BD", {
           style: "currency",
-          currency: "INR",
+          currency: "BDT",
           minimumFractionDigits: 0,
           maximumFractionDigits: 0,
         }).format(value);
       default:
-        return new Intl.NumberFormat("en-IN").format(value);
+        return new Intl.NumberFormat("en-BD").format(value);
     }
   };
 

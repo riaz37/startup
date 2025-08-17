@@ -135,7 +135,7 @@ export function RecentActivity({ activities }: RecentActivityProps) {
                       {/* Show amount for orders or progress for group orders */}
                       {activity.type === "order" && "amount" in activity && (
                         <div className="text-sm font-semibold text-green-600">
-                          ₹{(activity as any).amount?.toFixed(2) || "0.00"}
+                          ৳{(activity as any).amount?.toFixed(2) || "0.00"}
                         </div>
                       )}
                       

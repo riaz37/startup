@@ -101,7 +101,7 @@ function PaymentFormContent({ orderId, amount, onSuccess, onError }: PaymentForm
               Processing...
             </>
           ) : (
-            `Pay ₹${amount.toFixed(2)}`
+            `Pay ৳${amount.toFixed(2)}`
           )}
         </Button>
       </div>
@@ -130,7 +130,7 @@ export function PaymentForm(props: PaymentFormProps) {
     createPaymentIntent({
       orderId: props.orderId,
       amount: props.amount,
-      currency: "INR"
+      currency: "BDT"
     });
   }, [props.orderId, props.amount, createPaymentIntent]);
 

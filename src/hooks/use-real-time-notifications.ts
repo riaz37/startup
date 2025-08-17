@@ -146,7 +146,7 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
         return {
           ...baseNotification,
           title: 'Payment Successful',
-          message: `Payment of ₹${data.amount} has been processed successfully`,
+          message: `Payment of ৳${data.amount} has been processed successfully`,
           priority: 'high',
           category: 'payment',
         };
@@ -164,7 +164,7 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
         return {
           ...baseNotification,
           title: 'Payment Refunded',
-          message: `Payment of ₹${data.amount} has been refunded`,
+          message: `Payment of ৳${data.amount} has been refunded`,
           priority: 'medium',
           category: 'payment',
         };

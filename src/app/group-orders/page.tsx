@@ -48,7 +48,22 @@ export default async function GroupOrdersPage() {
         ? Math.min((go.currentQuantity / go.targetQuantity) * 100, 100)
         : 0,
       participantCount: 0, // This would need a separate query to count orders
-      timeRemaining: Math.max(0, go.expiresAt.getTime() - Date.now()),
+      timeRemaining: (() => {
+        const now = new Date();
+        const expiresAt = go.expiresAt;
+        
+        // Set both dates to start of day for consistent day calculation
+        const startOfToday = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+        const startOfExpiry = new Date(expiresAt.getFullYear(), expiresAt.getMonth(), expiresAt.getDate());
+        
+        // Calculate the difference in days
+        const diffTime = startOfExpiry.getTime() - startOfToday.getTime();
+        const diffDays = diffTime / (1000 * 60 * 60 * 24);
+        
+        if (diffDays <= 0) return 0; // Expired or expires today
+        
+        return Math.round(diffDays);
+      })(),
       product: {
         id: go.product.id,
         name: go.product.name,
@@ -65,9 +80,9 @@ export default async function GroupOrdersPage() {
   }
 
   const formatPrice = (price: number) => {
-    return new Intl.NumberFormat("en-IN", {
+    return new Intl.NumberFormat("en-BD", {
       style: "currency",
-      currency: "INR",
+      currency: "BDT",
       minimumFractionDigits: 0,
       maximumFractionDigits: 0
     }).format(price);

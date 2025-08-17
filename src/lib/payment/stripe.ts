@@ -11,7 +11,7 @@ export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
 
 // Stripe configuration
 export const STRIPE_CONFIG = {
-  currency: 'inr',
+  currency: 'bdt',
   paymentMethods: ['card', 'upi', 'netbanking', 'wallet'] as const,
   successUrl: `${process.env.NEXTAUTH_URL}/orders/confirmation?success=true`,
   cancelUrl: `${process.env.NEXTAUTH_URL}/orders/confirmation?canceled=true`,
@@ -142,7 +142,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
         userId: order.userId,
         type: 'PAYMENT_SUCCESS',
         title: 'Payment Successful',
-        message: `Your payment of ₹${paymentIntent.amount / 100} has been processed successfully.`,
+        message: `Your payment of ৳${paymentIntent.amount / 100} has been processed successfully.`,
         data: { orderId, amount: paymentIntent.amount / 100 },
       },
     });
@@ -303,7 +303,7 @@ async function handlePaymentRefunded(charge: Stripe.Charge) {
         userId: payment.order.userId,
         type: 'GENERAL',
         title: 'Payment Refunded',
-        message: `Your payment of ₹${payment.amount} has been refunded.`,
+        message: `Your payment of ৳${payment.amount} has been refunded.`,
         data: { orderId: payment.orderId, amount: payment.amount },
       },
     });

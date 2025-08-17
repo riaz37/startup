@@ -10,7 +10,8 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { Plus, Package, Calendar, DollarSign, Target } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Plus, Package, Calendar, DollarSign, Target, Percent, Tag } from "lucide-react";
 import Link from "next/link";
 
 interface Product {
@@ -21,9 +22,23 @@ interface Product {
   sellingPrice: number;
 }
 
+interface DiscountConfig {
+  id: string;
+  name: string;
+  description?: string;
+  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue: number;
+  isActive: boolean;
+  minQuantity?: number;
+  maxQuantity?: number;
+  startDate?: Date;
+  endDate?: Date;
+}
+
 export default function CreateGroupOrderPage() {
   const router = useRouter();
   const [products, setProducts] = useState<Product[]>([]);
+  const [discounts, setDiscounts] = useState<DiscountConfig[]>([]);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
   
@@ -36,8 +51,13 @@ export default function CreateGroupOrderPage() {
     estimatedDelivery: ""
   });
 
+  const [selectedDiscounts, setSelectedDiscounts] = useState<string[]>([]);
+  const [manualDiscount, setManualDiscount] = useState("");
+  const [useManualDiscount, setUseManualDiscount] = useState(false);
+
   useEffect(() => {
     fetchProducts();
+    fetchDiscounts();
   }, []);
 
   const fetchProducts = async () => {
@@ -52,14 +72,149 @@ export default function CreateGroupOrderPage() {
     }
   };
 
+  const fetchDiscounts = async () => {
+    try {
+      const response = await fetch("/api/admin/discounts");
+      if (response.ok) {
+        const data = await response.json();
+        // Filter for active discounts
+        const now = new Date();
+        const activeDiscounts = data.filter((discount: DiscountConfig) => {
+          if (!discount.isActive) return false;
+          if (discount.startDate && new Date(discount.startDate) > now) return false;
+          if (discount.endDate && new Date(discount.endDate) < now) return false;
+          return true;
+        });
+        setDiscounts(activeDiscounts);
+      }
+    } catch (error) {
+      console.error("Error fetching discounts:", error);
+    }
+  };
+
+  const calculateAutomaticDiscount = (basePrice: number, quantity: number) => {
+    if (!discounts || discounts.length === 0) {
+      return basePrice;
+    }
+
+    let totalDiscount = 0;
+    for (const discount of discounts) {
+      if (!discount.isActive) continue;
+
+      // Check date range
+      const now = new Date();
+      if (discount.startDate && new Date(discount.startDate) > now) continue;
+      if (discount.endDate && new Date(discount.endDate) < now) continue;
+
+      // Check quantity range
+      if (discount.minQuantity && quantity < discount.minQuantity) continue;
+      if (discount.maxQuantity && quantity > discount.maxQuantity) continue;
+
+      if (discount.discountType === 'PERCENTAGE') {
+        totalDiscount += (basePrice * discount.discountValue) / 100;
+      } else if (discount.discountType === 'FIXED_AMOUNT') {
+        totalDiscount += discount.discountValue;
+      }
+    }
+
+    return Math.max(0, basePrice - totalDiscount);
+  };
+
+  const calculateSelectedDiscounts = (basePrice: number, quantity: number) => {
+    if (selectedDiscounts.length === 0) {
+      return basePrice;
+    }
+
+    let totalDiscount = 0;
+    for (const discountId of selectedDiscounts) {
+      const discount = discounts.find(d => d.id === discountId);
+      if (!discount) continue;
+
+      // Check quantity range
+      if (discount.minQuantity && quantity < discount.minQuantity) continue;
+      if (discount.maxQuantity && quantity > discount.maxQuantity) continue;
+
+      if (discount.discountType === 'PERCENTAGE') {
+        totalDiscount += (basePrice * discount.discountValue) / 100;
+      } else if (discount.discountType === 'FIXED_AMOUNT') {
+        totalDiscount += discount.discountValue;
+      }
+    }
+
+    return Math.max(0, basePrice - totalDiscount);
+  };
+
   const handleProductChange = (productId: string) => {
     const product = products.find(p => p.id === productId);
     if (product) {
+      const targetQty = parseInt(formData.targetQuantity) || 1;
+      let discountedPrice: number;
+
+      if (useManualDiscount && manualDiscount) {
+        // Use manual discount
+        discountedPrice = parseFloat(manualDiscount);
+      } else if (selectedDiscounts.length > 0) {
+        // Use selected discounts
+        discountedPrice = calculateSelectedDiscounts(product.sellingPrice, targetQty);
+      } else {
+        // Use automatic discount calculation
+        discountedPrice = calculateAutomaticDiscount(product.sellingPrice, targetQty);
+      }
+      
       setFormData(prev => ({
         ...prev,
         productId,
-        pricePerUnit: (product.sellingPrice * 0.9).toString() // 10% bulk discount
+        pricePerUnit: discountedPrice.toString()
       }));
+    }
+  };
+
+  const handleQuantityChange = (quantity: string) => {
+    setFormData(prev => ({ ...prev, targetQuantity: quantity }));
+    
+    // Recalculate price if product is selected
+    if (formData.productId) {
+      const product = products.find(p => p.id === formData.productId);
+      if (product) {
+        const qty = parseInt(quantity) || 1;
+        let discountedPrice: number;
+
+        if (useManualDiscount && manualDiscount) {
+          discountedPrice = parseFloat(manualDiscount);
+        } else if (selectedDiscounts.length > 0) {
+          discountedPrice = calculateSelectedDiscounts(product.sellingPrice, qty);
+        } else {
+          discountedPrice = calculateAutomaticDiscount(product.sellingPrice, qty);
+        }
+
+        setFormData(prev => ({ ...prev, pricePerUnit: discountedPrice.toString() }));
+      }
+    }
+  };
+
+  const handleDiscountSelection = (discountId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedDiscounts(prev => [...prev, discountId]);
+      setUseManualDiscount(false);
+    } else {
+      setSelectedDiscounts(prev => prev.filter(id => id !== discountId));
+    }
+    
+    // Recalculate price
+    if (formData.productId && formData.targetQuantity) {
+      handleQuantityChange(formData.targetQuantity);
+    }
+  };
+
+  const handleManualDiscountChange = (value: string) => {
+    setManualDiscount(value);
+    setSelectedDiscounts([]);
+    
+    if (formData.productId && formData.targetQuantity) {
+      const product = products.find(p => p.id === formData.productId);
+      if (product) {
+        setFormData(prev => ({ ...prev, pricePerUnit: value }));
+      }
     }
   };
 
@@ -67,6 +222,17 @@ export default function CreateGroupOrderPage() {
     e.preventDefault();
     setIsLoading(true);
     setError("");
+
+    // Validate that expiresAt is in the future
+    if (formData.expiresAt) {
+      const expiresDate = new Date(formData.expiresAt);
+      const now = new Date();
+      if (expiresDate <= now) {
+        setError("Expiry date must be in the future");
+        setIsLoading(false);
+        return;
+      }
+    }
 
     try {
       const response = await fetch("/api/group-orders", {
@@ -85,13 +251,15 @@ export default function CreateGroupOrderPage() {
 
       router.push("/admin");
     } catch (error: unknown) {
-      setError(error.message);
+      setError(error instanceof Error ? error.message : 'An unknown error occurred');
     } finally {
       setIsLoading(false);
     }
   };
 
   const selectedProduct = products.find(p => p.id === formData.productId);
+  const basePrice = selectedProduct?.sellingPrice || 0;
+  const targetQty = parseInt(formData.targetQuantity) || 1;
 
   // Mock user for AdminNavigation - in real app, get from auth
   const mockUser = { name: "Admin", role: "ADMIN" };
@@ -107,7 +275,7 @@ export default function CreateGroupOrderPage() {
             <Plus className="h-8 w-8 text-primary mr-3" />
             <h1 className="text-4xl font-bold">
               Create New{" "}
-              <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
+              <span className="bg-gradient-to-br from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
                 Group Order
               </span>
             </h1>
@@ -142,49 +310,24 @@ export default function CreateGroupOrderPage() {
                   id="productId"
                   value={formData.productId}
                   onChange={(e) => handleProductChange(e.target.value)}
+                  className="w-full p-2 border border-input rounded-md bg-background"
                   required
-                  className="w-full px-3 py-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-primary focus:border-primary"
                 >
                   <option value="">Select a product</option>
                   {products.map((product) => (
                     <option key={product.id} value={product.id}>
-                      {product.name} ({product.unitSize} {product.unit})
+                      {product.name} - ৳{product.sellingPrice}/{product.unit}
                     </option>
                   ))}
                 </select>
               </div>
 
-              {selectedProduct && (
-                <Card className="bg-muted/50 border-l-4 border-primary">
-                  <CardContent className="p-4">
-                    <h3 className="font-semibold mb-2 flex items-center">
-                      <Package className="h-4 w-4 text-primary mr-2" />
-                      Product Details
-                    </h3>
-                    <div className="grid grid-cols-2 gap-4 text-sm">
-                      <div>
-                        <span className="text-muted-foreground">Regular Price:</span>
-                        <span className="ml-2 font-semibold text-primary">
-                          ₹{selectedProduct.sellingPrice} per {selectedProduct.unit}
-                        </span>
-                      </div>
-                      <div>
-                        <span className="text-muted-foreground">Unit Size:</span>
-                        <span className="ml-2 font-semibold">
-                          {selectedProduct.unitSize} {selectedProduct.unit}
-                        </span>
-                      </div>
-                    </div>
-                  </CardContent>
-                </Card>
-              )}
-
+              {/* Quantity and Threshold */}
               <div className="grid md:grid-cols-2 gap-6">
-                {/* Minimum Threshold */}
                 <div className="space-y-2">
                   <Label htmlFor="minThreshold" className="flex items-center">
-                    <DollarSign className="h-4 w-4 text-secondary mr-2" />
-                    Minimum Threshold Amount (₹)
+                    <Target className="h-4 w-4 text-primary mr-2" />
+                    Minimum Threshold (৳)
                   </Label>
                   <Input
                     type="number"
@@ -193,25 +336,23 @@ export default function CreateGroupOrderPage() {
                     onChange={(e) => setFormData(prev => ({ ...prev, minThreshold: e.target.value }))}
                     required
                     min="0"
-                    step="0.01"
                     placeholder="e.g., 5000"
                   />
                   <p className="text-sm text-muted-foreground">
-                    Minimum total amount needed to proceed with the order
+                    Minimum total order value to trigger the group order
                   </p>
                 </div>
 
-                {/* Target Quantity */}
                 <div className="space-y-2">
                   <Label htmlFor="targetQuantity" className="flex items-center">
-                    <Target className="h-4 w-4 text-accent mr-2" />
+                    <Target className="h-4 w-4 text-primary mr-2" />
                     Target Quantity
                   </Label>
                   <Input
                     type="number"
                     id="targetQuantity"
                     value={formData.targetQuantity}
-                    onChange={(e) => setFormData(prev => ({ ...prev, targetQuantity: e.target.value }))}
+                    onChange={(e) => handleQuantityChange(e.target.value)}
                     required
                     min="1"
                     placeholder="e.g., 100"
@@ -222,11 +363,162 @@ export default function CreateGroupOrderPage() {
                 </div>
               </div>
 
+              {/* Discount Configuration */}
+              <div className="space-y-4">
+                <Label className="flex items-center">
+                  <Percent className="h-4 w-4 text-primary mr-2" />
+                  Discount Configuration
+                </Label>
+                
+                {/* Manual Discount Option */}
+                <div className="flex items-center space-x-3">
+                  <Checkbox
+                    id="useManualDiscount"
+                    checked={useManualDiscount}
+                    onCheckedChange={(checked) => {
+                      setUseManualDiscount(checked as boolean);
+                      if (checked) {
+                        setSelectedDiscounts([]);
+                      }
+                    }}
+                  />
+                  <Label htmlFor="useManualDiscount">Use manual discount price</Label>
+                </div>
+
+                {useManualDiscount && (
+                  <div className="space-y-2">
+                    <Label htmlFor="manualDiscount">Manual Price Per Unit (৳)</Label>
+                    <Input
+                      id="manualDiscount"
+                      type="number"
+                      value={manualDiscount}
+                      onChange={(e) => handleManualDiscountChange(e.target.value)}
+                      min="0"
+                      step="0.01"
+                      placeholder="Enter custom price"
+                    />
+                  </div>
+                )}
+
+                {/* Automatic Discount Selection */}
+                {!useManualDiscount && discounts.length > 0 && (
+                  <div className="space-y-3">
+                    <p className="text-sm text-muted-foreground">
+                      Select which discounts to apply (or leave empty for automatic calculation):
+                    </p>
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+                      {discounts.map((discount) => {
+                        const isApplicable = (!discount.minQuantity || targetQty >= discount.minQuantity) &&
+                                           (!discount.maxQuantity || targetQty <= discount.maxQuantity);
+                        
+                        return (
+                          <div key={discount.id} className="flex items-center space-x-3 p-3 border rounded-lg">
+                            <Checkbox
+                              id={`discount-${discount.id}`}
+                              checked={selectedDiscounts.includes(discount.id)}
+                              onCheckedChange={(checked) => handleDiscountSelection(discount.id, checked as boolean)}
+                              disabled={!isApplicable}
+                            />
+                            <div className="flex-1">
+                              <Label htmlFor={`discount-${discount.id}`} className="flex items-center">
+                                {discount.name}
+                                {!isApplicable && (
+                                  <Badge variant="outline" className="ml-2 text-xs">
+                                    Not applicable for Qty: {targetQty}
+                                  </Badge>
+                                )}
+                              </Label>
+                              <p className="text-sm text-muted-foreground">
+                                {discount.description}
+                              </p>
+                              <div className="flex items-center space-x-2 mt-1">
+                                <Badge variant="secondary">
+                                  {discount.discountType === 'PERCENTAGE' 
+                                    ? `${discount.discountValue}% off` 
+                                    : `৳${discount.discountValue} off`
+                                  }
+                                </Badge>
+                                {discount.minQuantity && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Min: {discount.minQuantity}
+                                  </span>
+                                )}
+                                {discount.maxQuantity && (
+                                  <span className="text-xs text-muted-foreground">
+                                    Max: {discount.maxQuantity}
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  </div>
+                )}
+
+                {/* Price Calculation Display */}
+                {selectedProduct && (
+                  <div className="p-4 bg-muted rounded-lg space-y-2">
+                    <h4 className="font-medium">Price Calculation</h4>
+                    <div className="grid grid-cols-2 gap-4 text-sm">
+                      <div>
+                        <span className="text-muted-foreground">Base Price:</span>
+                        <span className="ml-2 font-medium">৳{basePrice}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Quantity:</span>
+                        <span className="ml-2 font-medium">{targetQty}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Total Base Value:</span>
+                        <span className="ml-2 font-medium">৳{basePrice * targetQty}</span>
+                      </div>
+                      <div>
+                        <span className="text-muted-foreground">Final Price Per Unit:</span>
+                        <span className="ml-2 font-medium text-primary">৳{formData.pricePerUnit}</span>
+                      </div>
+                    </div>
+                    
+                    {!useManualDiscount && selectedDiscounts.length > 0 && (
+                      <div className="mt-3 pt-3 border-t">
+                        <p className="text-sm font-medium mb-2">Applied Discounts:</p>
+                        <div className="space-y-1">
+                          {selectedDiscounts.map(discountId => {
+                            const discount = discounts.find(d => d.id === discountId);
+                            if (!discount) return null;
+                            
+                            let discountAmount = 0;
+                            if (discount.discountType === 'PERCENTAGE') {
+                              discountAmount = (basePrice * discount.discountValue) / 100;
+                            } else if (discount.discountType === 'FIXED_AMOUNT') {
+                              discountAmount = discount.discountValue;
+                            }
+                            
+                            return (
+                              <div key={discount.id} className="flex items-center justify-between text-sm">
+                                <span className="text-muted-foreground">{discount.name}</span>
+                                <Badge variant="secondary">
+                                  {discount.discountType === 'PERCENTAGE' 
+                                    ? `${discount.discountValue}% off` 
+                                    : `৳${discount.discountValue} off`
+                                  }
+                                </Badge>
+                              </div>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
               {/* Price Per Unit */}
               <div className="space-y-2">
                 <Label htmlFor="pricePerUnit" className="flex items-center">
                   <DollarSign className="h-4 w-4 text-primary mr-2" />
-                  Bulk Price Per Unit (₹)
+                  Final Price Per Unit (৳)
                 </Label>
                 <Input
                   type="number"
@@ -236,9 +528,14 @@ export default function CreateGroupOrderPage() {
                   required
                   min="0"
                   step="0.01"
+                  readOnly={!useManualDiscount}
+                  className={!useManualDiscount ? "bg-muted" : ""}
                 />
                 <p className="text-sm text-muted-foreground">
-                  Discounted price for bulk purchase (automatically calculated as 10% off regular price)
+                  {useManualDiscount 
+                    ? "Enter the final price per unit for this group order"
+                    : "Automatically calculated based on selected discounts and quantity"
+                  }
                 </p>
               </div>
 
@@ -255,10 +552,10 @@ export default function CreateGroupOrderPage() {
                     value={formData.expiresAt}
                     onChange={(e) => setFormData(prev => ({ ...prev, expiresAt: e.target.value }))}
                     required
-                    min={new Date().toISOString().slice(0, 16)}
+                    min={new Date(Date.now() + 60 * 60 * 1000).toISOString().slice(0, 16)} // At least 1 hour from now
                   />
                   <p className="text-sm text-muted-foreground">
-                    When to stop accepting orders
+                    When to stop accepting orders (must be at least 1 hour from now)
                   </p>
                 </div>
 

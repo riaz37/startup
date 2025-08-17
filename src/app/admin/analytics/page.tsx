@@ -1,4 +1,5 @@
-import { requireAdmin } from "@/lib/auth-utils";
+"use client";
+
 import { MainContainer } from "@/components/layout";
 import { AdminNavigation } from "@/components/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -11,16 +12,75 @@ import {
   DollarSign,
   ShoppingCart,
   Calendar,
-  Target
+  Target,
+  Loader2
 } from "lucide-react";
 import { AnalyticsDashboard } from "@/components/admin/analytics-dashboard";
+import { useDashboardAnalytics } from "@/hooks/api/use-analytics";
+import { useSession } from "next-auth/react";
 
-export default async function AnalyticsPage() {
-  const user = await requireAdmin();
+
+export default function AnalyticsPage() {
+  const { data: session } = useSession();
+  const user = session?.user;
+  const { data: analyticsData, isLoading, error } = useDashboardAnalytics();
+
+  if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Access denied. Admin privileges required.</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Loading analytics...</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  if (error || !analyticsData) {
+    return (
+      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
+        <div className="flex items-center justify-center min-h-screen">
+          <div className="text-center">
+            <p className="text-red-600 mb-4">Error loading analytics data</p>
+            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-primary text-white rounded">
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  const formatCurrency = (amount: number) => {
+    return new Intl.NumberFormat("en-BD", {
+      style: "currency",
+      currency: "BDT",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(amount);
+  };
+
+  const formatNumber = (num: number) => {
+    return new Intl.NumberFormat("en-BD").format(num);
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-      <AdminNavigation user={user} />
+              <AdminNavigation user={{ name: user?.name || 'Admin', role: user?.role || 'ADMIN' }} />
 
       <MainContainer>
         {/* Header Section */}
@@ -50,8 +110,8 @@ export default async function AnalyticsPage() {
                 <Users className="h-8 w-8 text-blue-600" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                  <p className="text-2xl font-bold">1,247</p>
-                  <p className="text-xs text-green-600">+12% this month</p>
+                  <p className="text-2xl font-bold">{formatNumber(analyticsData.users.totalUsers)}</p>
+                  <p className="text-xs text-green-600">+{analyticsData.users.userGrowth.toFixed(1)}% this month</p>
                 </div>
               </div>
             </CardContent>
@@ -63,8 +123,8 @@ export default async function AnalyticsPage() {
                 <ShoppingCart className="h-8 w-8 text-green-600" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
-                  <p className="text-2xl font-bold">3,456</p>
-                  <p className="text-xs text-green-600">+8% this month</p>
+                  <p className="text-2xl font-bold">{formatNumber(analyticsData.orders.totalOrders)}</p>
+                  <p className="text-xs text-green-600">+{analyticsData.orders.orderGrowth.toFixed(1)}% this month</p>
                 </div>
               </div>
             </CardContent>
@@ -76,8 +136,8 @@ export default async function AnalyticsPage() {
                 <DollarSign className="h-8 w-8 text-yellow-600" />
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Revenue</p>
-                  <p className="text-2xl font-bold">₹2.4M</p>
-                  <p className="text-xs text-green-600">+15% this month</p>
+                  <p className="text-2xl font-bold">{formatCurrency(analyticsData.revenue.totalRevenue)}</p>
+                  <p className="text-xs text-green-600">+{analyticsData.revenue.revenueGrowth.toFixed(1)}% this month</p>
                 </div>
               </div>
             </CardContent>
@@ -88,9 +148,9 @@ export default async function AnalyticsPage() {
               <div className="flex items-center space-x-2">
                 <Package className="h-8 w-8 text-purple-600" />
                 <div>
-                  <p className="text-sm font-medium text-muted-foreground">Products</p>
-                  <p className="text-2xl font-bold">89</p>
-                  <p className="text-xs text-green-600">+3 this month</p>
+                  <p className="text-sm font-medium text-muted-foreground">Group Orders</p>
+                  <p className="text-2xl font-bold">{formatNumber(analyticsData.groupOrders.totalGroupOrders)}</p>
+                  <p className="text-xs text-green-600">{analyticsData.groupOrders.activeGroupOrders} active</p>
                 </div>
               </div>
             </CardContent>
@@ -109,20 +169,32 @@ export default async function AnalyticsPage() {
             <CardContent>
               <div className="space-y-4">
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Group Order Join Rate</span>
-                  <Badge variant="default">68%</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Payment Success Rate</span>
-                  <Badge variant="default">94.2%</Badge>
+                  <span className="text-sm">Group Order Success Rate</span>
+                  <Badge variant="default">{analyticsData.groupOrders.successRate.toFixed(1)}%</Badge>
                 </div>
                 <div className="flex justify-between items-center">
                   <span className="text-sm">Order Completion Rate</span>
-                  <Badge variant="default">87.5%</Badge>
+                  <Badge variant="default">
+                    {analyticsData.orders.totalOrders > 0 
+                      ? ((analyticsData.orders.completedOrders / analyticsData.orders.totalOrders) * 100).toFixed(1)
+                      : 0}%
+                  </Badge>
                 </div>
                 <div className="flex justify-between items-center">
-                  <span className="text-sm">Customer Retention</span>
-                  <Badge variant="default">76.3%</Badge>
+                  <span className="text-sm">User Verification Rate</span>
+                  <Badge variant="default">
+                    {analyticsData.users.totalUsers > 0 
+                      ? ((analyticsData.users.totalUsers - (analyticsData.users.totalUsers - analyticsData.users.activeUsers)) / analyticsData.users.totalUsers * 100).toFixed(1)
+                      : 0}%
+                  </Badge>
+                </div>
+                <div className="flex justify-between items-center">
+                  <span className="text-sm">Revenue per User</span>
+                  <Badge variant="default">
+                    {formatCurrency(analyticsData.users.totalUsers > 0 
+                      ? analyticsData.revenue.totalRevenue / analyticsData.users.totalUsers
+                      : 0)}
+                  </Badge>
                 </div>
               </div>
             </CardContent>
@@ -140,30 +212,39 @@ export default async function AnalyticsPage() {
                 <div>
                   <div className="flex justify-between text-sm mb-2">
                     <span>Monthly Revenue Target</span>
-                    <span>₹3.0M / ₹2.4M</span>
+                    <span>{formatCurrency(analyticsData.revenue.totalRevenue)} / ৳3.0M</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full" style={{ width: '80%' }}></div>
+                    <div 
+                      className="bg-primary h-2 rounded-full" 
+                      style={{ width: `${Math.min((analyticsData.revenue.totalRevenue / 3000000) * 100, 100)}%` }}
+                    ></div>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm mb-2">
                     <span>User Growth Target</span>
-                    <span>1,500 / 1,247</span>
+                    <span>{formatNumber(analyticsData.users.totalUsers)} / 1,500</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full" style={{ width: '83%' }}></div>
+                    <div 
+                      className="bg-primary h-2 rounded-full" 
+                      style={{ width: `${Math.min((analyticsData.users.totalUsers / 1500) * 100, 100)}%` }}
+                    ></div>
                   </div>
                 </div>
                 
                 <div>
                   <div className="flex justify-between text-sm mb-2">
                     <span>Order Volume Target</span>
-                    <span>4,000 / 3,456</span>
+                    <span>{formatNumber(analyticsData.orders.totalOrders)} / 4,000</span>
                   </div>
                   <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div className="bg-primary h-2 rounded-full" style={{ width: '86%' }}></div>
+                    <div 
+                      className="bg-primary h-2 rounded-full" 
+                      style={{ width: `${Math.min((analyticsData.orders.totalOrders / 4000) * 100, 100)}%` }}
+                    ></div>
                   </div>
                 </div>
               </div>
@@ -183,19 +264,25 @@ export default async function AnalyticsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="text-center">
                 <h4 className="font-medium mb-2">Revenue Growth</h4>
-                <div className="text-2xl font-bold text-green-600">+15.2%</div>
+                <div className={`text-2xl font-bold ${analyticsData.revenue.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
+                  {analyticsData.revenue.revenueGrowth >= 0 ? '+' : ''}{analyticsData.revenue.revenueGrowth.toFixed(1)}%
+                </div>
                 <p className="text-sm text-muted-foreground">vs. last month</p>
               </div>
               
               <div className="text-center">
                 <h4 className="font-medium mb-2">User Growth</h4>
-                <div className="text-2xl font-bold text-blue-600">+12.8%</div>
+                <div className={`text-2xl font-bold ${analyticsData.users.userGrowth >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
+                  {analyticsData.users.userGrowth >= 0 ? '+' : ''}{analyticsData.users.userGrowth.toFixed(1)}%
+                </div>
                 <p className="text-sm text-muted-foreground">vs. last month</p>
               </div>
               
               <div className="text-center">
                 <h4 className="font-medium mb-2">Order Growth</h4>
-                <div className="text-2xl font-bold text-purple-600">+8.4%</div>
+                <div className={`text-2xl font-bold ${analyticsData.orders.orderGrowth >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
+                  {analyticsData.orders.orderGrowth >= 0 ? '+' : ''}{analyticsData.orders.orderGrowth.toFixed(1)}%
+                </div>
                 <p className="text-sm text-muted-foreground">vs. last month</p>
               </div>
             </div>
