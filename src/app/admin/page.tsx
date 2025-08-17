@@ -14,7 +14,8 @@ import {
   Plus, 
   Package,
   TrendingUp,
-  Loader2
+  Loader2,
+  Clock
 } from "lucide-react";
 import Link from "next/link";
 import { useAdminStats } from "@/hooks/api/use-admin-stats";
@@ -216,6 +217,23 @@ export default function AdminPage() {
                 <Button variant="outline" className="w-full" asChild>
                   <Link href="/admin/discounts">Manage Discounts</Link>
                 </Button>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <Clock className="h-5 w-5 mr-2" />
+                  Priority Orders
+                </CardTitle>
+              </CardHeader>
+              <CardContent className="space-y-3">
+                <Button variant="outline" className="w-full" asChild>
+                  <Link href="/admin/priority-orders">Manage Priority Orders</Link>
+                </Button>
+                <p className="text-sm text-muted-foreground">
+                  Handle MRP-priced orders with admin-set delivery dates
+                </p>
               </CardContent>
             </Card>
           </div>

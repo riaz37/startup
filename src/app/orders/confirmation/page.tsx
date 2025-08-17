@@ -14,7 +14,8 @@ import {
   Calendar,
   ArrowRight,
   Home,
-  ShoppingCart
+  ShoppingCart,
+  Banknote
 } from "lucide-react";
 import Link from "next/link";
 
@@ -23,6 +24,7 @@ interface ConfirmationPageProps {
     success?: string;
     canceled?: string;
     orderId?: string;
+    method?: string; // Added for cash on delivery
   }>;
 }
 
@@ -33,9 +35,10 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
     redirect("/auth/signin");
   }
 
-  const { success, canceled, orderId } = await searchParams;
+  const { success, canceled, orderId, method } = await searchParams;
   const isSuccess = success === "true";
   const isCanceled = canceled === "true";
+  const isCashOnDelivery = method === "cod";
 
   let order = null;
   if (orderId) {
@@ -74,6 +77,9 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
 
   const getStatusTitle = () => {
     if (isSuccess) {
+      if (isCashOnDelivery) {
+        return "Cash on Delivery Order Confirmed!";
+      }
       return "Payment Successful!";
     }
     if (isCanceled) {
@@ -84,6 +90,9 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
 
   const getStatusDescription = () => {
     if (isSuccess) {
+      if (isCashOnDelivery) {
+        return "Your cash on delivery order has been confirmed! You will pay when your order is delivered.";
+      }
       return "Your payment has been processed successfully. Your order is now confirmed!";
     }
     if (isCanceled) {
@@ -116,6 +125,26 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
           <p className="text-xl text-muted-foreground mb-8">
             {getStatusDescription()}
           </p>
+
+          {/* Cash on Delivery Notice */}
+          {isSuccess && isCashOnDelivery && (
+            <div className="mb-8 p-6 bg-amber-50 border border-amber-200 rounded-lg">
+              <div className="flex items-center justify-center mb-3">
+                <Banknote className="h-8 w-8 text-amber-600 mr-2" />
+                <h3 className="text-lg font-semibold text-amber-800">
+                  Cash on Delivery
+                </h3>
+              </div>
+              <p className="text-amber-700 mb-3">
+                Please have the exact amount ready when your order is delivered.
+              </p>
+              <div className="text-sm text-amber-600 space-y-1">
+                <p>• Payment will be collected upon delivery</p>
+                <p>• Delivery personnel will provide a receipt</p>
+                <p>• No additional charges for cash on delivery</p>
+              </div>
+            </div>
+          )}
 
           {/* Order Details */}
           {order && (
@@ -167,6 +196,14 @@ export default async function ConfirmationPage({ searchParams }: ConfirmationPag
                       {formatPrice(order.totalAmount)}
                     </p>
                   </div>
+                </div>
+
+                {/* Payment Method */}
+                <div className="text-left">
+                  <span className="text-sm text-muted-foreground">Payment Method:</span>
+                  <p className="font-medium text-foreground">
+                    {isCashOnDelivery ? "Cash on Delivery" : "Credit/Debit Card"}
+                  </p>
                 </div>
 
                 {/* Delivery Address */}

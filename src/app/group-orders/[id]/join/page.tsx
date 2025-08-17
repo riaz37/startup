@@ -3,13 +3,14 @@
 import { useState, useEffect } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { ArrowLeft, Package, Plus, MapPin, CheckCircle } from "lucide-react";
+import { ArrowLeft, Package, Plus, MapPin, CheckCircle, CreditCard, Banknote } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 interface GroupOrder {
   id: string;
@@ -51,6 +52,11 @@ interface Address {
   isDefault: boolean;
 }
 
+enum PaymentMethod {
+  CARD = "CARD",
+  CASH_ON_DELIVERY = "CASH_ON_DELIVERY"
+}
+
 export default function JoinGroupOrderPage({
   params
 }: {
@@ -61,6 +67,7 @@ export default function JoinGroupOrderPage({
   const [addresses, setAddresses] = useState<Address[]>([]);
   const [quantity, setQuantity] = useState<number>(1);
   const [selectedAddressId, setSelectedAddressId] = useState("");
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<PaymentMethod | null>(null);
   const [showAddressForm, setShowAddressForm] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState("");
@@ -169,6 +176,11 @@ export default function JoinGroupOrderPage({
       return;
     }
 
+    if (!selectedPaymentMethod) {
+      setError("Please select a payment method");
+      return;
+    }
+
     setIsLoading(true);
     setError("");
 
@@ -181,15 +193,22 @@ export default function JoinGroupOrderPage({
         },
         body: JSON.stringify({
           quantity,
-          addressId: selectedAddressId
+          addressId: selectedAddressId,
+          paymentMethod: selectedPaymentMethod
         })
       });
 
       const result = await response.json();
 
       if (response.ok) {
-        // Redirect to order confirmation
-        router.push(`/orders/confirmation?orderId=${result.order.id}`);
+        // Redirect based on payment method
+        if (selectedPaymentMethod === PaymentMethod.CASH_ON_DELIVERY) {
+          // For COD, redirect to order confirmation
+          router.push(`/orders/confirmation?orderId=${result.order.id}&success=true&method=cod`);
+        } else {
+          // For card payments, redirect to payment page
+          router.push(`/orders/${result.order.id}/payment`);
+        }
       } else {
         setError(result.error || "Failed to join group order");
       }
@@ -335,12 +354,12 @@ export default function JoinGroupOrderPage({
                     +
                   </Button>
                 </div>
-                                  <p className="text-sm text-muted-foreground">
-                    Min: {groupOrder.product.minOrderQty || 1} {groupOrder.product.unit}
-                    {groupOrder.product.maxOrderQty && (
-                      <span> • Max: {groupOrder.product.maxOrderQty} {groupOrder.product.unit}</span>
-                    )}
-                  </p>
+                <p className="text-sm text-muted-foreground">
+                  Min: {groupOrder.product.minOrderQty || 1} {groupOrder.product.unit}
+                  {groupOrder.product.maxOrderQty && (
+                    <span> • Max: {groupOrder.product.maxOrderQty} {groupOrder.product.unit}</span>
+                  )}
+                </p>
               </div>
 
               {/* Order Summary */}
@@ -361,193 +380,279 @@ export default function JoinGroupOrderPage({
             </CardContent>
           </Card>
 
-          {/* Delivery Address */}
-          <Card>
-            <CardHeader>
-              <div className="flex justify-between items-center">
-                <CardTitle className="flex items-center">
-                  <MapPin className="h-5 w-5 mr-2" />
-                  Delivery Address
-                </CardTitle>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowAddressForm(!showAddressForm)}
-                  className="text-sm"
-                >
-                  <Plus className="h-4 w-4 mr-2" />
-                  Add New Address
-                </Button>
-              </div>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              {error && (
-                <div className="bg-destructive/10 border border-destructive/20 text-destructive px-4 py-3 rounded-md text-sm">
-                  {error}
+          {/* Right Column - Address and Payment */}
+          <div className="space-y-6">
+            {/* Delivery Address */}
+            <Card>
+              <CardHeader>
+                <div className="flex justify-between items-center">
+                  <CardTitle className="flex items-center">
+                    <MapPin className="h-5 w-5 mr-2" />
+                    Delivery Address
+                  </CardTitle>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setShowAddressForm(!showAddressForm)}
+                    className="text-sm"
+                  >
+                    <Plus className="h-4 w-4 mr-2" />
+                    Add New Address
+                  </Button>
                 </div>
-              )}
+              </CardHeader>
+              <CardContent className="space-y-6">
+                {error && (
+                  <Alert variant="destructive">
+                    <AlertDescription>{error}</AlertDescription>
+                  </Alert>
+                )}
 
-              {/* Address Selection */}
-              {addresses.length > 0 && (
-                <RadioGroup
-                  value={selectedAddressId}
-                  onValueChange={setSelectedAddressId}
-                  className="space-y-3"
-                >
-                  {addresses.map((address) => (
-                    <div key={address.id} className="flex items-start space-x-3">
-                      <RadioGroupItem value={address.id} id={address.id} />
-                      <Label
-                        htmlFor={address.id}
-                        className="flex-1 cursor-pointer"
-                      >
-                        <div className={`p-4 border rounded-lg transition-colors ${
-                          selectedAddressId === address.id
-                            ? "border-primary bg-primary/5"
-                            : "border-border hover:border-border/80"
-                        }`}>
-                          <div className="flex justify-between items-start">
-                            <div>
-                              <div className="flex items-center space-x-2">
-                                <span className="font-medium text-foreground">{address.name}</span>
-                                <Badge variant="outline" className="text-xs">
-                                  {address.type}
-                                </Badge>
-                                {address.isDefault && (
-                                  <Badge variant="secondary" className="text-xs">
-                                    Default
+                {/* Address Selection */}
+                {addresses.length > 0 && (
+                  <RadioGroup
+                    value={selectedAddressId}
+                    onValueChange={setSelectedAddressId}
+                    className="space-y-3"
+                  >
+                    {addresses.map((address) => (
+                      <div key={address.id} className="flex items-start space-x-3">
+                        <RadioGroupItem value={address.id} id={address.id} />
+                        <Label
+                          htmlFor={address.id}
+                          className="flex-1 cursor-pointer"
+                        >
+                          <div className={`p-4 border rounded-lg transition-colors ${
+                            selectedAddressId === address.id
+                              ? "border-primary bg-primary/5"
+                              : "border-border hover:border-border/80"
+                          }`}>
+                            <div className="flex justify-between items-start">
+                              <div>
+                                <div className="flex items-center space-x-2">
+                                  <span className="font-medium text-foreground">{address.name}</span>
+                                  <Badge variant="outline" className="text-xs">
+                                    {address.type}
                                   </Badge>
-                                )}
+                                  {address.isDefault && (
+                                    <Badge variant="secondary" className="text-xs">
+                                      Default
+                                    </Badge>
+                                  )}
+                                </div>
+                                <p className="text-sm text-muted-foreground mt-1">
+                                  {address.addressLine1}
+                                  {address.addressLine2 && `, ${address.addressLine2}`}
+                                </p>
+                                <p className="text-sm text-muted-foreground">
+                                  {address.city}, {address.state} - {address.pincode}
+                                </p>
+                                <p className="text-sm text-muted-foreground">Phone: {address.phone}</p>
                               </div>
-                              <p className="text-sm text-muted-foreground mt-1">
-                                {address.addressLine1}
-                                {address.addressLine2 && `, ${address.addressLine2}`}
-                              </p>
-                              <p className="text-sm text-muted-foreground">
-                                {address.city}, {address.state} - {address.pincode}
-                              </p>
-                              <p className="text-sm text-muted-foreground">Phone: {address.phone}</p>
                             </div>
                           </div>
-                        </div>
-                      </Label>
-                    </div>
-                  ))}
-                </RadioGroup>
-              )}
+                        </Label>
+                      </div>
+                    ))}
+                  </RadioGroup>
+                )}
 
-              {/* Add Address Form */}
-              {showAddressForm && (
-                <form onSubmit={handleAddAddress} className="space-y-4 border-t pt-4">
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                {/* Add Address Form */}
+                {showAddressForm && (
+                  <form onSubmit={handleAddAddress} className="space-y-4 border-t pt-4">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name</Label>
+                        <Input
+                          id="name"
+                          type="text"
+                          required
+                          value={newAddress.name}
+                          onChange={(e) => setNewAddress(prev => ({ ...prev, name: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          required
+                          value={newAddress.phone}
+                          onChange={(e) => setNewAddress(prev => ({ ...prev, phone: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+                    
                     <div className="space-y-2">
-                      <Label htmlFor="name">Name</Label>
+                      <Label htmlFor="addressLine1">Address Line 1</Label>
                       <Input
-                        id="name"
+                        id="addressLine1"
                         type="text"
                         required
-                        value={newAddress.name}
-                        onChange={(e) => setNewAddress(prev => ({ ...prev, name: e.target.value }))}
+                        value={newAddress.addressLine1}
+                        onChange={(e) => setNewAddress(prev => ({ ...prev, addressLine1: e.target.value }))}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        required
-                        value={newAddress.phone}
-                        onChange={(e) => setNewAddress(prev => ({ ...prev, phone: e.target.value }))}
-                      />
-                    </div>
-                  </div>
-                  
-                  <div className="space-y-2">
-                    <Label htmlFor="addressLine1">Address Line 1</Label>
-                    <Input
-                      id="addressLine1"
-                      type="text"
-                      required
-                      value={newAddress.addressLine1}
-                      onChange={(e) => setNewAddress(prev => ({ ...prev, addressLine1: e.target.value }))}
-                    />
-                  </div>
 
-                  <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                    <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+                      <div className="space-y-2">
+                        <Label htmlFor="city">City</Label>
+                        <Input
+                          id="city"
+                          type="text"
+                          required
+                          value={newAddress.city}
+                          onChange={(e) => setNewAddress(prev => ({ ...prev, city: e.target.value }))}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="state">State</Label>
+                        <Input
+                          id="state"
+                          type="text"
+                          required
+                          value={newAddress.state}
+                          onChange={(e) => setNewAddress(prev => ({ ...prev, state: e.target.value }))}
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="city">City</Label>
+                      <Label htmlFor="pincode">Pincode</Label>
                       <Input
-                        id="city"
+                        id="pincode"
                         type="text"
                         required
-                        value={newAddress.city}
-                        onChange={(e) => setNewAddress(prev => ({ ...prev, city: e.target.value }))}
+                        value={newAddress.pincode}
+                        onChange={(e) => setNewAddress(prev => ({ ...prev, pincode: e.target.value }))}
                       />
                     </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="state">State</Label>
-                      <Input
-                        id="state"
-                        type="text"
-                        required
-                        value={newAddress.state}
-                        onChange={(e) => setNewAddress(prev => ({ ...prev, state: e.target.value }))}
-                      />
+
+                    <div className="flex justify-end space-x-3">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        onClick={() => setShowAddressForm(false)}
+                      >
+                        Cancel
+                      </Button>
+                      <Button
+                        type="submit"
+                        disabled={isLoading}
+                      >
+                        {isLoading ? "Adding..." : "Add Address"}
+                      </Button>
                     </div>
-                  </div>
+                  </form>
+                )}
+              </CardContent>
+            </Card>
 
-                  <div className="space-y-2">
-                    <Label htmlFor="pincode">Pincode</Label>
-                    <Input
-                      id="pincode"
-                      type="text"
-                      required
-                      value={newAddress.pincode}
-                      onChange={(e) => setNewAddress(prev => ({ ...prev, pincode: e.target.value }))}
-                    />
-                  </div>
-
-                  <div className="flex justify-end space-x-3">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      onClick={() => setShowAddressForm(false)}
-                    >
-                      Cancel
-                    </Button>
-                    <Button
-                      type="submit"
-                      disabled={isLoading}
-                    >
-                      {isLoading ? "Adding..." : "Add Address"}
-                    </Button>
-                  </div>
-                </form>
-              )}
-
-              {/* Place Order Button */}
-              <div className="pt-4 border-t">
-                <Button
-                  onClick={handleJoinOrder}
-                  disabled={isLoading || !selectedAddressId}
-                  className="w-full"
-                  size="lg"
+            {/* Payment Method Selection */}
+            <Card>
+              <CardHeader>
+                <CardTitle className="flex items-center">
+                  <CreditCard className="h-5 w-5 mr-2" />
+                  Payment Method
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <RadioGroup
+                  value={selectedPaymentMethod || ""}
+                  onValueChange={(value) => setSelectedPaymentMethod(value as PaymentMethod)}
+                  className="space-y-3"
                 >
-                  {isLoading ? (
-                    <>
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Processing...
-                    </>
-                  ) : (
-                    <>
-                      <CheckCircle className="h-4 w-4 mr-2" />
-                      Join Order - {formatPrice(totalAmount)}
-                    </>
-                  )}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
+                  <div className="flex items-start space-x-3">
+                    <RadioGroupItem value={PaymentMethod.CARD} id="card" />
+                    <Label htmlFor="card" className="flex-1 cursor-pointer">
+                      <div className={`p-4 border rounded-lg transition-colors ${
+                        selectedPaymentMethod === PaymentMethod.CARD
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-border/80"
+                      }`}>
+                        <div className="flex items-center space-x-3">
+                          <CreditCard className="h-5 w-5 text-primary" />
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-foreground">Credit/Debit Card</span>
+                              <Badge variant="default" className="text-xs">Recommended</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Pay securely with your card via Stripe
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </Label>
+                  </div>
+
+                  <div className="flex items-start space-x-3">
+                    <RadioGroupItem value={PaymentMethod.CASH_ON_DELIVERY} id="cod" />
+                    <Label htmlFor="cod" className="flex-1 cursor-pointer">
+                      <div className={`p-4 border rounded-lg transition-colors ${
+                        selectedPaymentMethod === PaymentMethod.CASH_ON_DELIVERY
+                          ? "border-primary bg-primary/5"
+                          : "border-border hover:border-border/80"
+                      }`}>
+                        <div className="flex items-center space-x-3">
+                          <Banknote className="h-5 w-5 text-primary" />
+                          <div>
+                            <div className="flex items-center space-x-2">
+                              <span className="font-medium text-foreground">Cash on Delivery</span>
+                              <Badge variant="secondary" className="text-xs">Available</Badge>
+                            </div>
+                            <p className="text-sm text-muted-foreground mt-1">
+                              Pay when you receive your order
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </Label>
+                  </div>
+                </RadioGroup>
+
+                {/* Cash on Delivery Notice */}
+                {selectedPaymentMethod === PaymentMethod.CASH_ON_DELIVERY && (
+                  <div className="mt-4 p-4 bg-amber-50 border border-amber-200 rounded-lg">
+                    <div className="flex items-start space-x-2">
+                      <Banknote className="h-5 w-5 text-amber-600 mt-0.5" />
+                      <div className="text-sm text-amber-700">
+                        <p className="font-medium mb-1">Cash on Delivery Information</p>
+                        <p>• Payment will be collected when your order is delivered</p>
+                        <p>• Please have the exact amount ready</p>
+                        <p>• No additional charges for cash on delivery</p>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+
+            {/* Place Order Button */}
+            <div className="pt-4">
+              <Button
+                onClick={handleJoinOrder}
+                disabled={isLoading || !selectedAddressId || !selectedPaymentMethod}
+                className="w-full"
+                size="lg"
+              >
+                {isLoading ? (
+                  <>
+                    <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
+                    Processing...
+                  </>
+                ) : (
+                  <>
+                    <CheckCircle className="h-4 w-4 mr-2" />
+                    {selectedPaymentMethod === PaymentMethod.CASH_ON_DELIVERY 
+                      ? `Confirm COD Order - ${formatPrice(totalAmount)}`
+                      : `Join Order - ${formatPrice(totalAmount)}`
+                    }
+                  </>
+                )}
+              </Button>
+            </div>
+          </div>
         </div>
       </div>
     </div>

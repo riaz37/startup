@@ -2,6 +2,7 @@ import { getCurrentUser, prisma } from "@/lib";
 import { redirect } from "next/navigation";
 import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { PaymentForm } from "@/components/payments/payment-form";
+import { PaymentMethodSelector, PaymentMethod } from "@/components/payments/payment-method-selector";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -13,8 +14,10 @@ import {
   Calendar,
   User,
   Shield,
-  CheckCircle
+  CheckCircle,
+  AlertCircle
 } from "lucide-react";
+import { CashOnDeliveryHandler } from "@/components/payments/cash-on-delivery-handler";
 
 interface PaymentPageProps {
   params: Promise<{
@@ -24,15 +27,16 @@ interface PaymentPageProps {
 
 export default async function PaymentPage({ params }: PaymentPageProps) {
   const user = await getCurrentUser();
-  const { id } = await params;
 
   if (!user) {
     redirect("/auth/signin");
   }
 
+  const { id } = await params;
+
   // Fetch order details
   const order = await prisma.order.findUnique({
-    where: { id },
+    where: { id: id },
     include: {
       groupOrder: {
         include: {
@@ -57,14 +61,14 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
     redirect("/unauthorized");
   }
 
-  // Check if order is already paid
-  if (order.paymentStatus === "COMPLETED") {
-    redirect(`/orders/${order.id}`);
-  }
-
   // Check if order is cancelled
   if (order.status === "CANCELLED") {
     redirect(`/orders/${order.id}`);
+  }
+
+  // Check if order is already paid
+  if (order.paymentStatus === "COMPLETED" || order.paymentStatus === "CASH_ON_DELIVERY") {
+    redirect(`/orders/confirmation?orderId=${order.id}&success=true`);
   }
 
   return (
@@ -76,113 +80,161 @@ export default async function PaymentPage({ params }: PaymentPageProps) {
             badge="💳 Payment"
             title="Complete Your"
             highlightedWord="Payment"
-            description="Secure payment powered by Stripe. Your payment information is encrypted and secure."
+            description="Choose your preferred payment method to complete your order."
           />
 
           <div className="grid lg:grid-cols-3 gap-8">
-            {/* Payment Form */}
-            <div className="lg:col-span-2">
-              <Card className="card-sohozdaam">
-                <CardHeader>
-                  <CardTitle className="flex items-center">
-                    <CreditCard className="h-6 w-6 text-primary mr-2" />
-                    Payment Details
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <PaymentForm
-                    orderId={order.id}
-                    amount={order.totalAmount}
-                  />
-                </CardContent>
-              </Card>
+            {/* Payment Method Selection and Forms */}
+            <div className="lg:col-span-2 space-y-6">
+              {/* Payment Method Selector */}
+              <PaymentMethodSelector
+                selectedMethod={null}
+                onMethodSelect={() => {}} // Will be handled by client component
+                amount={order.totalAmount}
+                onProceed={() => {}} // Will be handled by client component
+              />
+
+              {/* Payment Forms Container */}
+              <CashOnDeliveryHandler
+                orderId={order.id}
+                amount={order.totalAmount}
+                orderNumber={order.orderNumber}
+              />
             </div>
 
             {/* Order Summary */}
             <div className="lg:col-span-1 space-y-4">
               <Card className="card-sohozdaam">
                 <CardHeader>
-                  <CardTitle>Order Summary</CardTitle>
+                  <CardTitle className="flex items-center">
+                    <Package className="h-5 w-5 mr-2" />
+                    Order Summary
+                  </CardTitle>
                 </CardHeader>
                 <CardContent className="space-y-4">
                   {/* Product Info */}
-                  <div className="flex items-start space-x-3">
-                    <Package className="h-5 w-5 text-primary mt-0.5" />
+                  <div className="flex items-center space-x-3">
+                    {order.groupOrder.product.imageUrl ? (
+                      <img
+                        src={order.groupOrder.product.imageUrl}
+                        alt={order.groupOrder.product.name}
+                        className="h-12 w-12 object-cover rounded-lg border"
+                      />
+                    ) : (
+                      <div className="h-12 w-12 bg-muted rounded-lg flex items-center justify-center border">
+                        <Package className="h-6 w-6 text-muted-foreground" />
+                      </div>
+                    )}
                     <div className="flex-1">
-                      <h4 className="font-medium">{order.groupOrder.product.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {order.groupOrder.product.unitSize} {order.groupOrder.product.unit}
+                      <h4 className="font-medium text-foreground text-sm">
+                        {order.groupOrder.product.name}
+                      </h4>
+                      <p className="text-xs text-muted-foreground">
+                        Group Order #{order.groupOrder.batchNumber}
                       </p>
-                      <Badge variant="secondary" className="mt-1">
-                        {order.groupOrder.batchNumber}
+                      <Badge variant="outline" className="text-xs mt-1">
+                        {order.groupOrder.product.category.name}
                       </Badge>
                     </div>
                   </div>
 
                   <Separator />
 
-                  {/* Delivery Address */}
-                  <div className="flex items-start space-x-3">
-                    <MapPin className="h-5 w-5 text-primary mt-0.5" />
-                    <div className="flex-1">
-                      <h4 className="font-medium">Delivery Address</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {order.address.addressLine1}
-                        {order.address.addressLine2 && (
-                          <>, {order.address.addressLine2}</>
-                        )}
-                        <br />
-                        {order.address.city}, {order.address.state} {order.address.pincode}
-                      </p>
+                  {/* Order Details */}
+                  <div className="space-y-3 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Order Number:</span>
+                      <span className="font-medium">#{order.orderNumber}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Status:</span>
+                      <Badge variant="outline" className="text-xs">
+                        {order.status}
+                      </Badge>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Payment Status:</span>
+                      <Badge variant="outline" className="text-xs">
+                        {order.paymentStatus}
+                      </Badge>
                     </div>
                   </div>
 
                   <Separator />
 
-                  {/* Order Details */}
-                  <div className="space-y-2">
-                    <div className="flex justify-between text-sm">
-                      <span>Order Number:</span>
-                      <span className="font-medium">{order.orderNumber}</span>
-                    </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Order Date:</span>
+                  {/* Price Breakdown */}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Unit Price:</span>
                       <span className="font-medium">
-                        {new Date(order.placedAt).toLocaleDateString()}
+                        {formatPrice(order.groupOrder.pricePerUnit)}/{order.groupOrder.product.unit}
                       </span>
                     </div>
-                    <div className="flex justify-between text-sm">
-                      <span>Payment Method:</span>
-                      <span className="font-medium">Credit/Debit Card</span>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">Quantity:</span>
+                      <span className="font-medium">1 {order.groupOrder.product.unit}</span>
                     </div>
+                    <Separator />
+                    <div className="flex justify-between text-lg font-bold">
+                      <span>Total Amount:</span>
+                      <span className="text-primary">
+                        {formatPrice(order.totalAmount)}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+
+              {/* Delivery Information */}
+              <Card className="card-sohozdaam">
+                <CardHeader>
+                  <CardTitle className="flex items-center">
+                    <MapPin className="h-5 w-5 mr-2" />
+                    Delivery Details
+                  </CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <User className="h-4 w-4 text-muted-foreground" />
+                      <span className="font-medium">{order.address.name}</span>
+                    </div>
+                    <p className="text-muted-foreground">
+                      {order.address.addressLine1}
+                      {order.address.addressLine2 && <>, {order.address.addressLine2}</>}
+                    </p>
+                    <p className="text-muted-foreground">
+                      {order.address.city}, {order.address.state} - {order.address.pincode}
+                    </p>
+                    <p className="text-muted-foreground">Phone: {order.address.phone}</p>
                   </div>
 
                   <Separator />
 
-                  {/* Total */}
-                  <div className="text-center pt-4">
-                    <div className="text-2xl font-bold text-primary">
-                      {formatPrice(order.totalAmount)}
+                  <div className="space-y-2 text-sm">
+                    <div className="flex items-center space-x-2">
+                      <Calendar className="h-4 w-4 text-muted-foreground" />
+                      <span className="text-muted-foreground">Estimated Delivery:</span>
                     </div>
-                    <p className="text-sm text-muted-foreground">
-                      Total Amount
+                    <p className="font-medium">
+                      {order.groupOrder.estimatedDelivery 
+                        ? new Date(order.groupOrder.estimatedDelivery).toLocaleDateString()
+                        : 'TBD'
+                      }
                     </p>
                   </div>
                 </CardContent>
               </Card>
 
               {/* Security Notice */}
-              <Card className="card-sohozdaam">
+              <Card className="card-sohozdaam border-green-200 bg-green-50/50">
                 <CardContent className="pt-6">
-                  <div className="text-center text-sm text-muted-foreground">
-                    <div className="flex items-center justify-center mb-2">
-                      <Shield className="h-4 w-4 text-green-500 mr-2" />
-                      <span>Secure Payment</span>
+                  <div className="flex items-start space-x-3">
+                    <Shield className="h-5 w-5 text-green-600 mt-0.5" />
+                    <div className="text-sm text-green-800">
+                      <p className="font-medium mb-1">Secure Payment</p>
+                      <p>Your payment information is encrypted and secure. We never store your card details.</p>
                     </div>
-                    <p>
-                      Your payment information is encrypted and secure. 
-                      We never store your card details.
-                    </p>
                   </div>
                 </CardContent>
               </Card>

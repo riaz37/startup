@@ -24,7 +24,6 @@ export async function seedProducts() {
         unit: "kg",
         unitSize: 5.0,
         mrp: 450.00,
-        costPrice: 380.00,
         sellingPrice: 420.00,
         minOrderQty: 1,
         maxOrderQty: 10
@@ -36,7 +35,6 @@ export async function seedProducts() {
         unit: "liter",
         unitSize: 1.0,
         mrp: 120.00,
-        costPrice: 100.00,
         sellingPrice: 110.00,
         minOrderQty: 1,
         maxOrderQty: 20
@@ -48,7 +46,6 @@ export async function seedProducts() {
         unit: "kg",
         unitSize: 1.0,
         mrp: 45.00,
-        costPrice: 38.00,
         sellingPrice: 42.00,
         minOrderQty: 1,
         maxOrderQty: 25
@@ -60,7 +57,6 @@ export async function seedProducts() {
         unit: "kg",
         unitSize: 1.0,
         mrp: 140.00,
-        costPrice: 120.00,
         sellingPrice: 130.00,
         minOrderQty: 1,
         maxOrderQty: 15
@@ -72,7 +68,6 @@ export async function seedProducts() {
         unit: "kg",
         unitSize: 5.0,
         mrp: 200.00,
-        costPrice: 170.00,
         sellingPrice: 185.00,
         minOrderQty: 1,
         maxOrderQty: 8
@@ -84,7 +79,6 @@ export async function seedProducts() {
         unit: "kg",
         unitSize: 2.0,
         mrp: 80.00,
-        costPrice: 65.00,
         sellingPrice: 75.00,
         minOrderQty: 1,
         maxOrderQty: 20
@@ -96,7 +90,6 @@ export async function seedProducts() {
         unit: "kg",
         unitSize: 3.0,
         mrp: 90.00,
-        costPrice: 75.00,
         sellingPrice: 85.00,
         minOrderQty: 1,
         maxOrderQty: 15
@@ -108,7 +101,6 @@ export async function seedProducts() {
         unit: "grams",
         unitSize: 500.0,
         mrp: 180.00,
-        costPrice: 150.00,
         sellingPrice: 165.00,
         minOrderQty: 1,
         maxOrderQty: 12

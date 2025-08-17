@@ -4,17 +4,21 @@
 
 export interface Product {
   id: string;
+  categoryId: string;
   name: string;
   slug: string;
-  description: string | null;
-  imageUrl: string | null;
+  description?: string;
+  imageUrl?: string;
   unit: string;
   unitSize: number;
   mrp: number;
   sellingPrice: number;
+  isActive: boolean;
   minOrderQty: number;
-  maxOrderQty: number | null;
-  category: {
+  maxOrderQty?: number;
+  createdAt: string;
+  updatedAt: string;
+  category?: {
     id: string;
     name: string;
     slug: string;
@@ -87,27 +91,25 @@ export interface OrderItem {
 
 export interface Order {
   id: string;
-  orderNumber: string;
   userId: string;
-  totalAmount: number;
-  status: string;
-  paymentStatus: string;
-  placedAt: string;
-  notes?: string;
+  groupOrderId: string;
   addressId: string;
-  groupOrder: {
-    batchNumber: string;
-    status: string;
-    estimatedDelivery?: string;
-    product: {
-      name: string;
-      unit: string;
-      unitSize: number;
-      imageUrl?: string;
-    };
-  };
-  address: Address;
-  items: OrderItem[];
+  orderNumber: string;
+  status: string;
+  totalAmount: number;
+  paymentStatus: PaymentStatus;
+  paymentMethod?: PaymentMethod;
+  paymentId?: string;
+  notes?: string;
+  placedAt: string;
+  confirmedAt?: string;
+  cancelledAt?: string;
+  deliveredAt?: string;
+  createdAt: string;
+  updatedAt: string;
+  groupOrder?: GroupOrder;
+  address?: Address;
+  user?: User;
 }
 
 export interface CreateOrderRequest {
@@ -192,13 +194,31 @@ export interface GroupOrdersResponse {
 // PAYMENT TYPES
 // ============================================================================
 
+export enum PaymentMethod {
+  CARD = "CARD",
+  UPI = "UPI",
+  NETBANKING = "NETBANKING",
+  WALLET = "WALLET",
+  CASH_ON_DELIVERY = "CASH_ON_DELIVERY"
+}
+
+export enum PaymentStatus {
+  PENDING = "PENDING",
+  PROCESSING = "PROCESSING",
+  COMPLETED = "COMPLETED",
+  FAILED = "FAILED",
+  REFUNDED = "REFUNDED",
+  PARTIALLY_REFUNDED = "PARTIALLY_REFUNDED",
+  CASH_ON_DELIVERY = "CASH_ON_DELIVERY"
+}
+
 export interface Payment {
   id: string;
   orderId: string;
   amount: number;
   currency: string;
-  status: string;
-  paymentMethod: string;
+  status: PaymentStatus;
+  paymentMethod: PaymentMethod;
   transactionId: string;
   createdAt: string;
   updatedAt: string;
@@ -212,6 +232,7 @@ export interface CreatePaymentIntentRequest {
   orderId: string;
   amount: number;
   currency: string;
+  paymentMethod?: PaymentMethod;
 }
 
 export interface PaymentIntent {
@@ -282,7 +303,7 @@ export interface Notification {
   type: string;
   title: string;
   message: string;
-  data?: Record<string, any>;
+  data?: Record<string, unknown>;
   isRead: boolean;
   createdAt: string;
   updatedAt: string;
@@ -407,7 +428,20 @@ export interface CreateAddressRequest {
   contactPhone: string;
 }
 
-export interface UpdateAddressRequest extends Partial<CreateAddressRequest> {}
+export interface UpdateAddressRequest {
+  type?: 'home' | 'work' | 'other';
+  name?: string;
+  addressLine1?: string;
+  addressLine2?: string;
+  city?: string;
+  state?: string;
+  pincode?: string;
+  landmark?: string;
+  country?: string;
+  isDefault?: boolean;
+  contactPerson?: string;
+  contactPhone?: string;
+}
 
 export interface AddressesResponse {
   addresses: Address[];
@@ -604,7 +638,7 @@ export interface ActivityItem {
 
 export interface WebSocketMessage {
   type: string;
-  data: any;
+  data: unknown;
   timestamp: string;
 }
 

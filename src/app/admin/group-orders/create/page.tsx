@@ -11,8 +11,9 @@ import { Label } from "@/components/ui/label";
 import { Badge } from "@/components/ui/badge";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Checkbox } from "@/components/ui/checkbox";
-import { Plus, Package, Calendar, DollarSign, Target, Percent, Tag } from "lucide-react";
+import { Plus, Package, Calendar, DollarSign, Target, Percent, Tag, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
+import { ImageUploadWithPreview } from "@/components/ui/image-upload-with-preview";
 
 interface Product {
   id: string;
@@ -48,7 +49,9 @@ export default function CreateGroupOrderPage() {
     targetQuantity: "",
     pricePerUnit: "",
     expiresAt: "",
-    estimatedDelivery: ""
+    estimatedDelivery: "",
+    groupOrderImageUrl: "",
+    groupOrderImagePublicId: ""
   });
 
   const [selectedDiscounts, setSelectedDiscounts] = useState<string[]>([]);
@@ -218,6 +221,22 @@ export default function CreateGroupOrderPage() {
     }
   };
 
+  const handleImageUpload = (imageUrl: string, publicId: string) => {
+    setFormData(prev => ({
+      ...prev,
+      groupOrderImageUrl: imageUrl,
+      groupOrderImagePublicId: publicId
+    }));
+  };
+
+  const handleImageRemove = () => {
+    setFormData(prev => ({
+      ...prev,
+      groupOrderImageUrl: "",
+      groupOrderImagePublicId: ""
+    }));
+  };
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
@@ -320,6 +339,31 @@ export default function CreateGroupOrderPage() {
                     </option>
                   ))}
                 </select>
+              </div>
+
+              {/* Group Order Image */}
+              <div className="space-y-2">
+                <Label className="flex items-center">
+                  <ImageIcon className="h-4 w-4 text-primary mr-2" />
+                  Group Order Image (Optional)
+                </Label>
+                <ImageUploadWithPreview
+                  onImageUpload={handleImageUpload}
+                  onImageRemove={handleImageRemove}
+                  currentImageUrl={formData.groupOrderImageUrl}
+                  previewType="group-order"
+                  previewData={{
+                    name: `Group Order - ${products.find(p => p.id === formData.productId)?.name || 'Product'}`,
+                    description: `Group order for ${formData.targetQuantity} units`,
+                    price: parseFloat(formData.pricePerUnit) || 0,
+                    minThreshold: parseFloat(formData.minThreshold) || 0,
+                    targetQuantity: parseInt(formData.targetQuantity) || 0,
+                    expiresAt: formData.expiresAt ? new Date(formData.expiresAt).toLocaleDateString() : '7 days'
+                  }}
+                />
+                <p className="text-sm text-muted-foreground">
+                  Upload a promotional image for this group order. This will be displayed to customers.
+                </p>
               </div>
 
               {/* Quantity and Threshold */}

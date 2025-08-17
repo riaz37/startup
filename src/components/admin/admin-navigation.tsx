@@ -37,16 +37,34 @@ export function AdminNavigation({ user }: AdminNavigationProps) {
                 Dashboard
               </Link>
               <Link
+                href="/admin/group-orders"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Group Orders
+              </Link>
+              <Link
                 href="/admin/group-orders/create"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Create Order
               </Link>
               <Link
-                href="/products"
+                href="/admin/products"
                 className="text-muted-foreground hover:text-foreground transition-colors"
               >
                 Products
+              </Link>
+              <Link
+                href="/admin/categories"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Categories
+              </Link>
+              <Link
+                href="/admin/price-management"
+                className="text-muted-foreground hover:text-foreground transition-colors"
+              >
+                Price Management
               </Link>
             </div>
           </div>

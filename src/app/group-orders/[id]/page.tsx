@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Progress } from "@/components/ui/progress";
 import { Users, Clock, Package, TrendingUp, ArrowLeft } from "lucide-react";
+import { PriceHistoryWrapper } from "@/components/products/price-history-wrapper";
 
 interface GroupOrder {
   id: string;
@@ -30,6 +31,8 @@ interface GroupOrder {
     unitSize: number;
     imageUrl: string | null;
     description: string | null;
+    mrp: number;
+    sellingPrice: number;
     category: {
       name: string;
     };
@@ -136,6 +139,8 @@ async function getGroupOrder(id: string): Promise<GroupOrder | null> {
         unitSize: groupOrder.product.unitSize,
         imageUrl: groupOrder.product.imageUrl,
         description: groupOrder.product.description,
+        mrp: groupOrder.product.mrp,
+        sellingPrice: groupOrder.product.sellingPrice,
         category: {
           name: groupOrder.product.category.name,
         },
@@ -282,6 +287,15 @@ export default async function GroupOrderDetailPage({
               <p className="text-sm text-green-600 font-medium">
                 🎉 Bulk pricing - Save with group orders!
               </p>
+            </div>
+
+            {/* Price History Display */}
+            <div className="mt-4">
+              <PriceHistoryWrapper
+                productId={groupOrder.product.id}
+                currentMrp={groupOrder.product.mrp}
+                currentSellingPrice={groupOrder.product.sellingPrice}
+              />
             </div>
 
             {/* Progress */}

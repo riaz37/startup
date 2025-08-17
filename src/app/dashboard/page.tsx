@@ -18,7 +18,8 @@ import {
   CreditCard,
   Calendar,
   MapPin,
-  Star
+  Star,
+  Clock
 } from "lucide-react";
 import OrderHistoryWidget from "@/components/orders/order-history-widget";
 import { prisma } from "@/lib/database";
@@ -195,6 +196,14 @@ export default async function DashboardPage() {
       href: "/help",
       color: "secondary" as const,
       badge: "24/7"
+    },
+    {
+      icon: Clock,
+      title: "Priority Orders",
+      description: "Fast delivery at MRP price",
+      href: "/priority-orders",
+      color: "success" as const,
+      badge: "Fast"
     }
   ];
 

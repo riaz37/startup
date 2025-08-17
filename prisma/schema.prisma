@@ -42,6 +42,12 @@ model User {
   reviews         Review[]
   passwordResets  PasswordReset[]
   emailVerifications EmailVerification[]
+  priorityOrders  PriorityOrder[]
+
+
+  // New relations for price management
+  priceHistory ProductPriceHistory[] @relation("PriceHistoryAdmin")
+  priceAlerts PriceAlert[]
 
   @@map("users")
 }
@@ -105,6 +111,7 @@ model Address {
   // Relations
   user   User    @relation(fields: [userId], references: [id], onDelete: Cascade)
   orders Order[]
+  priorityOrders PriorityOrder[]
 
   @@map("addresses")
 }
@@ -137,7 +144,6 @@ model Product {
   unit         String // kg, liter, piece, etc.
   unitSize     Float // 1, 0.5, 2.5, etc.
   mrp          Float // Maximum Retail Price
-  costPrice    Float // Cost from manufacturer
   sellingPrice Float // Your selling price (discounted)
   isActive     Boolean  @default(true)
   minOrderQty  Int      @default(1)
@@ -149,7 +155,13 @@ model Product {
   category    Category     @relation(fields: [categoryId], references: [id])
   groupOrders GroupOrder[]
   orderItems  OrderItem[]
+  priorityOrders PriorityOrder[]
   reviews     Review[]
+
+  // New relations for price management
+  priceHistory ProductPriceHistory[]
+  priceChangeNotifications PriceChangeNotification[]
+  priceAlerts PriceAlert[]
 
   @@map("products")
 }
@@ -183,13 +195,13 @@ model GroupOrder {
 model Order {
   id            String        @id @default(cuid())
   userId        String
-  groupOrderId  String
+  groupOrderId  String?       // Made optional to support both types
   addressId     String
   orderNumber   String        @unique // ORD-2024-001, etc.
   status        OrderStatus   @default(PENDING)
   totalAmount   Float
   paymentStatus PaymentStatus @default(PENDING)
-  paymentMethod String?
+  paymentMethod PaymentMethod? // Updated to use enum
   paymentId     String? // Payment gateway transaction ID
   notes         String?
   placedAt      DateTime      @default(now())
@@ -201,7 +213,7 @@ model Order {
 
   // Relations
   user       User        @relation(fields: [userId], references: [id])
-  groupOrder GroupOrder  @relation(fields: [groupOrderId], references: [id])
+  groupOrder GroupOrder? @relation(fields: [groupOrderId], references: [id]) // Made optional
   address    Address     @relation(fields: [addressId], references: [id])
   items      OrderItem[]
   payments   Payment[]
@@ -232,8 +244,8 @@ model Payment {
   orderId          String
   amount           Float
   currency         String        @default("BDT")
-  paymentMethod    String // UPI, Card, NetBanking, etc.
-  gatewayProvider  String // Razorpay, Stripe, etc.
+  paymentMethod    PaymentMethod // Updated to use enum
+  gatewayProvider  String? // Can be null for cash on delivery
   gatewayOrderId   String? // Gateway's order ID
   gatewayPaymentId String? // Gateway's payment ID
   status           PaymentStatus @default(PENDING)
@@ -267,6 +279,7 @@ model PickupLocation {
 
   // Relations
   deliveries Delivery[]
+  priorityDeliveries PriorityDelivery[]
 
   @@map("pickup_locations")
 }
@@ -491,6 +504,15 @@ enum PaymentStatus {
   FAILED
   REFUNDED
   PARTIALLY_REFUNDED
+  CASH_ON_DELIVERY // New status for COD orders
+}
+
+enum PaymentMethod {
+  CARD
+  UPI
+  NETBANKING
+  WALLET
+  CASH_ON_DELIVERY
 }
 
 enum DeliveryType {
@@ -525,9 +547,163 @@ enum NotificationType {
   PAYMENT_SUCCESS
   PAYMENT_FAILED
   GENERAL
+  PRIORITY_ORDER_CONFIRMED
+  PRIORITY_ORDER_SHIPPED
+  PRIORITY_ORDER_DELIVERED
 }
 
 enum DiscountType {
   PERCENTAGE
   FIXED_AMOUNT
+}
+
+// Price Management Enums
+enum PriceChangeType {
+  INCREASE
+  DECREASE
+  NO_CHANGE
+}
+
+
+
+enum PriceAlertType {
+  PRICE_DROP
+  PRICE_INCREASE
+  ANY_CHANGE
+}
+
+// Price History Tracking
+model ProductPriceHistory {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  mrp       Decimal  @db.Decimal(10, 2)
+  sellingPrice Decimal @db.Decimal(10, 2)
+  changeReason String? // "Supplier cost increase", "Market adjustment", etc.
+  adminId   String?  // Who made the change
+  admin     User?    @relation("PriceHistoryAdmin", fields: [adminId], references: [id])
+  createdAt DateTime @default(now())
+  
+  @@index([productId, createdAt])
+  @@index([createdAt])
+  @@map("product_price_history")
+}
+
+// Price Change Notifications
+model PriceChangeNotification {
+  id          String   @id @default(cuid())
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  oldPrice    Decimal  @db.Decimal(10, 2)
+  newPrice    Decimal  @db.Decimal(10, 2)
+  changePercentage Decimal @db.Decimal(5, 2)
+  changeType  PriceChangeType
+  reason      String?
+  isNotified  Boolean  @default(false)
+  createdAt   DateTime @default(now())
+  
+  @@index([productId, createdAt])
+  @@map("price_change_notifications")
+}
+
+
+
+// Price Alert Subscriptions
+model PriceAlert {
+  id          String   @id @default(cuid())
+  userId      String
+  user        User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  productId   String
+  product     Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  targetPrice Decimal  @db.Decimal(10, 2)
+  alertType   PriceAlertType
+  isActive    Boolean  @default(true)
+  lastTriggered DateTime?
+  createdAt   DateTime @default(now())
+  
+  @@unique([userId, productId])
+  @@index([productId, targetPrice])
+  @@map("price_alerts")
+}
+
+// Priority-based delivery system (MRP price)
+model PriorityOrder {
+  id                String           @id @default(cuid())
+  productId         String
+  userId            String
+  addressId         String
+  orderNumber       String           @unique // PO-2024-001, PO-2024-002, etc.
+  quantity          Int
+  unitPrice         Float // MRP price per unit
+  totalAmount       Float
+  deliveryType      DeliveryType     @default(HOME_DELIVERY)
+  status            PriorityOrderStatus @default(PENDING)
+  paymentStatus     PaymentStatus    @default(PENDING)
+  paymentMethod     PaymentMethod?
+  paymentId         String?
+  estimatedDelivery DateTime?
+  actualDelivery    DateTime?
+  notes             String?
+  placedAt          DateTime         @default(now())
+  confirmedAt       DateTime?
+  cancelledAt       DateTime?
+  deliveredAt       DateTime?
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
+
+  // Relations
+  product    Product    @relation(fields: [productId], references: [id])
+  user       User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  address    Address     @relation(fields: [addressId], references: [id], onDelete: Cascade)
+  items      PriorityOrderItem[]
+  delivery   PriorityDelivery?
+
+  @@map("priority_orders")
+}
+
+model PriorityOrderItem {
+  id         String   @id @default(cuid())
+  priorityOrderId String
+  productId  String
+  quantity   Int
+  unitPrice  Float // MRP price per unit at time of order
+  totalPrice Float // quantity * unitPrice
+  createdAt  DateTime @default(now())
+
+  // Relations
+  priorityOrder PriorityOrder @relation(fields: [priorityOrderId], references: [id], onDelete: Cascade)
+
+  @@map("priority_order_items")
+}
+
+model PriorityDelivery {
+  id               String         @id @default(cuid())
+  priorityOrderId  String         @unique
+  pickupLocationId String?
+  deliveryType     DeliveryType   @default(HOME_DELIVERY)
+  status           DeliveryStatus @default(PENDING)
+  trackingNumber   String?
+  estimatedDate    DateTime?
+  actualDate       DateTime?
+  deliveryNotes    String?
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+
+  // Relations
+  priorityOrder  PriorityOrder   @relation(fields: [priorityOrderId], references: [id])
+  pickupLocation PickupLocation? @relation(fields: [pickupLocationId], references: [id])
+
+  @@map("priority_deliveries")
+}
+
+// Simplified priority order status
+enum PriorityOrderStatus {
+  PENDING      // Order placed, payment pending
+  CONFIRMED    // Payment confirmed
+  PROCESSING   // Being prepared
+  READY        // Ready for pickup/delivery
+  SHIPPED      // On the way
+  DELIVERED    // Completed
+  CANCELLED    // Cancelled by user/admin
+  REFUNDED     // Money returned
 }

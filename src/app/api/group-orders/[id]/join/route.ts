@@ -18,7 +18,7 @@ export async function POST(
 
     const { id } = await params;
     const body = await request.json();
-    const { quantity, addressId } = body;
+    const { quantity, addressId, paymentMethod } = body;
 
     // Validate group order exists and is active
     const groupOrder = await prisma.groupOrder.findUnique({
@@ -102,6 +102,15 @@ export async function POST(
     const orderCount = await prisma.order.count();
     const orderNumber = `ORD-${new Date().getFullYear()}-${String(orderCount + 1).padStart(3, '0')}`;
 
+    // Determine payment status and method based on selection
+    let paymentStatus: "PENDING" | "CASH_ON_DELIVERY" = "PENDING";
+    let orderStatus: "PENDING" | "CONFIRMED" = "PENDING";
+    
+    if (paymentMethod === "CASH_ON_DELIVERY") {
+      paymentStatus = "CASH_ON_DELIVERY";
+      orderStatus = "CONFIRMED";
+    }
+
     // Create order in a transaction
     const result = await prisma.$transaction(async (tx) => {
       // Create the order
@@ -112,8 +121,9 @@ export async function POST(
           addressId,
           orderNumber,
           totalAmount,
-          status: "PENDING",
-          paymentStatus: "PENDING"
+          status: orderStatus,
+          paymentStatus: paymentStatus,
+          paymentMethod: paymentMethod || null
         }
       });
 
@@ -127,6 +137,21 @@ export async function POST(
           totalPrice: totalAmount
         }
       });
+
+      // If it's cash on delivery, create payment record
+      if (paymentMethod === "CASH_ON_DELIVERY") {
+        await tx.payment.create({
+          data: {
+            orderId: order.id,
+            amount: totalAmount,
+            currency: "BDT",
+            paymentMethod: "CASH_ON_DELIVERY" as any,
+            gatewayProvider: null as any,
+            status: "CASH_ON_DELIVERY" as any,
+            processedAt: new Date(),
+          },
+        });
+      }
 
       // Update group order totals
       await tx.groupOrder.update({
