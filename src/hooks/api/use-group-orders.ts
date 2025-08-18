@@ -98,3 +98,25 @@ export function useProcessGroupOrder() {
     },
   });
 } 
+
+// Hook for checking if group orders are available for a product
+export function useProductGroupOrdersAvailable(productId: string) {
+  return useQuery({
+    queryKey: ['group-orders', 'product', 'available', productId],
+    queryFn: async () => {
+      const response = await fetch(`/api/group-orders/product/${productId}`);
+      if (!response.ok) {
+        throw new Error('Failed to fetch group orders');
+      }
+      const data = await response.json();
+      return {
+        hasGroupOrders: data.count > 0,
+        count: data.count,
+        groupOrders: data.groupOrders || []
+      };
+    },
+    enabled: !!productId,
+    staleTime: 5 * 60 * 1000, // 5 minutes
+    gcTime: 10 * 60 * 1000, // 10 minutes
+  });
+} 

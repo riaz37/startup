@@ -53,59 +53,59 @@ export function GroupOrderCard({ groupOrder, user, formatPrice }: GroupOrderCard
   const getStatusBadge = (status: string) => {
     switch (status) {
       case "COLLECTING":
-        return <Badge className="badge-warning">Collecting Orders</Badge>;
+        return <Badge variant="secondary" className="text-xs">Collecting Orders</Badge>;
       case "THRESHOLD_MET":
-        return <Badge className="badge-success">Threshold Met</Badge>;
+        return <Badge variant="default" className="text-xs">Threshold Met</Badge>;
       case "ORDERED":
-        return <Badge className="badge-secondary">Ordered</Badge>;
+        return <Badge variant="secondary" className="text-xs">Ordered</Badge>;
       case "SHIPPED":
-        return <Badge className="badge-primary">Shipped</Badge>;
+        return <Badge variant="default" className="text-xs">Shipped</Badge>;
       case "DELIVERED":
-        return <Badge className="badge-success">Delivered</Badge>;
+        return <Badge variant="default" className="text-xs">Delivered</Badge>;
       default:
-        return <Badge variant="outline">{status}</Badge>;
+        return <Badge variant="outline" className="text-xs">{status}</Badge>;
     }
   };
 
   return (
-    <Card className="group-order-card collecting">
-      <CardContent className="p-6">
+    <Card className="group-order-card collecting h-full flex flex-col">
+      <CardContent className="p-4 sm:p-6 flex flex-col h-full">
         {/* Header */}
         <div className="flex items-center justify-between mb-4">
-          <div className="flex items-center space-x-3">
-            <Badge variant="secondary">
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap gap-2">
+            <Badge variant="secondary" className="text-xs">
               {groupOrder.product.category.name}
             </Badge>
             {getStatusBadge(groupOrder.status)}
           </div>
-          <span className="text-sm text-muted-foreground">
+          <span className="text-xs sm:text-sm text-muted-foreground">
             #{groupOrder.batchNumber}
           </span>
         </div>
 
         {/* Product Info */}
-        <div className="flex items-start space-x-4 mb-6">
+        <div className="flex items-start space-x-3 sm:space-x-4 mb-4 sm:mb-6">
           {groupOrder.product.imageUrl ? (
             <LazyImage
               src={groupOrder.product.imageUrl}
               alt={groupOrder.product.name}
-              className="h-20 w-20 object-cover rounded-lg border"
+              className="h-16 w-16 sm:h-20 sm:w-20 object-cover rounded-lg border flex-shrink-0"
             />
           ) : (
-            <div className="h-20 w-20 bg-muted rounded-lg flex items-center justify-center border">
-              <Package className="h-8 w-8 text-muted-foreground" />
+            <div className="h-16 w-16 sm:h-20 sm:w-20 bg-muted rounded-lg flex items-center justify-center border flex-shrink-0">
+              <Package className="h-6 w-6 sm:h-8 sm:w-8 text-muted-foreground" />
             </div>
           )}
-          <div className="flex-1">
-            <h3 className="text-xl font-semibold mb-1">
+          <div className="flex-1 min-w-0">
+            <h3 className="text-lg sm:text-xl font-semibold mb-1 truncate">
               {groupOrder.product.name}
             </h3>
-            <p className="text-muted-foreground mb-2">
+            <p className="text-sm text-muted-foreground mb-2">
               {groupOrder.product.unitSize} {groupOrder.product.unit}
             </p>
-            <p className="text-2xl font-bold text-primary">
+            <p className="text-xl sm:text-2xl font-bold text-primary">
               {formatPrice(groupOrder.pricePerUnit)}
-              <span className="text-sm font-normal text-muted-foreground">
+              <span className="text-xs sm:text-sm font-normal text-muted-foreground">
                 /{groupOrder.product.unit}
               </span>
             </p>
@@ -113,7 +113,7 @@ export function GroupOrderCard({ groupOrder, user, formatPrice }: GroupOrderCard
         </div>
 
         {/* Progress Bar */}
-        <div className="mb-6">
+        <div className="mb-4 sm:mb-6">
           <div className="flex justify-between text-sm mb-2">
             <span className="font-medium">Progress to Goal</span>
             <span className="text-primary font-semibold">
@@ -127,33 +127,33 @@ export function GroupOrderCard({ groupOrder, user, formatPrice }: GroupOrderCard
             />
           </div>
           <div className="flex justify-between text-xs text-muted-foreground mt-2">
-            <span>{formatPrice(groupOrder.currentAmount)} collected</span>
-            <span>{formatPrice(groupOrder.minThreshold)} goal</span>
+            <span className="truncate">{formatPrice(groupOrder.currentAmount)} collected</span>
+            <span className="truncate">{formatPrice(groupOrder.minThreshold)} goal</span>
           </div>
         </div>
 
         {/* Stats Grid */}
-        <div className="grid grid-cols-3 gap-4 mb-6">
-          <div className="text-center p-3 bg-muted/50 rounded-lg">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4 mb-4 sm:mb-6">
+          <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg">
             <div className="flex items-center justify-center mb-1">
-              <Users className="h-4 w-4 text-primary mr-1" />
-              <span className="text-lg font-bold">{groupOrder.participantCount}</span>
+              <Users className="h-3 w-3 sm:h-4 sm:w-4 text-primary mr-1" />
+              <span className="text-sm sm:text-lg font-bold">{groupOrder.participantCount}</span>
             </div>
             <div className="text-xs text-muted-foreground">Participants</div>
           </div>
-          <div className="text-center p-3 bg-muted/50 rounded-lg">
+          <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg">
             <div className="flex items-center justify-center mb-1">
-              <Package className="h-4 w-4 text-secondary mr-1" />
-              <span className="text-lg font-bold">{groupOrder.currentQuantity}</span>
+              <Package className="h-3 w-3 sm:h-4 sm:w-4 text-secondary mr-1" />
+              <span className="text-sm sm:text-lg font-bold">{groupOrder.currentQuantity}</span>
             </div>
             <div className="text-xs text-muted-foreground">
               of {groupOrder.targetQuantity} {groupOrder.product.unit}
             </div>
           </div>
-          <div className="text-center p-3 bg-muted/50 rounded-lg" title={`Expires on ${new Date(groupOrder.expiresAt).toLocaleDateString()} at ${new Date(groupOrder.expiresAt).toLocaleTimeString()}`}>
+          <div className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg" title={`Expires on ${new Date(groupOrder.expiresAt).toLocaleDateString()} at ${new Date(groupOrder.expiresAt).toLocaleTimeString()}`}>
             <div className="flex items-center justify-center mb-1">
-              <Clock className="h-4 w-4 text-accent mr-1" />
-              <span className="text-lg font-bold">{groupOrder.timeRemaining}</span>
+              <Clock className="h-3 w-3 sm:h-4 sm:w-4 text-accent mr-1" />
+              <span className="text-sm sm:text-lg font-bold">{groupOrder.timeRemaining}</span>
             </div>
             <div className="text-xs text-muted-foreground">
               {formatTimeRemaining(groupOrder.timeRemaining)}
@@ -163,9 +163,9 @@ export function GroupOrderCard({ groupOrder, user, formatPrice }: GroupOrderCard
 
         {/* Estimated Delivery */}
         {groupOrder.estimatedDelivery && (
-          <div className="mb-6 p-4 bg-muted/30 rounded-lg border-l-4 border-primary">
-            <div className="flex items-center text-sm">
-              <TrendingUp className="h-4 w-4 text-primary mr-2" />
+          <div className="mb-4 sm:mb-6 p-3 sm:p-4 bg-muted/30 rounded-lg border-l-4 border-primary">
+            <div className="flex items-center text-xs sm:text-sm">
+              <TrendingUp className="h-3 w-3 sm:h-4 sm:w-4 text-primary mr-2 flex-shrink-0" />
               <span className="font-medium">Estimated Delivery:</span>
               <span className="ml-2">
                 {new Date(groupOrder.estimatedDelivery).toLocaleDateString()}
@@ -175,14 +175,14 @@ export function GroupOrderCard({ groupOrder, user, formatPrice }: GroupOrderCard
         )}
 
         {/* Action Buttons */}
-        <div className="flex space-x-3">
-          <Button variant="outline" className="flex-1" asChild>
+        <div className="flex space-x-2 sm:space-x-3 mt-auto">
+          <Button variant="outline" className="flex-1 text-xs sm:text-sm" asChild>
             <Link href={`/group-orders/${groupOrder.id}`}>
               View Details
             </Link>
           </Button>
           {user && groupOrder.status === "COLLECTING" && (
-            <Button className="flex-1" asChild>
+            <Button className="flex-1 text-xs sm:text-sm" asChild>
               <Link href={`/group-orders/${groupOrder.id}/join`}>
                 Join Order
               </Link>

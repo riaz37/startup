@@ -42,22 +42,22 @@ export function ProductCardSkeleton() {
 // Group Order Card Skeleton
 export function GroupOrderCardSkeleton() {
   return (
-    <div className="border rounded-lg overflow-hidden bg-card">
-      <div className="p-6 space-y-4">
+    <div className="border rounded-lg overflow-hidden bg-card h-full flex flex-col">
+      <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 flex flex-col h-full">
         <div className="flex items-center justify-between">
-          <div className="flex items-center space-x-3">
-            <Skeleton className="h-6 w-20" />
-            <Skeleton className="h-6 w-24" />
+          <div className="flex items-center space-x-2 sm:space-x-3 flex-wrap gap-2">
+            <Skeleton className="h-5 w-16 sm:w-20" />
+            <Skeleton className="h-5 w-20 sm:w-24" />
           </div>
-          <Skeleton className="h-4 w-16" />
+          <Skeleton className="h-3 w-12 sm:w-16" />
         </div>
         
-        <div className="flex items-start space-x-4">
-          <Skeleton className="h-20 w-20 rounded-lg" />
-          <div className="flex-1 space-y-2">
-            <Skeleton className="h-6 w-3/4" />
+        <div className="flex items-start space-x-3 sm:space-x-4">
+          <Skeleton className="h-16 w-16 sm:h-20 sm:w-20 rounded-lg flex-shrink-0" />
+          <div className="flex-1 space-y-2 min-w-0">
+            <Skeleton className="h-5 w-3/4" />
             <Skeleton className="h-4 w-1/2" />
-            <Skeleton className="h-8 w-24" />
+            <Skeleton className="h-6 w-20 sm:h-8 sm:w-24" />
           </div>
         </div>
         
@@ -73,18 +73,18 @@ export function GroupOrderCardSkeleton() {
           </div>
         </div>
         
-        <div className="grid grid-cols-3 gap-4">
+        <div className="grid grid-cols-3 gap-3 sm:gap-4">
           {[1, 2, 3].map((i) => (
-            <div key={i} className="text-center p-3 bg-muted/50 rounded-lg">
-              <Skeleton className="h-6 w-8 mx-auto mb-1" />
-              <Skeleton className="h-3 w-16 mx-auto" />
+            <div key={i} className="text-center p-2 sm:p-3 bg-muted/50 rounded-lg">
+              <Skeleton className="h-4 w-6 sm:h-6 sm:w-8 mx-auto mb-1" />
+              <Skeleton className="h-3 w-12 sm:w-16 mx-auto" />
             </div>
           ))}
         </div>
         
-        <div className="flex space-x-3">
-          <Skeleton className="h-10 flex-1" />
-          <Skeleton className="h-10 flex-1" />
+        <div className="flex space-x-2 sm:space-x-3 mt-auto">
+          <Skeleton className="h-9 flex-1" />
+          <Skeleton className="h-9 flex-1" />
         </div>
       </div>
     </div>

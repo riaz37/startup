@@ -16,13 +16,15 @@ interface AddToCartButtonProps {
   orderType: 'priority' | 'group';
   groupOrderId?: string;
   className?: string;
+  compact?: boolean;
 }
 
 export function AddToCartButton({ 
   product, 
   orderType, 
   groupOrderId, 
-  className 
+  className,
+  compact = false
 }: AddToCartButtonProps) {
   const [quantity, setQuantity] = useState(product.minOrderQty);
   const [isLoading, setIsLoading] = useState(false);
@@ -88,6 +90,76 @@ export function AddToCartButton({
     return Math.round(((product.mrp - product.sellingPrice) / product.mrp) * 100);
   };
 
+  // Compact version for product cards
+  if (compact) {
+    return (
+      <div className={`space-y-3 ${className}`}>
+        {/* Compact Quantity Selector */}
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handleQuantityChange(-1)}
+              disabled={quantity <= product.minOrderQty}
+              className="h-8 w-8"
+            >
+              <Minus className="h-3 w-3" />
+            </Button>
+            
+            <span className="text-sm font-medium min-w-[2rem] text-center">
+              {quantity}
+            </span>
+            
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => handleQuantityChange(1)}
+              disabled={product.maxOrderQty ? quantity >= product.maxOrderQty : false}
+              className="h-8 w-8"
+            >
+              <Plus className="h-3 w-3" />
+            </Button>
+          </div>
+          
+          <span className="text-xs text-muted-foreground">
+            Min: {product.minOrderQty} {product.unit}
+          </span>
+        </div>
+
+        {/* Compact Add to Cart Button */}
+        <Button
+          onClick={handleAddToCart}
+          disabled={isLoading}
+          className="w-full"
+          size="sm"
+        >
+          {isLoading ? (
+            <div className="flex items-center gap-2">
+              <div className="animate-spin rounded-full h-3 w-3 border-b-2 border-white"></div>
+              Adding...
+            </div>
+          ) : (
+            <div className="flex items-center gap-2">
+              <ShoppingCart className="h-4 w-4" />
+              Add to Cart
+            </div>
+          )}
+        </Button>
+
+        {/* Compact Order Type Info */}
+        <div className="text-xs text-muted-foreground text-center">
+          {orderType === 'priority' ? (
+            <p>Priority orders delivered within 24-48 hours at MRP price</p>
+          ) : (
+            <p>Group orders unlock bulk pricing</p>
+          )}
+        </div>
+      </div>
+    );
+  }
+
+  // Full version for detailed views
   return (
     <div className={`space-y-4 ${className}`}>
       {/* Price Display - Only show for group orders to avoid confusion */}
@@ -153,11 +225,6 @@ export function AddToCartButton({
           Min: {product.minOrderQty} {product.unit}
           {product.maxOrderQty && ` • Max: ${product.maxOrderQty} ${product.unit}`}
         </div>
-      </div>
-
-      {/* Total Price */}
-      <div className="text-lg font-semibold">
-        Total: {formatPrice(getPrice() * quantity)}
       </div>
 
       {/* Add to Cart Button */}

@@ -120,9 +120,7 @@ export function LazyList<T>({
 
   return (
     <div className={className}>
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
-        {visibleItems.map((item, index) => renderItem(item, index))}
-      </div>
+      {visibleItems.map((item, index) => renderItem(item, index))}
       
       {hasMore && (
         <div ref={sentinelRef} className="mt-8">

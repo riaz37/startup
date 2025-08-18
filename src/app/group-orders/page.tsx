@@ -26,7 +26,7 @@ export default function GroupOrdersPage() {
 
   // Progressive loading hook
   const { visibleItems, isLoading, hasMore, loadMore } = useProgressiveLoading(
-    filteredOrders,
+    Array.isArray(filteredOrders) ? filteredOrders : [],
     8,
     300
   );
@@ -37,7 +37,9 @@ export default function GroupOrdersPage() {
   }, []);
 
   useEffect(() => {
-    filterAndSortOrders();
+    if (Array.isArray(groupOrders)) {
+      filterAndSortOrders();
+    }
   }, [groupOrders, searchTerm, statusFilter, sortBy]);
 
   const fetchGroupOrders = async () => {
@@ -48,7 +50,13 @@ export default function GroupOrdersPage() {
         throw new Error('Failed to fetch group orders');
       }
       const data = await response.json();
-      setGroupOrders(data);
+      // The API returns { groupOrders: [...], pagination: {...} }
+      if (data.groupOrders && Array.isArray(data.groupOrders)) {
+        setGroupOrders(data.groupOrders);
+      } else {
+        console.error('Group orders API returned unexpected data structure:', data);
+        setGroupOrders([]);
+      }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Failed to fetch group orders'));
     } finally {
@@ -79,6 +87,12 @@ export default function GroupOrdersPage() {
   };
 
   const filterAndSortOrders = () => {
+    // Ensure groupOrders is an array
+    if (!Array.isArray(groupOrders)) {
+      setFilteredOrders([]);
+      return;
+    }
+
     let filtered = groupOrders;
 
     // Filter by search term
@@ -126,15 +140,24 @@ export default function GroupOrdersPage() {
     }).format(price);
   };
 
-  const renderGroupOrderCard = (order: GroupOrder, index: number) => (
-    <GroupOrderCard
-      key={order.id}
-      groupOrder={order}
-      formatPrice={formatPrice}
-    />
-  );
+  const renderGroupOrderCard = (order: GroupOrder, index: number) => {
+    if (!order || !order.id) {
+      return null;
+    }
+    
+    return (
+      <GroupOrderCard
+        key={order.id}
+        groupOrder={order}
+        formatPrice={formatPrice}
+      />
+    );
+  };
 
   const getStatusCount = (status: string) => {
+    if (!Array.isArray(groupOrders)) {
+      return 0;
+    }
     return groupOrders.filter(order => order.status === status).length;
   };
 
@@ -157,39 +180,40 @@ export default function GroupOrdersPage() {
 
   return (
     <ClientPageLayout>
-      <MainContainer>
+      <MainContainer className="group-orders-page">
         <PageHeader
           badge="🛒 Active Group Orders"
           title="Join Group Orders & Save Big"
           highlightedWord="Save Big"
           description="Discover active group orders and join others to unlock bulk pricing on quality products. The more people join, the bigger the savings!"
+          className="page-header"
         />
 
         {/* Status Overview */}
-        <div className="mb-8">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-            <div className="bg-card border rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-primary">{getStatusCount('COLLECTING')}</div>
-              <div className="text-sm text-muted-foreground">Collecting</div>
+        <div className="mb-8 status-overview">
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+            <div className="bg-card border rounded-lg p-3 sm:p-4 text-center hover:shadow-md transition-shadow">
+              <div className="text-xl sm:text-2xl font-bold text-primary">{getStatusCount('COLLECTING')}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Collecting</div>
             </div>
-            <div className="bg-card border rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-secondary">{getStatusCount('THRESHOLD_MET')}</div>
-              <div className="text-sm text-muted-foreground">Threshold Met</div>
+            <div className="bg-card border rounded-lg p-3 sm:p-4 text-center hover:shadow-md transition-shadow">
+              <div className="text-xl sm:text-2xl font-bold text-secondary">{getStatusCount('THRESHOLD_MET')}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Threshold Met</div>
             </div>
-            <div className="bg-card border rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-accent">{getStatusCount('ORDERED')}</div>
-              <div className="text-sm text-muted-foreground">Ordered</div>
+            <div className="bg-card border rounded-lg p-3 sm:p-4 text-center hover:shadow-md transition-shadow">
+              <div className="text-xl sm:text-2xl font-bold text-accent">{getStatusCount('ORDERED')}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Ordered</div>
             </div>
-            <div className="bg-card border rounded-lg p-4 text-center">
-              <div className="text-2xl font-bold text-success">{getStatusCount('DELIVERED')}</div>
-              <div className="text-sm text-muted-foreground">Delivered</div>
+            <div className="bg-card border rounded-lg p-3 sm:p-4 text-center hover:shadow-md transition-shadow">
+              <div className="text-xl sm:text-2xl font-bold text-success">{getStatusCount('DELIVERED')}</div>
+              <div className="text-xs sm:text-sm text-muted-foreground">Delivered</div>
             </div>
           </div>
         </div>
 
         {/* Search and Filter Controls */}
-        <div className="mb-8 space-y-4">
-          <div className="flex flex-col sm:flex-row gap-4">
+        <div className="mb-8 space-y-4 search-filters">
+          <div className="flex flex-col lg:flex-row gap-4">
             <div className="relative flex-1">
               <Users className="absolute left-3 top-1/2 transform -translate-y-1/2 h-4 w-4 text-muted-foreground" />
               <Input
@@ -199,37 +223,39 @@ export default function GroupOrdersPage() {
                 className="pl-10"
               />
             </div>
-            <Select value={statusFilter} onValueChange={setStatusFilter}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="All Statuses" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">All Statuses</SelectItem>
-                <SelectItem value="COLLECTING">Collecting Orders</SelectItem>
-                <SelectItem value="THRESHOLD_MET">Threshold Met</SelectItem>
-                <SelectItem value="ORDERED">Ordered</SelectItem>
-                <SelectItem value="SHIPPED">Shipped</SelectItem>
-                <SelectItem value="DELIVERED">Delivered</SelectItem>
-              </SelectContent>
-            </Select>
-            <Select value={sortBy} onValueChange={setSortBy}>
-              <SelectTrigger className="w-48">
-                <SelectValue placeholder="Sort by" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="expires-soon">Expires Soon</SelectItem>
-                <SelectItem value="expires-late">Expires Later</SelectItem>
-                <SelectItem value="progress-high">High Progress</SelectItem>
-                <SelectItem value="progress-low">Low Progress</SelectItem>
-                <SelectItem value="price-low">Price: Low to High</SelectItem>
-                <SelectItem value="price-high">Price: High to Low</SelectItem>
-              </SelectContent>
-            </Select>
+            <div className="flex flex-col sm:flex-row gap-3 lg:gap-4">
+              <Select value={statusFilter} onValueChange={setStatusFilter}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="All Statuses" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Statuses</SelectItem>
+                  <SelectItem value="COLLECTING">Collecting Orders</SelectItem>
+                  <SelectItem value="THRESHOLD_MET">Threshold Met</SelectItem>
+                  <SelectItem value="ORDERED">Ordered</SelectItem>
+                  <SelectItem value="SHIPPED">Shipped</SelectItem>
+                  <SelectItem value="DELIVERED">Delivered</SelectItem>
+                </SelectContent>
+              </Select>
+              <Select value={sortBy} onValueChange={setSortBy}>
+                <SelectTrigger className="w-full sm:w-48">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="expires-soon">Expires Soon</SelectItem>
+                  <SelectItem value="expires-late">Expires Later</SelectItem>
+                  <SelectItem value="progress-high">High Progress</SelectItem>
+                  <SelectItem value="progress-low">Low Progress</SelectItem>
+                  <SelectItem value="price-low">Price: Low to High</SelectItem>
+                  <SelectItem value="price-high">Price: High to Low</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
           </div>
           
-          <div className="flex items-center justify-between">
+          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="text-sm text-muted-foreground">
-              {filteredOrders.length} group order{filteredOrders.length !== 1 ? 's' : ''} found
+              {Array.isArray(filteredOrders) ? filteredOrders.length : 0} group order{(Array.isArray(filteredOrders) ? filteredOrders.length : 0) !== 1 ? 's' : ''} found
             </div>
             <Button
               variant="outline"
@@ -239,6 +265,7 @@ export default function GroupOrdersPage() {
                 setStatusFilter("all");
                 setSortBy("expires-soon");
               }}
+              className="w-full sm:w-auto"
             >
               Clear Filters
             </Button>
@@ -248,7 +275,7 @@ export default function GroupOrdersPage() {
         {/* Group Orders Grid with Lazy Loading */}
         {loading ? (
           <EnhancedGroupOrdersLoading count={8} />
-        ) : filteredOrders.length === 0 ? (
+        ) : !Array.isArray(filteredOrders) || filteredOrders.length === 0 ? (
           <EmptyState
             icon={Users}
             title="No Group Orders Found"
@@ -265,17 +292,19 @@ export default function GroupOrdersPage() {
             } : undefined}
           />
         ) : (
-          <LazyList
-            items={filteredOrders}
-            renderItem={renderGroupOrderCard}
-            skeletonComponent={GroupOrderCardSkeleton}
-            pageSize={8}
-            className="grid grid-cols-1 gap-8 lg:grid-cols-2"
-          />
+          <div className="space-y-6">
+            <LazyList
+              items={filteredOrders}
+              renderItem={renderGroupOrderCard}
+              skeletonComponent={GroupOrderCardSkeleton}
+              pageSize={8}
+              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 group-orders-grid"
+            />
+          </div>
         )}
 
         {/* Load More Button */}
-        {hasMore && !isLoading && (
+        {Array.isArray(filteredOrders) && hasMore && !isLoading && (
           <div className="mt-8 text-center">
             <Button onClick={loadMore} variant="outline" size="lg">
               Load More Orders

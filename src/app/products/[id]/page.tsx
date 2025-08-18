@@ -3,6 +3,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import { prisma } from "@/lib/database";
 import { PriceHistoryWrapper } from "@/components/products/price-history-wrapper";
+import { AvailableGroupOrders } from "@/components/products/available-group-orders";
 import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -213,7 +214,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 <Button className="flex-1 bg-primary hover:bg-primary/90" asChild>
                   <Link href={`/group-orders/create?productId=${product.id}`}>
                     <Users className="h-4 w-4 mr-2" />
-                    Join Group Order
+                    Create Group Order
                   </Link>
                 </Button>
                 <Button variant="outline" size="icon">
@@ -222,23 +223,6 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 <Button variant="outline" size="icon">
                   <Share2 className="h-4 w-4" />
                 </Button>
-              </div>
-              
-              {/* Group Order Info */}
-              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
-                <div className="flex items-start space-x-3">
-                  <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
-                      <Users className="h-4 w-4 text-blue-600" />
-                    </div>
-                  </div>
-                  <div className="flex-1">
-                    <h4 className="font-medium text-blue-800 mb-1">Save with Group Orders</h4>
-                    <p className="text-sm text-blue-700 mb-3">
-                      Join group orders to get discounted prices and free delivery. Perfect for bulk purchases.
-                    </p>
-                  </div>
-                </div>
               </div>
             </div>
           </div>
@@ -356,6 +340,16 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
           </div>
         </div>
 
+        {/* Available Group Orders Section */}
+        <div className="mb-12">
+          <AvailableGroupOrders
+            productId={product.id}
+            productName={product.name}
+            productUnit={product.unit}
+            productUnitSize={product.unitSize}
+          />
+        </div>
+
         {/* Reviews Section */}
         {product.reviews.length > 0 && (
           <div className="mb-12">
@@ -410,16 +404,20 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               Ready to Order?
             </h3>
             <p className="text-muted-foreground mb-4">
-              Join a group order to get the best prices and fastest delivery
+              Choose between priority orders for immediate delivery or join group orders for better prices
             </p>
             <div className="flex justify-center space-x-3">
-              <Button className="bg-primary hover:bg-primary/90">
-                <Users className="h-4 w-4 mr-2" />
-                Find Group Orders
+              <Button className="bg-primary hover:bg-primary/90" asChild>
+                <Link href="/group-orders">
+                  <Users className="h-4 w-4 mr-2" />
+                  Browse Group Orders
+                </Link>
               </Button>
-              <Button variant="outline">
-                <Truck className="h-4 w-4 mr-2" />
-                Learn More
+              <Button variant="outline" asChild>
+                <Link href="/priority-orders/create">
+                  <Truck className="h-4 w-4 mr-2" />
+                  Create Priority Order
+                </Link>
               </Button>
             </div>
           </CardContent>

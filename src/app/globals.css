@@ -263,20 +263,27 @@
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
   border: 1px solid var(--border);
   border-left: 4px solid var(--primary);
-  padding: 1.5rem;
-  transition: all 0.2s;
+  transition: all 0.2s ease-in-out;
   cursor: pointer;
   background-image: linear-gradient(to right, color-mix(in srgb, var(--primary) 5%, transparent), transparent);
+  height: 100%;
+  display: flex;
+  flex-direction: column;
 }
 
 .group-order-card:hover {
-  box-shadow: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
-  border-color: color-mix(in srgb, var(--primary) 20%, transparent);
+  box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.1), 0 4px 10px -2px rgb(0 0 0 / 0.04);
+  border-color: color-mix(in srgb, var(--primary) 30%, transparent);
+  transform: translateY(-2px);
 }
 
 .group-order-card.collecting {
   border-left-color: var(--accent);
   background-image: linear-gradient(to right, color-mix(in srgb, var(--accent) 5%, transparent), transparent);
+}
+
+.group-order-card.collecting:hover {
+  border-color: color-mix(in srgb, var(--accent) 30%, transparent);
 }
 
 .group-order-card.threshold-met {
@@ -289,9 +296,153 @@
   background-image: linear-gradient(to right, color-mix(in srgb, oklch(0.67 0.15 162) 5%, transparent), transparent);
 }
 
+.group-order-card.completed:hover {
+  border-color: color-mix(in srgb, oklch(0.67 0.15 162) 30%, transparent);
+}
+
 .group-order-card.cancelled {
   border-left-color: var(--destructive);
   background-image: linear-gradient(to right, color-mix(in srgb, var(--destructive) 5%, transparent), transparent);
+}
+
+.group-order-card.cancelled:hover {
+  border-color: color-mix(in srgb, var(--destructive) 30%, transparent);
+}
+
+/* Responsive adjustments for group order cards */
+@media (max-width: 640px) {
+  .group-order-card {
+    border-radius: 0.5rem;
+  }
+  
+  .group-order-card .card-content {
+    padding: 1rem;
+  }
+  
+  /* Improve mobile grid layout */
+  .group-orders-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+}
+
+@media (max-width: 768px) {
+  .group-order-card {
+    margin-bottom: 1rem;
+  }
+  
+  /* Improve mobile status overview */
+  .status-overview {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.75rem;
+  }
+}
+
+@media (max-width: 1024px) {
+  /* Improve tablet layout */
+  .group-orders-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+/* Improve overall page layout */
+.group-orders-page {
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Better spacing for mobile */
+@media (max-width: 640px) {
+  .group-orders-page .page-header {
+    margin-bottom: 1.5rem;
+  }
+  
+  .group-orders-page .status-overview {
+    margin-bottom: 1.5rem;
+  }
+  
+  .group-orders-page .search-filters {
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Enhanced visual hierarchy */
+.group-orders-page .status-overview .bg-card {
+  position: relative;
+  overflow: hidden;
+}
+
+.group-orders-page .status-overview .bg-card::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: linear-gradient(to right, var(--primary), var(--secondary));
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.group-orders-page .status-overview .bg-card:hover::before {
+  opacity: 1;
+}
+
+/* Improve search and filter section */
+.search-filters .relative {
+  position: relative;
+}
+
+.search-filters .relative input {
+  transition: all 0.2s ease;
+}
+
+.search-filters .relative input:focus {
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* Better button styling */
+.search-filters button {
+  transition: all 0.2s ease;
+}
+
+.search-filters button:hover {
+  transform: translateY(-1px);
+}
+
+/* Improve grid layout responsiveness */
+.group-orders-grid {
+  display: grid;
+  gap: 1.5rem;
+}
+
+@media (min-width: 640px) {
+  .group-orders-grid {
+    grid-template-columns: repeat(1, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 768px) {
+  .group-orders-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1024px) {
+  .group-orders-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: 1.5rem;
+  }
+}
+
+@media (min-width: 1280px) {
+  .group-orders-grid {
+    grid-template-columns: repeat(4, 1fr);
+    gap: 1.5rem;
+  }
 }
 
 .threshold-progress {
@@ -300,6 +451,7 @@
   height: 0.75rem;
   overflow: hidden;
   box-shadow: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+  position: relative;
 }
 
 .threshold-progress-bar {
@@ -307,6 +459,34 @@
   height: 100%;
   transition: all 0.5s ease-out;
   box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+  border-radius: 9999px;
+  position: relative;
+  overflow: hidden;
+}
+
+.threshold-progress-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    rgba(255, 255, 255, 0.2) 50%,
+    transparent 100%
+  );
+  animation: shimmer 2s infinite;
+}
+
+@keyframes shimmer {
+  0% {
+    transform: translateX(-100%);
+  }
+  100% {
+    transform: translateX(100%);
+  }
 }
 
 .threshold-progress-bar.collecting {
@@ -315,6 +495,13 @@
 
 .threshold-progress-bar.completed {
   background-image: linear-gradient(to right, oklch(0.67 0.15 162), oklch(0.70 0.15 162));
+}
+
+/* Responsive progress bar */
+@media (max-width: 640px) {
+  .threshold-progress {
+    height: 0.5rem;
+  }
 }
 
 .text-gradient {
@@ -331,6 +518,8 @@
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 500;
+  border: 1px solid color-mix(in srgb, oklch(0.67 0.15 162) 20%, transparent);
+  white-space: nowrap;
 }
 
 .badge-warning {
@@ -340,6 +529,8 @@
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 500;
+  border: 1px solid color-mix(in srgb, var(--accent) 20%, transparent);
+  white-space: nowrap;
 }
 
 .badge-error {
@@ -349,15 +540,8 @@
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 500;
-}
-
-.badge-primary {
-  background-color: color-mix(in srgb, var(--primary) 10%, var(--background));
-  color: var(--primary);
-  padding: 0.25rem 0.75rem;
-  border-radius: 9999px;
-  font-size: 0.875rem;
-  font-weight: 500;
+  border: 1px solid color-mix(in srgb, var(--destructive) 20%, transparent);
+  white-space: nowrap;
 }
 
 .badge-secondary {
@@ -367,6 +551,31 @@
   border-radius: 9999px;
   font-size: 0.875rem;
   font-weight: 500;
+  border: 1px solid color-mix(in srgb, var(--secondary) 20%, transparent);
+  white-space: nowrap;
+}
+
+.badge-primary {
+  background-color: color-mix(in srgb, var(--primary) 10%, var(--background));
+  color: var(--primary);
+  padding: 0.25rem 0.75rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 500;
+  border: 1px solid color-mix(in srgb, var(--primary) 20%, transparent);
+  white-space: nowrap;
+}
+
+/* Responsive badge adjustments */
+@media (max-width: 640px) {
+  .badge-success,
+  .badge-warning,
+  .badge-error,
+  .badge-secondary,
+  .badge-primary {
+    padding: 0.2rem 0.5rem;
+    font-size: 0.75rem;
+  }
 }
 
 .status-pending {
@@ -577,4 +786,76 @@
 
 .animate-\[shimmer_2s_infinite\] {
   animation: shimmer 2s infinite;
+}
+
+/* Page header improvements */
+.group-orders-page .page-header {
+  background: linear-gradient(135deg, color-mix(in srgb, var(--primary) 5%, transparent), color-mix(in srgb, var(--secondary) 5%, transparent));
+  border-radius: 1rem;
+  padding: 2rem;
+  margin-bottom: 2rem;
+  border: 1px solid color-mix(in srgb, var(--border) 50%, transparent);
+}
+
+@media (max-width: 640px) {
+  .group-orders-page .page-header {
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+  }
+}
+
+/* Enhanced card animations */
+.group-order-card {
+  animation: fadeInUp 0.6s ease-out;
+}
+
+@keyframes fadeInUp {
+  from {
+    opacity: 0;
+    transform: translateY(20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Stagger animation for multiple cards */
+.group-order-card:nth-child(1) { animation-delay: 0.1s; }
+.group-order-card:nth-child(2) { animation-delay: 0.2s; }
+.group-order-card:nth-child(3) { animation-delay: 0.3s; }
+.group-order-card:nth-child(4) { animation-delay: 0.4s; }
+
+/* Improve status overview cards */
+.status-overview .bg-card {
+  background: linear-gradient(135deg, var(--card), color-mix(in srgb, var(--primary) 2%, var(--card)));
+  border: 1px solid color-mix(in srgb, var(--border) 70%, transparent);
+  transition: all 0.3s ease;
+}
+
+.status-overview .bg-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 25px -5px rgb(0 0 0 / 0.1), 0 4px 10px -2px rgb(0 0 0 / 0.04);
+}
+
+/* Better focus states */
+.group-orders-page input:focus,
+.group-orders-page select:focus,
+.group-orders-page button:focus {
+  outline: none;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--primary) 20%, transparent);
+}
+
+/* Improved loading states */
+.group-orders-page .animate-pulse {
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: .5;
+  }
 }

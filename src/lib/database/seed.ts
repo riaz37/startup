@@ -1,5 +1,6 @@
 import { prisma } from "./prisma";
 import { seedCategories } from "./seed-categories";
+import { seedGroupOrders } from "./seed-group-orders";
 import { seedProducts } from "./seed-products";
 
 export async function seedDatabase() {
@@ -14,6 +15,11 @@ export async function seedDatabase() {
     // Step 2: Seed products (which depend on categories)
     console.log("📦 Step 2: Seeding products...");
     await seedProducts();
+    console.log("");
+
+    // Step 3: Seed group orders (which depend on products)
+    console.log("🎉 Step 3: Seeding group orders...");
+    await seedGroupOrders();
     console.log("");
 
     console.log("🎉 Database seeding completed successfully!");

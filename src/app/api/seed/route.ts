@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { seedCategories } from "@/lib/database/seed-categories";
 import { seedProducts } from "@/lib/database/seed-products";
+import { seedGroupOrders } from "@/lib/database/seed-group-orders";
 
 export async function GET() {
   try {
@@ -14,9 +15,13 @@ export async function GET() {
     await seedProducts();
     console.log("✅ Products seeded successfully");
     
+    // Seed group orders
+    await seedGroupOrders();
+    console.log("✅ Group orders seeded successfully");
+    
     return NextResponse.json({
       success: true,
-      message: "Database seeded successfully with sample data"
+      message: "Database seeded successfully with sample data including group orders"
     });
   } catch (error) {
     console.error("❌ Error seeding database:", error);
