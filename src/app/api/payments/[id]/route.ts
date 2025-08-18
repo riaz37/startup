@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser, requireAdmin } from "@/lib";
 import { prisma } from "@/lib";
-import { getPaymentDetails, cancelPaymentIntent, updatePaymentIntent } from "@/lib";
+import { getPaymentDetails, cancelPaymentIntent, updatePaymentIntent } from "@/lib/payment";
 
 export async function GET(
   request: NextRequest,

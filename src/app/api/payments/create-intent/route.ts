@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib";
 import { prisma } from "@/lib";
-import { createPaymentIntent } from "@/lib";
+import { createPaymentIntent } from "@/lib/payment";
+import { PaymentMethod } from "@/types";
 
 export async function POST(request: NextRequest) {
   try {
@@ -66,7 +67,7 @@ export async function POST(request: NextRequest) {
         orderId: order.id,
         amount: order.totalAmount,
         currency: "BDT",
-        paymentMethod: "stripe",
+        paymentMethod: PaymentMethod.CARD,
         gatewayProvider: "stripe",
         status: "PENDING",
       },

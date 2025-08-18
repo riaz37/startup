@@ -1,7 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib";
 import { prisma } from "@/lib";
-import { refundPayment } from "@/lib";
+import { refundPayment } from "@/lib/payment";
+
 
 export async function POST(request: NextRequest) {
   try {
