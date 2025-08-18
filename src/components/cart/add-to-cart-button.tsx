@@ -90,22 +90,24 @@ export function AddToCartButton({
 
   return (
     <div className={`space-y-4 ${className}`}>
-      {/* Price Display */}
-      <div className="space-y-2">
-        <div className="flex items-center gap-2">
-          <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
-          {orderType === 'group' && getDiscount() > 0 && (
-            <Badge variant="secondary" className="text-sm">
-              {getDiscount()}% OFF
-            </Badge>
+      {/* Price Display - Only show for group orders to avoid confusion */}
+      {orderType === 'group' && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2">
+            <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
+            {getDiscount() > 0 && (
+              <Badge variant="secondary" className="text-sm">
+                {getDiscount()}% OFF
+              </Badge>
+            )}
+          </div>
+          {getDiscount() > 0 && (
+            <span className="text-sm text-muted-foreground line-through">
+              MRP: {formatPrice(product.mrp)}
+            </span>
           )}
         </div>
-        {orderType === 'group' && getDiscount() > 0 && (
-          <span className="text-sm text-muted-foreground line-through">
-            MRP: {formatPrice(product.mrp)}
-          </span>
-        )}
-      </div>
+      )}
 
       {/* Quantity Selector */}
       <div className="space-y-2">

@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { OrderHistorySkeleton } from "@/components/ui/skeleton";
 
 interface OrderHistoryProps {
   userId: string;
@@ -85,29 +86,65 @@ export default function OrderHistoryWidget({ userId }: OrderHistoryProps) {
 
   if (loading) {
     return (
-      <Card>
-        <CardHeader>
+      <Card className="overflow-hidden">
+        <CardHeader className="border-b bg-gradient-to-r from-primary/5 to-secondary/5">
           <CardTitle className="flex items-center">
-            <svg
-              className="h-5 w-5 mr-2"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                strokeWidth={2}
-                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
-              />
-            </svg>
+            <div className="relative mr-3">
+              <div className="h-5 w-5 rounded-full border-2 border-primary/20 animate-pulse"></div>
+              <div className="absolute inset-0 h-5 w-5 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
+            </div>
             Recent Orders
           </CardTitle>
         </CardHeader>
-        <CardContent>
-          <div className="text-center py-8">
-            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-            <p className="text-muted-foreground">Loading orders...</p>
+        <CardContent className="p-0">
+          <div className="space-y-4 p-6">
+            {/* Enhanced Order Loading Cards */}
+            {[1, 2, 3].map((i) => (
+              <div key={i} className="group relative overflow-hidden rounded-lg border bg-card p-4 transition-all duration-300 hover:shadow-md">
+                {/* Shimmer Effect */}
+                <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                
+                <div className="relative space-y-3">
+                  {/* Header with animated elements */}
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 animate-pulse" />
+                      <div className="space-y-2">
+                        <div className="h-4 w-24 bg-muted rounded animate-pulse" />
+                        <div className="h-3 w-16 bg-muted/60 rounded animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="h-6 w-20 bg-muted rounded-full animate-pulse" />
+                  </div>
+                  
+                  {/* Content with staggered animation */}
+                  <div className="space-y-2">
+                    <div className="h-4 w-48 bg-muted rounded animate-pulse" style={{ animationDelay: `${i * 0.1}s` }} />
+                    <div className="h-3 w-32 bg-muted/60 rounded animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
+                  </div>
+                  
+                  {/* Footer with progress indicator */}
+                  <div className="flex items-center justify-between pt-2">
+                    <div className="flex items-center space-x-2">
+                      <div className="h-3 w-3 rounded-full bg-primary/20 animate-pulse" />
+                      <div className="h-3 w-16 bg-muted/40 rounded animate-pulse" />
+                    </div>
+                    <div className="h-4 w-20 bg-muted rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+            ))}
+            
+            {/* Loading indicator */}
+            <div className="text-center py-4">
+              <div className="inline-flex items-center space-x-2 text-sm text-muted-foreground">
+                <div className="relative">
+                  <div className="h-3 w-3 rounded-full border-2 border-primary/20"></div>
+                  <div className="absolute inset-0 h-3 w-3 rounded-full border-2 border-transparent border-t-primary animate-spin"></div>
+                </div>
+                <span className="animate-pulse">Loading your order history...</span>
+              </div>
+            </div>
           </div>
         </CardContent>
       </Card>

@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Users, Clock, Package, TrendingUp } from "lucide-react";
 import Link from "next/link";
+import { LazyImage } from "@/components/ui/lazy-load";
 
 interface GroupOrder {
   id: string;
@@ -85,7 +86,7 @@ export function GroupOrderCard({ groupOrder, user, formatPrice }: GroupOrderCard
         {/* Product Info */}
         <div className="flex items-start space-x-4 mb-6">
           {groupOrder.product.imageUrl ? (
-            <img
+            <LazyImage
               src={groupOrder.product.imageUrl}
               alt={groupOrder.product.name}
               className="h-20 w-20 object-cover rounded-lg border"

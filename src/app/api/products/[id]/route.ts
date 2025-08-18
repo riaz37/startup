@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib";
+import { requireAdmin } from "@/lib/auth/auth-utils";
 
 export async function GET(
   request: NextRequest,
@@ -76,6 +77,9 @@ export async function PUT(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require admin authentication
+    await requireAdmin();
+    
     const { id } = await params;
     const body = await request.json();
 
@@ -96,7 +100,6 @@ export async function PUT(
         unit: body.unit,
         unitSize: body.unitSize,
         mrp: body.mrp || 0,
-        costPrice: body.costPrice || 0,
         sellingPrice: body.sellingPrice || 0,
         minOrderQty: body.minOrderQty || 1,
         maxOrderQty: body.maxOrderQty || null,
@@ -120,8 +123,17 @@ export async function PUT(
     });
   } catch (error) {
     console.error("Error updating product:", error);
+    
+    // Handle authentication errors specifically
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return NextResponse.json(
+        { error: "Unauthorized access" },
+        { status: 401 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: "Failed to update product" },
+      { error: "Failed to delete product" },
       { status: 500 }
     );
   }
@@ -132,6 +144,9 @@ export async function DELETE(
   { params }: { params: Promise<{ id: string }> }
 ) {
   try {
+    // Require admin authentication
+    await requireAdmin();
+    
     const { id } = await params;
 
     // Check if product exists
@@ -156,8 +171,17 @@ export async function DELETE(
     });
   } catch (error) {
     console.error("Error deleting product:", error);
+    
+    // Handle authentication errors specifically
+    if (error instanceof Error && error.message.includes('Unauthorized')) {
+      return NextResponse.json(
+        { error: "Unauthorized access" },
+        { status: 401 }
+      );
+    }
+    
     return NextResponse.json(
-      { error: "Failed to delete product" },
+      { error: "Failed to update product" },
       { status: 500 }
     );
   }

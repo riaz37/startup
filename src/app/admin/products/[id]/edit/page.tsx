@@ -28,7 +28,6 @@ interface Product {
   unit: string;
   unitSize: string;
   mrp: number;
-  costPrice: number;
   sellingPrice: number;
   minOrderQty: number;
   maxOrderQty?: number;
@@ -62,7 +61,6 @@ export default function EditProductPage() {
     unit: '',
     unitSize: '',
     mrp: '',
-    costPrice: '',
     sellingPrice: '',
     minOrderQty: '',
     maxOrderQty: '',
@@ -93,7 +91,6 @@ export default function EditProductPage() {
           unit: data.product.unit || '',
           unitSize: data.product.unitSize || '',
           mrp: data.product.mrp?.toString() || '',
-          costPrice: data.product.costPrice?.toString() || '',
           sellingPrice: data.product.sellingPrice?.toString() || '',
           minOrderQty: data.product.minOrderQty?.toString() || '',
           maxOrderQty: data.product.maxOrderQty?.toString() || '',
@@ -116,10 +113,20 @@ export default function EditProductPage() {
       const response = await fetch('/api/categories');
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.categories || []);
+        // The API returns { success: true, categories: [...] }
+        if (data.success && Array.isArray(data.categories)) {
+          setCategories(data.categories);
+        } else {
+          console.error('Categories API returned unexpected data structure:', data);
+          setCategories([]);
+        }
+      } else {
+        console.error('Failed to fetch categories:', response.status, response.statusText);
+        setCategories([]);
       }
     } catch (error) {
       console.error('Error fetching categories:', error);
+      setCategories([]);
     }
   };
 
@@ -150,25 +157,28 @@ export default function EditProductPage() {
       setError('');
       setSuccess('');
 
+      const requestBody = {
+        name: formData.name,
+        description: formData.description,
+        categoryId: formData.categoryId,
+        unit: formData.unit,
+        unitSize: parseFloat(formData.unitSize) || 0,
+        mrp: parseFloat(formData.mrp) || 0,
+        sellingPrice: parseFloat(formData.sellingPrice) || 0,
+        minOrderQty: parseInt(formData.minOrderQty) || 1,
+        maxOrderQty: formData.maxOrderQty ? parseInt(formData.maxOrderQty) : undefined,
+        isActive: formData.isActive,
+        imageUrl: formData.imageUrl
+      };
+
+      console.log('Sending product update request:', requestBody);
+
       const response = await fetch(`/api/products/${productId}`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
         },
-        body: JSON.stringify({
-          name: formData.name,
-          description: formData.description,
-          categoryId: formData.categoryId,
-          unit: formData.unit,
-          unitSize: formData.unitSize,
-          mrp: parseFloat(formData.mrp) || 0,
-          costPrice: parseFloat(formData.costPrice) || 0,
-          sellingPrice: parseFloat(formData.sellingPrice) || 0,
-          minOrderQty: parseInt(formData.minOrderQty) || 1,
-          maxOrderQty: formData.maxOrderQty ? parseInt(formData.maxOrderQty) : undefined,
-          isActive: formData.isActive,
-          imageUrl: formData.imageUrl
-        }),
+        body: JSON.stringify(requestBody),
       });
 
       if (response.ok) {
@@ -177,7 +187,12 @@ export default function EditProductPage() {
         await fetchProduct();
       } else {
         const errorData = await response.json();
-        throw new Error(errorData.message || 'Failed to update product');
+        console.error('Product update failed:', {
+          status: response.status,
+          statusText: response.statusText,
+          errorData
+        });
+        throw new Error(errorData.error || errorData.message || 'Failed to update product');
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : 'Failed to update product');
@@ -343,6 +358,9 @@ export default function EditProductPage() {
                     <Label htmlFor="unitSize">Unit Size *</Label>
                     <Input
                       id="unitSize"
+                      type="number"
+                      step="0.01"
+                      min="0"
                       value={formData.unitSize}
                       onChange={(e) => handleInputChange('unitSize', e.target.value)}
                       placeholder="e.g., 1, 500, 250"
@@ -362,19 +380,6 @@ export default function EditProductPage() {
                       min="0"
                       value={formData.mrp}
                       onChange={(e) => handleInputChange('mrp', e.target.value)}
-                      placeholder="0.00"
-                    />
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="costPrice">Cost Price (৳)</Label>
-                    <Input
-                      id="costPrice"
-                      type="number"
-                      step="0.01"
-                      min="0"
-                      value={formData.costPrice}
-                      onChange={(e) => handleInputChange('costPrice', e.target.value)}
                       placeholder="0.00"
                     />
                   </div>

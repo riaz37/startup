@@ -7,21 +7,15 @@ import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
 import { 
   ArrowLeft, 
   Package, 
   Star, 
   Users, 
-  Calendar,
-  MapPin,
   ShoppingCart,
   Heart,
   Share2,
-  Truck,
-  Shield,
-  Clock,
-  Tag
+  Truck
 } from "lucide-react";
 
 interface Product {
@@ -153,9 +147,9 @@ function renderStars(rating: number) {
 }
 
 function formatPrice(price: number) {
-  return new Intl.NumberFormat("en-IN", {
+  return new Intl.NumberFormat("en-BD", {
     style: "currency",
-    currency: "INR",
+    currency: "BDT",
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(price);
@@ -397,7 +391,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                         </span>
                       </div>
                       {review.comment && (
-                        <p className="text-muted-foreground ml-11">
+                        <p className="text-sm text-muted-foreground ml-11">
                           {review.comment}
                         </p>
                       )}

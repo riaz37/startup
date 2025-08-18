@@ -1,10 +1,10 @@
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Button } from "@/components/ui/button";
-import { Package, ShoppingCart, Tag, ExternalLink } from "lucide-react";
+import { Package, ShoppingCart, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { ProductCardProps } from "@/types";
 import { AddToCartButton } from "@/components/cart";
+import { LazyImage } from "@/components/ui/lazy-load";
 
 export function ProductCard({ product, formatPrice, calculateDiscount }: ProductCardProps) {
   const discount = calculateDiscount(product.mrp, product.sellingPrice);
@@ -14,7 +14,7 @@ export function ProductCard({ product, formatPrice, calculateDiscount }: Product
       <Card className="group hover:shadow-lg transition-all duration-300 overflow-hidden cursor-pointer border-2 border-transparent hover:border-primary/20 hover:bg-primary/5">
         <div className="relative">
           {product.imageUrl ? (
-            <img
+            <LazyImage
               src={product.imageUrl}
               alt={product.name}
               className="w-full h-48 object-cover group-hover:scale-105 transition-transform duration-300"
@@ -50,13 +50,20 @@ export function ProductCard({ product, formatPrice, calculateDiscount }: Product
           </div>
 
           <div className="flex items-center justify-between mb-4">
-            <div className="flex items-center space-x-2">
-              <span className="text-lg font-bold text-green-600">
-                {formatPrice(product.sellingPrice)}
-              </span>
+            <div className="flex flex-col space-y-1">
+              <div className="flex items-center space-x-2">
+                <span className="text-xl font-bold text-green-600">
+                  {formatPrice(product.sellingPrice)}
+                </span>
+                {discount > 0 && (
+                  <span className="text-sm text-gray-500 line-through">
+                    {formatPrice(product.mrp)}
+                  </span>
+                )}
+              </div>
               {discount > 0 && (
-                <span className="text-sm text-gray-500 line-through">
-                  {formatPrice(product.mrp)}
+                <span className="text-xs text-green-600 font-medium">
+                  Save {formatPrice(product.mrp - product.sellingPrice)}
                 </span>
               )}
             </div>
@@ -65,13 +72,7 @@ export function ProductCard({ product, formatPrice, calculateDiscount }: Product
             </Badge>
           </div>
 
-          <div className="flex items-center justify-between mb-3">
-            <div className="text-sm text-gray-600">
-              Min: {product.minOrderQty} {product.unit}
-              {product.maxOrderQty && (
-                <span className="ml-2">Max: {product.maxOrderQty} {product.unit}</span>
-              )}
-            </div>
+          <div className="flex items-center justify-end mb-3">
             <div className="text-sm text-primary font-medium group-hover:text-primary/80 transition-colors">
               View Details →
             </div>

@@ -2,9 +2,10 @@ import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser, requireAdmin } from "@/lib";
 import { prisma } from "@/lib";
 
+// GET /api/priority-orders/[id] - Get priority order by ID
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -16,8 +17,9 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
     const priorityOrder = await prisma.priorityOrder.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         product: {
           include: {
@@ -68,9 +70,10 @@ export async function GET(
   }
 }
 
+// PATCH /api/priority-orders/[id] - Update priority order
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAdmin();
@@ -83,8 +86,9 @@ export async function PATCH(
       pickupLocationId 
     } = await request.json();
 
+    const { id } = await params;
     const priorityOrder = await prisma.priorityOrder.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         user: true,
         product: true,
@@ -101,7 +105,7 @@ export async function PATCH(
 
     // Update priority order
     const updatedPriorityOrder = await prisma.priorityOrder.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...(status && { status }),
         ...(estimatedDelivery && { estimatedDelivery: new Date(estimatedDelivery) }),
@@ -133,7 +137,7 @@ export async function PATCH(
       } else {
         await prisma.priorityDelivery.create({
           data: {
-            priorityOrderId: params.id,
+            priorityOrderId: id,
             deliveryType: deliveryType || "HOME_DELIVERY",
             pickupLocationId: pickupLocationId || null,
             status: "PENDING",
@@ -145,7 +149,7 @@ export async function PATCH(
     // Update order status based on delivery status
     if (status === "DELIVERED" && !priorityOrder.actualDelivery) {
       await prisma.priorityOrder.update({
-        where: { id: params.id },
+        where: { id },
         data: {
           actualDelivery: new Date(),
         },
@@ -190,7 +194,7 @@ export async function PATCH(
           type: "GENERAL",
           title: notificationTitle,
           message: notificationMessage,
-          data: { priorityOrderId: params.id, productName: priorityOrder.product.name },
+          data: { priorityOrderId: id, productName: priorityOrder.product.name },
         },
       });
     }

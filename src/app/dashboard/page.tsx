@@ -27,15 +27,31 @@ import {
 } from "lucide-react";
 import OrderHistoryWidget from "@/components/orders/order-history-widget";
 import { useState } from "react";
+import { DashboardStatsSkeleton } from "@/components/ui/skeleton";
 
 interface DashboardData {
   totalOrders: number;
   groupOrdersJoined: number;
   totalProducts: number;
   totalSavings: number;
-  recentOrders: any[];
-  recentGroupOrders: any[];
-  userStats: any;
+  recentOrders: Array<{
+    id: string;
+    status: string;
+    totalAmount: number;
+    createdAt: string;
+  }>;
+  recentGroupOrders: Array<{
+    id: string;
+    status: string;
+    productName: string;
+    progressPercentage: number;
+    createdAt: string;
+  }>;
+  userStats: {
+    createdAt: string;
+    email: string;
+    name: string;
+  };
 }
 
 export default function DashboardPage() {
@@ -80,10 +96,160 @@ export default function DashboardPage() {
     return (
       <ClientPageLayout user={session?.user}>
         <MainContainer>
-          <div className="flex items-center justify-center min-h-[400px]">
-            <div className="text-center">
-              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
-              <p className="text-muted-foreground">Loading dashboard...</p>
+          {/* Enhanced Page Header Loading */}
+          <div className="mb-12">
+            <div className="space-y-4">
+              <div className="flex items-center space-x-3">
+                <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 animate-pulse" />
+                <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+              </div>
+              <div className="space-y-2">
+                <div className="h-10 w-80 bg-muted rounded animate-pulse" />
+                <div className="h-5 w-96 bg-muted/60 rounded animate-pulse" />
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Welcome Stats Loading */}
+          <div className="bg-gradient-to-r from-primary/5 via-primary/10 to-secondary/5 rounded-2xl p-8 mb-12 border border-primary/20">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-6 items-center">
+              <div className="text-center md:text-left space-y-3">
+                <div className="h-8 w-64 bg-muted rounded animate-pulse mx-auto md:mx-0" />
+                <div className="h-5 w-48 bg-muted/60 rounded animate-pulse mx-auto md:mx-0" />
+              </div>
+              <div className="text-center space-y-2">
+                <div className="h-12 w-32 bg-muted rounded animate-pulse mx-auto" />
+                <div className="h-4 w-24 bg-muted/60 rounded animate-pulse mx-auto" />
+              </div>
+              <div className="text-center space-y-2">
+                <div className="h-12 w-32 bg-muted rounded animate-pulse mx-auto" />
+                <div className="h-4 w-24 bg-muted/60 rounded animate-pulse mx-auto" />
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Dashboard Stats Loading */}
+          <div className="mb-12">
+            <div className="h-8 w-32 bg-muted rounded animate-pulse mb-6" />
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+              {[1, 2, 3, 4].map((i) => (
+                <div key={i} className="border rounded-lg p-6 bg-card relative overflow-hidden group">
+                  {/* Shimmer Effect */}
+                  <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
+                  
+                  <div className="relative">
+                    <div className="flex items-center justify-between mb-4">
+                      <div className="space-y-2">
+                        <div className="h-4 w-24 bg-muted rounded animate-pulse" style={{ animationDelay: `${i * 0.1}s` }} />
+                        <div className="h-8 w-20 bg-muted rounded animate-pulse" style={{ animationDelay: `${i * 0.15}s` }} />
+                      </div>
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 animate-pulse" style={{ animationDelay: `${i * 0.2}s` }} />
+                    </div>
+                    <div className="flex items-center space-x-2">
+                      <div className="h-4 w-4 rounded-full bg-muted animate-pulse" />
+                      <div className="h-4 w-20 bg-muted/60 rounded animate-pulse" />
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Enhanced Content Grid Loading */}
+          <div className="grid lg:grid-cols-3 gap-8 mb-12">
+            {/* Left Column Loading */}
+            <div className="lg:col-span-1 space-y-8">
+              {/* Profile Card Loading */}
+              <div className="border rounded-lg p-6 bg-card">
+                <div className="space-y-4">
+                  <div className="flex items-center space-x-4">
+                    <div className="h-16 w-16 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 animate-pulse" />
+                    <div className="space-y-2">
+                      <div className="h-5 w-32 bg-muted rounded animate-pulse" />
+                      <div className="h-4 w-24 bg-muted/60 rounded animate-pulse" />
+                    </div>
+                  </div>
+                  <div className="space-y-2">
+                    <div className="h-4 w-full bg-muted rounded animate-pulse" />
+                    <div className="h-4 w-3/4 bg-muted/60 rounded animate-pulse" />
+                  </div>
+                </div>
+              </div>
+              
+              {/* Quick Actions Loading */}
+              <div className="border rounded-lg p-6 bg-card">
+                <div className="space-y-4">
+                  <div className="h-6 w-32 bg-muted rounded animate-pulse" />
+                  <div className="grid grid-cols-2 gap-3">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="h-20 bg-muted rounded animate-pulse" style={{ animationDelay: `${i * 0.1}s` }} />
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Right Column Loading */}
+            <div className="lg:col-span-2">
+              <div className="border rounded-lg p-6 bg-card">
+                <div className="space-y-4">
+                  <div className="h-6 w-40 bg-muted rounded animate-pulse" />
+                  <div className="space-y-3">
+                    {[1, 2, 3, 4].map((i) => (
+                      <div key={i} className="flex items-center space-x-3 p-3 border rounded-lg">
+                        <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 animate-pulse" />
+                        <div className="flex-1 space-y-2">
+                          <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                          <div className="h-3 w-48 bg-muted/60 rounded animate-pulse" />
+                        </div>
+                        <div className="h-6 w-16 bg-muted rounded animate-pulse" />
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          {/* Enhanced Order History Loading */}
+          <div className="mb-8">
+            <div className="h-8 w-40 bg-muted rounded animate-pulse mb-6" />
+            <div className="border rounded-lg p-6 bg-card">
+              <div className="space-y-4">
+                {[1, 2, 3].map((i) => (
+                  <div key={i} className="flex items-center justify-between p-3 border rounded-lg">
+                    <div className="flex items-center space-x-3">
+                      <div className="h-8 w-8 rounded-full bg-gradient-to-r from-primary/20 to-secondary/20 animate-pulse" />
+                      <div className="space-y-2">
+                        <div className="h-4 w-32 bg-muted rounded animate-pulse" />
+                        <div className="h-3 w-24 bg-muted/60 rounded animate-pulse" />
+                      </div>
+                    </div>
+                    <div className="flex items-center space-x-4">
+                      <div className="h-6 w-20 bg-muted rounded animate-pulse" />
+                      <div className="h-6 w-16 bg-muted rounded animate-pulse" />
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
+
+          {/* Loading Progress Indicator */}
+          <div className="text-center py-8">
+            <div className="inline-flex flex-col items-center space-y-4">
+              <div className="relative">
+                <div className="h-16 w-16 rounded-full border-4 border-primary/20 animate-pulse"></div>
+                <div className="absolute inset-0 h-16 w-16 rounded-full border-4 border-transparent border-t-primary animate-spin"></div>
+              </div>
+              <div className="space-y-2">
+                <div className="text-lg font-medium text-muted-foreground animate-pulse">
+                  Loading your Sohozdaam dashboard...
+                </div>
+                <div className="text-sm text-muted-foreground/60">
+                  Preparing your personalized experience
+                </div>
+              </div>
             </div>
           </div>
         </MainContainer>
@@ -223,27 +389,25 @@ export default function DashboardPage() {
 
   // Transform recent orders into activities
   const recentActivities = [
-    ...dashboardData.recentOrders.map((order: any) => ({
+    ...dashboardData.recentOrders.map((order) => ({
       id: order.id,
       type: "order" as const,
       title: `Order #${order.id.slice(-6)}`,
-      description: `${order.items.length} items - ${order.status}`,
+      description: `Order - ${order.status}`,
       timestamp: order.createdAt,
       status: order.status,
       href: `/orders/${order.id}`,
       amount: order.totalAmount
     })),
-    ...dashboardData.recentGroupOrders
-      .filter((order: any) => order.groupOrder) // Additional safety filter
-      .map((order: any) => ({
+    ...dashboardData.recentGroupOrders.map((order) => ({
       id: order.id,
       type: "group_order" as const,
-        title: `Joined ${order.groupOrder!.product.name}`,
-        description: `Batch #${order.groupOrder!.batchNumber} - ${order.groupOrder!.status}`,
-        timestamp: order.createdAt,
-        status: order.groupOrder!.status,
-        href: `/group-orders/${order.groupOrder!.id}`,
-        progress: order.groupOrder!.currentQuantity / order.groupOrder!.targetQuantity
+      title: `Joined ${order.productName}`,
+      description: `Group Order - ${order.status}`,
+      timestamp: order.createdAt,
+      status: order.status,
+      href: `/group-orders/${order.id}`,
+      progress: order.progressPercentage / 100
     }))
   ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
    .slice(0, 8);

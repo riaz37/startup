@@ -15,7 +15,7 @@ export async function seedProducts() {
       }
     });
 
-    // Sample products data
+    // Sample products data with image URLs
     const products = [
       {
         name: "Basmati Rice",
@@ -26,7 +26,8 @@ export async function seedProducts() {
         mrp: 450.00,
         sellingPrice: 420.00,
         minOrderQty: 1,
-        maxOrderQty: 10
+        maxOrderQty: 10,
+        imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop&crop=center"
       },
       {
         name: "Sunflower Oil",
@@ -37,7 +38,8 @@ export async function seedProducts() {
         mrp: 120.00,
         sellingPrice: 110.00,
         minOrderQty: 1,
-        maxOrderQty: 20
+        maxOrderQty: 20,
+        imageUrl: "https://images.unsplash.com/photo-1578662996442-48f60103fc96?w=400&h=300&fit=crop&crop=center"
       },
       {
         name: "White Sugar",
@@ -48,7 +50,8 @@ export async function seedProducts() {
         mrp: 45.00,
         sellingPrice: 42.00,
         minOrderQty: 1,
-        maxOrderQty: 25
+        maxOrderQty: 25,
+        imageUrl: "https://images.unsplash.com/photo-1581441363689-1f3c3c414635?w=400&h=300&fit=crop&crop=center"
       },
       {
         name: "Toor Dal",
@@ -59,7 +62,8 @@ export async function seedProducts() {
         mrp: 140.00,
         sellingPrice: 130.00,
         minOrderQty: 1,
-        maxOrderQty: 15
+        maxOrderQty: 15,
+        imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop&crop=center"
       },
       {
         name: "Wheat Flour",
@@ -70,7 +74,8 @@ export async function seedProducts() {
         mrp: 200.00,
         sellingPrice: 185.00,
         minOrderQty: 1,
-        maxOrderQty: 8
+        maxOrderQty: 8,
+        imageUrl: "https://images.unsplash.com/photo-1586201375761-83865001e31c?w=400&h=300&fit=crop&crop=center"
       },
       {
         name: "Red Onions",
@@ -81,7 +86,8 @@ export async function seedProducts() {
         mrp: 80.00,
         sellingPrice: 75.00,
         minOrderQty: 1,
-        maxOrderQty: 20
+        maxOrderQty: 20,
+        imageUrl: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&h=300&fit=crop&crop=center"
       },
       {
         name: "Potatoes",
@@ -92,18 +98,20 @@ export async function seedProducts() {
         mrp: 90.00,
         sellingPrice: 85.00,
         minOrderQty: 1,
-        maxOrderQty: 15
+        maxOrderQty: 15,
+        imageUrl: "https://images.unsplash.com/photo-1518977676601-b53f82aba655?w=400&h=300&fit=crop&crop=center"
       },
       {
         name: "Tea Powder",
         slug: "tea-powder-500g",
         description: "Premium black tea powder for perfect morning tea",
-        unit: "grams",
+        unit: "g",
         unitSize: 500.0,
         mrp: 180.00,
         sellingPrice: 165.00,
         minOrderQty: 1,
-        maxOrderQty: 12
+        maxOrderQty: 10,
+        imageUrl: "https://images.unsplash.com/photo-1544787219-7f47ccb76574?w=400&h=300&fit=crop&crop=center"
       }
     ];
 

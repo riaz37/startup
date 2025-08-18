@@ -70,7 +70,14 @@ export default function ProductsPage() {
       const response = await fetch("/api/products");
       if (response.ok) {
         const data = await response.json();
-        setProducts(data.products || []);
+        // The API returns { products: [...], pagination: {...} }
+        if (data.products && Array.isArray(data.products)) {
+          setProducts(data.products);
+        } else {
+          console.error("Products API returned unexpected data structure:", data);
+          setProducts([]);
+          setError("Invalid products data received");
+        }
       } else {
         throw new Error("Failed to fetch products");
       }
@@ -87,10 +94,20 @@ export default function ProductsPage() {
       const response = await fetch("/api/categories");
       if (response.ok) {
         const data = await response.json();
-        setCategories(data.categories || []);
+        // The API returns { success: true, categories: [...] }
+        if (data.success && Array.isArray(data.categories)) {
+          setCategories(data.categories);
+        } else {
+          console.error("Categories API returned unexpected data structure:", data);
+          setCategories([]);
+        }
+      } else {
+        console.error("Failed to fetch categories:", response.status, response.statusText);
+        setCategories([]);
       }
     } catch (error) {
       console.error("Error fetching categories:", error);
+      setCategories([]);
     }
   };
 

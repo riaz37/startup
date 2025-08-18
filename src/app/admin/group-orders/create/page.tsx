@@ -68,10 +68,20 @@ export default function CreateGroupOrderPage() {
       const response = await fetch("/api/products");
       if (response.ok) {
         const data = await response.json();
-        setProducts(data.products);
+        // The API returns { products: [...], pagination: {...} }
+        if (data.products && Array.isArray(data.products)) {
+          setProducts(data.products);
+        } else {
+          console.error("Products API returned unexpected data structure:", data);
+          setProducts([]);
+        }
+      } else {
+        console.error("Failed to fetch products:", response.status, response.statusText);
+        setProducts([]);
       }
     } catch (error) {
       console.error("Error fetching products:", error);
+      setProducts([]);
     }
   };
 

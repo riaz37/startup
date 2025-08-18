@@ -9,7 +9,7 @@ import {
   TrendingUp, 
   TrendingDown, 
   Users, 
-  ShoppingCart, 
+ ShoppingCart, 
   DollarSign,
   Package,
   Calendar,
@@ -17,6 +17,8 @@ import {
   Loader2
 } from "lucide-react";
 import { useDashboardAnalytics } from "@/hooks/api/use-analytics";
+import { DashboardStatsSkeleton, AnalyticsChartSkeleton } from "@/components/ui/skeleton";
+import { EnhancedAnalyticsLoading } from "@/components/ui/enhanced-loading";
 
 interface AnalyticsData {
   period: string;
@@ -165,14 +167,7 @@ export function AnalyticsDashboard() {
   };
 
   if (isLoading) {
-    return (
-      <Card className="card-sohozdaam mb-8">
-        <CardContent className="text-center py-8">
-          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
-          <p>Loading analytics data...</p>
-        </CardContent>
-      </Card>
-    );
+    return <EnhancedAnalyticsLoading />;
   }
 
   if (error || !dashboardData) {

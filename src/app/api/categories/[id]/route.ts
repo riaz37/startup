@@ -1,69 +1,58 @@
-import { NextRequest, NextResponse } from 'next/server';
-import { prisma } from '@/lib/database';
+import { NextRequest, NextResponse } from "next/server";
+import { getCurrentUser, requireAdmin } from "@/lib";
+import { prisma } from "@/lib";
 
-export async function PUT(
+// GET /api/categories/[id] - Get category by ID
+export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const { id } = params;
-    const body = await request.json();
-    const { name, slug, description } = body;
-
-    if (!name || !slug) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Name and slug are required',
-        },
-        { status: 400 }
-      );
-    }
-
-    // Check if category already exists with different ID
-    const existingCategory = await prisma.category.findFirst({
-      where: {
-        OR: [
-          { name: name },
-          { slug: slug },
-        ],
-        NOT: {
-          id: id,
-        },
-      },
+    const { id } = await params;
+    const category = await prisma.category.findUnique({
+      where: { id },
+      include: {
+        products: {
+          take: 10,
+          orderBy: { createdAt: 'desc' }
+        }
+      }
     });
 
-    if (existingCategory) {
-      return NextResponse.json(
-        {
-          success: false,
-          error: 'Category with this name or slug already exists',
-        },
-        { status: 409 }
-      );
+    if (!category) {
+      return NextResponse.json({ error: "Category not found" }, { status: 404 });
     }
+
+    return NextResponse.json(category);
+  } catch (error) {
+    console.error("Error fetching category:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch category" },
+      { status: 500 }
+    );
+  }
+}
+
+// PUT /api/categories/[id] - Update category
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireAdmin();
+    const { id } = await params;
+    const body = await request.json();
 
     const category = await prisma.category.update({
       where: { id },
-      data: {
-        name,
-        slug,
-        description: description || '',
-        updatedAt: new Date(),
-      },
+      data: body
     });
 
-    return NextResponse.json({
-      success: true,
-      category,
-    });
+    return NextResponse.json(category);
   } catch (error) {
-    console.error('Error updating category:', error);
+    console.error("Error updating category:", error);
     return NextResponse.json(
-      {
-        success: false,
-        error: 'Failed to update category',
-      },
+      { error: "Failed to update category" },
       { status: 500 }
     );
   }

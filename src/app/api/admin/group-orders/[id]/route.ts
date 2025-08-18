@@ -1,20 +1,61 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getServerSession } from "next-auth";
-import { authOptions } from "@/lib/auth";
-import { prisma } from "@/lib/database";
+import { requireAdmin } from "@/lib";
+import { prisma } from "@/lib";
+
+// GET /api/admin/group-orders/[id] - Get group order details
+export async function GET(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
+  try {
+    const user = await requireAdmin();
+    const { id } = await params;
+
+    const groupOrder = await prisma.groupOrder.findUnique({
+      where: { id },
+      include: {
+        product: {
+          include: {
+            category: true,
+          },
+        },
+        orders: {
+          include: {
+            user: {
+              select: {
+                id: true,
+                name: true,
+                email: true,
+              },
+            },
+            items: true,
+          },
+        },
+      },
+    });
+
+    if (!groupOrder) {
+      return NextResponse.json({ error: "Group order not found" }, { status: 404 });
+    }
+
+    return NextResponse.json(groupOrder);
+  } catch (error) {
+    console.error("Error fetching group order:", error);
+    return NextResponse.json(
+      { error: "Failed to fetch group order" },
+      { status: 500 }
+    );
+  }
+}
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
-    const session = await getServerSession(authOptions);
+    const user = await requireAdmin();
     
-    if (!session?.user || (session.user.role !== "ADMIN" && session.user.role !== "SUPER_ADMIN")) {
-      return NextResponse.json({ error: "Unauthorized" }, { status: 401 });
-    }
-
-    const { id } = params;
+    const { id } = await params;
 
     // Check if group order exists
     const groupOrder = await prisma.groupOrder.findUnique({
@@ -52,7 +93,7 @@ export async function DELETE(
     }
 
     // Log the deletion (using console.log since groupOrderLog table doesn't exist)
-    console.log(`Group order ${id} deleted by admin ${session.user.id}`, {
+    console.log(`Group order ${id} deleted by admin ${user.id}`, {
       deletedAt: new Date().toISOString(),
       orderCount: groupOrder.orders.length,
     });

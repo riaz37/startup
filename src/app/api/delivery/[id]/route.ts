@@ -4,7 +4,7 @@ import { prisma } from "@/lib";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -16,8 +16,9 @@ export async function GET(
       );
     }
 
+    const { id } = await params;
     const delivery = await prisma.delivery.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         order: {
           include: {
@@ -63,14 +64,15 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAdmin();
     const { status, actualDeliveryDate, trackingNumber, notes } = await request.json();
 
+    const { id } = await params;
     const delivery = await prisma.delivery.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         order: {
           include: {
@@ -94,7 +96,7 @@ export async function PATCH(
 
     // Update delivery
     const updatedDelivery = await prisma.delivery.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status,
         ...(actualDeliveryDate && { actualDeliveryDate: new Date(actualDeliveryDate) }),
@@ -157,7 +159,7 @@ export async function PATCH(
       await prisma.notification.create({
         data: {
           userId: delivery.order.userId,
-          type: "DELIVERY_UPDATE",
+          type: "GENERAL",
           title: notificationTitle,
           message: notificationMessage,
           data: { orderId: delivery.orderId, deliveryId: delivery.id, status },
