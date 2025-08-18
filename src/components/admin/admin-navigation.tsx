@@ -6,7 +6,7 @@ import { ShoppingCart, Settings, Plus } from "lucide-react";
 
 interface AdminNavigationProps {
   user: {
-    name: string;
+    name?: string | null;
     role: string;
   };
 }

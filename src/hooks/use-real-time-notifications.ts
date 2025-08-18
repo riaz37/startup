@@ -12,6 +12,37 @@ interface NotificationSettings {
   system: boolean;
 }
 
+interface WebSocketMessage {
+  type: string;
+  data: Record<string, unknown>;
+  timestamp?: string;
+}
+
+interface NotificationData {
+  orderNumber?: string;
+  orderId?: string;
+  status?: string;
+  reason?: string;
+  amount?: number;
+  scheduledDate?: string;
+  trackingNumber?: string;
+  productName?: string;
+  message?: string;
+  level?: 'error' | 'warning' | 'info';
+}
+
+interface Notification {
+  id: string;
+  type: string;
+  data: NotificationData;
+  timestamp: string;
+  isRead: boolean;
+  title: string;
+  message: string;
+  priority: 'high' | 'medium' | 'low';
+  category: 'order' | 'payment' | 'delivery' | 'groupOrder' | 'system';
+}
+
 interface UseRealTimeNotificationsOptions {
   settings?: Partial<NotificationSettings>;
   showToasts?: boolean;
@@ -32,7 +63,7 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
   } = options;
 
   const { isConnected, lastMessage } = useWebSocketContext();
-  const [notifications, setNotifications] = useState<any[]>([]);
+  const [notifications, setNotifications] = useState<Notification[]>([]);
   const [unreadCount, setUnreadCount] = useState(0);
 
   // Handle incoming WebSocket messages
@@ -42,7 +73,7 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
     }
   }, [lastMessage, isConnected]);
 
-  const handleNotificationMessage = useCallback((message: any) => {
+  const handleNotificationMessage = useCallback((message: WebSocketMessage) => {
     const { type, data } = message;
 
     // Check if this notification type is enabled
@@ -79,33 +110,33 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
       case 'order:created':
       case 'order:updated':
       case 'order:cancelled':
-        return settings.orders;
+        return settings.orders ?? false;
       
       case 'payment:success':
       case 'payment:failed':
       case 'payment:refunded':
-        return settings.payments;
+        return settings.payments ?? false;
       
       case 'delivery:scheduled':
       case 'delivery:inTransit':
       case 'delivery:completed':
       case 'delivery:failed':
-        return settings.deliveries;
+        return settings.deliveries ?? false;
       
       case 'groupOrder:created':
       case 'groupOrder:thresholdMet':
       case 'groupOrder:statusChanged':
-        return settings.groupOrders;
+        return settings.groupOrders ?? false;
       
       case 'admin:systemAlert':
-        return settings.system;
+        return settings.system ?? false;
       
       default:
         return false;
     }
   };
 
-  const createNotificationFromMessage = (type: string, data: any) => {
+  const createNotificationFromMessage = (type: string, data: NotificationData): Notification | null => {
     const baseNotification = {
       id: `${type}-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
       type,
@@ -120,8 +151,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'New Order Created',
           message: `Order ${data.orderNumber || data.orderId} has been created successfully`,
-          priority: 'medium',
-          category: 'order',
+          priority: 'medium' as const,
+          category: 'order' as const,
         };
 
       case 'order:updated':
@@ -129,8 +160,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Order Updated',
           message: `Order ${data.orderNumber || data.orderId} status changed to ${data.status}`,
-          priority: 'medium',
-          category: 'order',
+          priority: 'medium' as const,
+          category: 'order' as const,
         };
 
       case 'order:cancelled':
@@ -138,8 +169,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Order Cancelled',
           message: `Order ${data.orderNumber || data.orderId} has been cancelled${data.reason ? `: ${data.reason}` : ''}`,
-          priority: 'high',
-          category: 'order',
+          priority: 'high' as const,
+          category: 'order' as const,
         };
 
       case 'payment:success':
@@ -147,8 +178,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Payment Successful',
           message: `Payment of ৳${data.amount} has been processed successfully`,
-          priority: 'high',
-          category: 'payment',
+          priority: 'high' as const,
+          category: 'payment' as const,
         };
 
       case 'payment:failed':
@@ -156,8 +187,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Payment Failed',
           message: `Payment failed: ${data.reason || 'Unknown error'}`,
-          priority: 'high',
-          category: 'payment',
+          priority: 'high' as const,
+          category: 'payment' as const,
         };
 
       case 'payment:refunded':
@@ -165,17 +196,17 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Payment Refunded',
           message: `Payment of ৳${data.amount} has been refunded`,
-          priority: 'medium',
-          category: 'payment',
+          priority: 'medium' as const,
+          category: 'payment' as const,
         };
 
       case 'delivery:scheduled':
         return {
           ...baseNotification,
           title: 'Delivery Scheduled',
-          message: `Your delivery has been scheduled for ${new Date(data.scheduledDate).toLocaleDateString()}`,
-          priority: 'medium',
-          category: 'delivery',
+          message: `Your delivery has been scheduled for ${new Date(data.scheduledDate || '').toLocaleDateString()}`,
+          priority: 'medium' as const,
+          category: 'delivery' as const,
         };
 
       case 'delivery:inTransit':
@@ -183,8 +214,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Delivery In Transit',
           message: `Your order is now on its way!${data.trackingNumber ? ` Tracking: ${data.trackingNumber}` : ''}`,
-          priority: 'medium',
-          category: 'delivery',
+          priority: 'medium' as const,
+          category: 'delivery' as const,
         };
 
       case 'delivery:completed':
@@ -192,8 +223,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Delivery Completed!',
           message: 'Your order has been delivered successfully',
-          priority: 'high',
-          category: 'delivery',
+          priority: 'high' as const,
+          category: 'delivery' as const,
         };
 
       case 'delivery:failed':
@@ -201,8 +232,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Delivery Failed',
           message: `Delivery could not be completed: ${data.reason || 'Unknown error'}`,
-          priority: 'high',
-          category: 'delivery',
+          priority: 'high' as const,
+          category: 'delivery' as const,
         };
 
       case 'groupOrder:created':
@@ -210,8 +241,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'New Group Order',
           message: `New group order available for ${data.productName}`,
-          priority: 'medium',
-          category: 'groupOrder',
+          priority: 'medium' as const,
+          category: 'groupOrder' as const,
         };
 
       case 'groupOrder:thresholdMet':
@@ -219,8 +250,8 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Group Order Threshold Met!',
           message: `The group order for ${data.productName} has reached its minimum threshold`,
-          priority: 'high',
-          category: 'groupOrder',
+          priority: 'high' as const,
+          category: 'groupOrder' as const,
         };
 
       case 'groupOrder:statusChanged':
@@ -228,17 +259,17 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
           ...baseNotification,
           title: 'Group Order Status Changed',
           message: `Group order for ${data.productName} status changed to ${data.status}`,
-          priority: 'medium',
-          category: 'groupOrder',
+          priority: 'medium' as const,
+          category: 'groupOrder' as const,
         };
 
       case 'admin:systemAlert':
         return {
           ...baseNotification,
           title: 'System Alert',
-          message: data.message,
-          priority: data.level === 'error' ? 'high' : 'medium',
-          category: 'system',
+          message: data.message || 'System notification',
+          priority: data.level === 'error' ? 'high' : 'medium' as const,
+          category: 'system' as const,
         };
 
       default:
@@ -246,7 +277,7 @@ export function useRealTimeNotifications(options: UseRealTimeNotificationsOption
     }
   };
 
-  const showNotificationToast = (notification: any) => {
+  const showNotificationToast = (notification: Notification) => {
     const toastOptions = {
       duration: notification.priority === 'high' ? 8000 : 5000,
       action: {

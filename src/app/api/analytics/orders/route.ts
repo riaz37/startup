@@ -83,12 +83,14 @@ export async function GET(request: NextRequest) {
         _count: true
       }),
       // Orders by product
-      prisma.order.groupBy({
+      prisma.orderItem.groupBy({
         by: ["productId"],
-        where: whereClause,
+        where: {
+          order: whereClause
+        },
         _count: true,
         _sum: {
-          totalAmount: true,
+          totalPrice: true,
           quantity: true
         }
       })
@@ -103,12 +105,12 @@ export async function GET(request: NextRequest) {
     // Process order status counts
     const statusMetrics = {
       totalOrders: currentOrders,
-      pendingOrders: orderStatusCounts.find(s => s.status === "pending")?._count || 0,
-      processingOrders: orderStatusCounts.find(s => s.status === "processing")?._count || 0,
-      completedOrders: orderStatusCounts.find(s => s.status === "completed")?._count || 0,
-      deliveredOrders: orderStatusCounts.find(s => s.status === "delivered")?._count || 0,
-      cancelledOrders: orderStatusCounts.find(s => s.status === "cancelled")?._count || 0,
-      failedOrders: orderStatusCounts.find(s => s.status === "failed")?._count || 0
+      pendingOrders: orderStatusCounts.find(s => s.status === "PENDING")?._count || 0,
+      processingOrders: orderStatusCounts.find(s => s.status === "PROCESSING")?._count || 0,
+      completedOrders: orderStatusCounts.find(s => s.status === "CONFIRMED")?._count || 0,
+      deliveredOrders: orderStatusCounts.find(s => s.status === "DELIVERED")?._count || 0,
+      cancelledOrders: orderStatusCounts.find(s => s.status === "CANCELLED")?._count || 0,
+      failedOrders: 0 // No FAILED status in OrderStatus enum
     };
 
     // Get product details for orders by product
@@ -128,9 +130,9 @@ export async function GET(request: NextRequest) {
           productName: product?.name || "Unknown Product",
           category: product?.category?.name || "Uncategorized",
           orderCount: order._count,
-          totalRevenue: order._sum.totalAmount || 0,
+          totalRevenue: order._sum.totalPrice || 0,
           totalQuantity: order._sum.quantity || 0,
-          averageOrderValue: order._count > 0 ? (order._sum.totalAmount || 0) / order._count : 0
+          averageOrderValue: order._count > 0 ? (order._sum.totalPrice || 0) / order._count : 0
         };
       })
     );

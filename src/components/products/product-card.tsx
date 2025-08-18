@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Package, ShoppingCart, Tag, ExternalLink } from "lucide-react";
 import Link from "next/link";
 import { ProductCardProps } from "@/types";
+import { AddToCartButton } from "@/components/cart";
 
 export function ProductCard({ product, formatPrice, calculateDiscount }: ProductCardProps) {
   const discount = calculateDiscount(product.mrp, product.sellingPrice);
@@ -64,7 +65,7 @@ export function ProductCard({ product, formatPrice, calculateDiscount }: Product
             </Badge>
           </div>
 
-          <div className="flex items-center justify-between">
+          <div className="flex items-center justify-between mb-3">
             <div className="text-sm text-gray-600">
               Min: {product.minOrderQty} {product.unit}
               {product.maxOrderQty && (
@@ -74,6 +75,15 @@ export function ProductCard({ product, formatPrice, calculateDiscount }: Product
             <div className="text-sm text-primary font-medium group-hover:text-primary/80 transition-colors">
               View Details →
             </div>
+          </div>
+
+          {/* Add to Cart Section */}
+          <div className="border-t pt-3">
+            <AddToCartButton
+              product={product}
+              orderType="priority"
+              className="text-sm"
+            />
           </div>
         </CardContent>
       </Card>

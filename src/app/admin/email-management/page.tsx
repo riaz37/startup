@@ -1,4 +1,4 @@
-import { requireAdmin } from "@/lib/auth-utils";
+import { requireAdmin } from "@/lib";
 import { MainContainer } from "@/components/layout";
 import { AdminNavigation } from "@/components/admin";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";

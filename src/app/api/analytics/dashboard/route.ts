@@ -64,7 +64,7 @@ export async function GET(request: NextRequest) {
       prisma.order.aggregate({
         where: {
           createdAt: { gte: start, lte: end },
-          status: { in: ["completed", "delivered"] }
+          status: { in: ["CONFIRMED", "DELIVERED"] }
         },
         _sum: {
           totalAmount: true
@@ -86,7 +86,7 @@ export async function GET(request: NextRequest) {
       prisma.order.aggregate({
         where: {
           createdAt: { gte: previousStart, lte: previousEnd },
-          status: { in: ["completed", "delivered"] }
+          status: { in: ["CONFIRMED", "DELIVERED"] }
         },
         _sum: {
           totalAmount: true
@@ -102,19 +102,21 @@ export async function GET(request: NextRequest) {
       : 0;
 
     // Get top products by revenue
-    const topProducts = await prisma.order.groupBy({
+    const topProducts = await prisma.orderItem.groupBy({
       by: ["productId"],
       where: {
-        createdAt: { gte: start, lte: end },
-        status: { in: ["completed", "delivered"] }
+        order: {
+          createdAt: { gte: start, lte: end },
+          status: { in: ["CONFIRMED", "DELIVERED"] }
+        }
       },
       _sum: {
-        totalAmount: true,
+        totalPrice: true,
         quantity: true
       },
       orderBy: {
         _sum: {
-          totalAmount: "desc"
+          totalPrice: "desc"
         }
       },
       take: 5
@@ -131,7 +133,7 @@ export async function GET(request: NextRequest) {
           productId: product.productId,
           productName: productDetails?.name || "Unknown Product",
           totalSold: product._sum.quantity || 0,
-          revenue: product._sum.totalAmount || 0
+          revenue: product._sum.totalPrice || 0
         };
       })
     );
@@ -147,9 +149,9 @@ export async function GET(request: NextRequest) {
 
     const orderMetrics = {
       totalOrders: currentOrders,
-      pendingOrders: orderStatusCounts.find(s => s.status === "pending")?._count || 0,
-      completedOrders: orderStatusCounts.find(s => s.status === "completed")?._count || 0,
-      cancelledOrders: orderStatusCounts.find(s => s.status === "cancelled")?._count || 0,
+      pendingOrders: orderStatusCounts.find(s => s.status === "PENDING")?._count || 0,
+      completedOrders: orderStatusCounts.find(s => s.status === "CONFIRMED")?._count || 0,
+      cancelledOrders: orderStatusCounts.find(s => s.status === "CANCELLED")?._count || 0,
       orderGrowth,
       averageOrderValue: currentOrders > 0 ? (currentRevenue._sum.totalAmount || 0) / currentOrders : 0
     };
@@ -163,8 +165,8 @@ export async function GET(request: NextRequest) {
       _count: true
     });
 
-    const activeGroupOrders = groupOrderStatusCounts.find(s => s.status === "collecting")?._count || 0;
-    const completedGroupOrders = groupOrderStatusCounts.find(s => s.status === "delivered")?._count || 0;
+    const activeGroupOrders = groupOrderStatusCounts.find(s => s.status === "COLLECTING")?._count || 0;
+    const completedGroupOrders = groupOrderStatusCounts.find(s => s.status === "DELIVERED")?._count || 0;
 
     // Calculate average participants for group orders
     const groupOrderParticipants = await prisma.groupOrder.aggregate({

@@ -1,5 +1,7 @@
+"use client";
+
 import Link from "next/link";
-import { prisma } from "@/lib/database/prisma";
+import { useEffect, useState } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 interface OrderHistoryProps {
@@ -19,51 +21,41 @@ interface RecentOrder {
       name: string;
       imageUrl: string | null;
     };
-  };
+  } | null;
   items: Array<{
     quantity: number;
   }>;
 }
 
-async function getRecentOrders(userId: string): Promise<RecentOrder[]> {
-  try {
-    const orders = await prisma.order.findMany({
-      where: { userId },
-      include: {
-        groupOrder: {
-          include: {
-            product: {
-              select: {
-                name: true,
-                imageUrl: true
-              }
-            }
-          }
-        },
-        items: {
-          select: {
-            quantity: true
-          }
+export default function OrderHistoryWidget({ userId }: OrderHistoryProps) {
+  const [recentOrders, setRecentOrders] = useState<RecentOrder[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  useEffect(() => {
+    const fetchOrderHistory = async () => {
+      try {
+        setLoading(true);
+        const response = await fetch('/api/orders/history');
+        
+        if (!response.ok) {
+          throw new Error('Failed to fetch order history');
         }
-      },
-      orderBy: {
-        placedAt: "desc"
-      },
-      take: 5 // Show only recent 5 orders
-    });
+        
+        const data = await response.json();
+        setRecentOrders(data.orders || []);
+      } catch (error) {
+        console.error("Error fetching recent orders:", error);
+        setError('Failed to load order history');
+      } finally {
+        setLoading(false);
+      }
+    };
 
-    return orders.map(order => ({
-      ...order,
-      placedAt: order.placedAt.toISOString()
-    }));
-  } catch (error) {
-    console.error("Error fetching recent orders:", error);
-    return [];
-  }
-}
-
-export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) {
-  const recentOrders = await getRecentOrders(userId);
+    if (userId) {
+      fetchOrderHistory();
+    }
+  }, [userId]);
 
   const formatPrice = (price: number) => {
     return new Intl.NumberFormat("en-BD", {
@@ -90,6 +82,89 @@ export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) 
         return "bg-gray-100 text-gray-800";
     }
   };
+
+  if (loading) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <svg
+              className="h-5 w-5 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+              />
+            </svg>
+            Recent Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8">
+            <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+            <p className="text-muted-foreground">Loading orders...</p>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
+
+  if (error) {
+    return (
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <svg
+              className="h-5 w-5 mr-2"
+              fill="none"
+              viewBox="0 0 24 24"
+              stroke="currentColor"
+            >
+              <path
+                strokeLinecap="round"
+                strokeLinejoin="round"
+                strokeWidth={2}
+                d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z"
+              />
+            </svg>
+            Recent Orders
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-8 text-muted-foreground">
+            <div className="mx-auto flex items-center justify-center h-12 w-12 rounded-full bg-muted mb-4">
+              <svg
+                className="h-6 w-6 text-muted-foreground"
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+              >
+                <path
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                  strokeWidth={2}
+                  d="M6 18L18 6M6 6l12 12"
+                />
+              </svg>
+            </div>
+            <h4 className="text-sm font-medium">Error loading orders</h4>
+            <p className="text-sm">{error}</p>
+            <button 
+              onClick={() => window.location.reload()}
+              className="mt-4 inline-flex items-center px-3 py-2 border border-transparent shadow-sm text-sm font-medium rounded-md text-white bg-primary hover:bg-primary/90"
+            >
+              Try Again
+            </button>
+          </div>
+        </CardContent>
+      </Card>
+    );
+  }
 
   if (recentOrders.length === 0) {
     return (
@@ -171,7 +246,7 @@ export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) 
         <div className="space-y-4">
           {recentOrders.map((order) => (
             <div key={order.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-muted/30 transition-colors">
-              {order.groupOrder.product.imageUrl ? (
+              {order.groupOrder?.product.imageUrl ? (
                 <img
                   src={order.groupOrder.product.imageUrl}
                   alt={order.groupOrder.product.name}
@@ -197,14 +272,14 @@ export default async function OrderHistoryWidget({ userId }: OrderHistoryProps) 
               
               <div className="flex-1 min-w-0">
                 <p className="text-sm font-medium text-foreground truncate">
-                  {order.groupOrder.product.name}
+                  {order.groupOrder?.product.name || 'Product not found'}
                 </p>
                 <p className="text-xs text-muted-foreground">
                   #{order.orderNumber} • Qty: {order.items[0]?.quantity || 0}
                 </p>
                 <div className="flex items-center space-x-2 mt-1">
-                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.groupOrder.status)}`}>
-                    {order.groupOrder.status.replace('_', ' ')}
+                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${getStatusColor(order.groupOrder?.status || order.status)}`}>
+                    {(order.groupOrder?.status || order.status).replace('_', ' ')}
                   </span>
                 </div>
               </div>

@@ -39,13 +39,8 @@ apiClient.interceptors.request.use(
       config.params = { _t: Date.now() }
     }
     
-    // Add auth token if available
-    if (typeof window !== 'undefined') {
-      const token = localStorage.getItem('auth-token') || sessionStorage.getItem('auth-token')
-      if (token) {
-        config.headers.Authorization = `Bearer ${token}`
-      }
-    }
+    // Auth token is automatically handled by NextAuth cookies
+    // No need to manually add Authorization header
     
     return config
   },
@@ -82,11 +77,6 @@ apiClient.interceptors.response.use(
           break
         case 401:
           toast.error('Unauthorized access. Please log in again.')
-          // Clear invalid tokens
-          if (typeof window !== 'undefined') {
-            localStorage.removeItem('auth-token')
-            sessionStorage.removeItem('auth-token')
-          }
           // Redirect to login page
           if (typeof window !== 'undefined') {
             window.location.href = '/auth/signin'

@@ -218,7 +218,7 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <div className="flex space-x-3">
                 <Button className="flex-1 bg-primary hover:bg-primary/90" asChild>
                   <Link href={`/group-orders/create?productId=${product.id}`}>
-                    <ShoppingCart className="h-4 w-4 mr-2" />
+                    <Users className="h-4 w-4 mr-2" />
                     Join Group Order
                   </Link>
                 </Button>
@@ -230,30 +230,19 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 </Button>
               </div>
               
-              {/* Priority Order Option */}
-              <div className="p-4 bg-amber-50 border border-amber-200 rounded-lg">
+              {/* Group Order Info */}
+              <div className="p-4 bg-blue-50 border border-blue-200 rounded-lg">
                 <div className="flex items-start space-x-3">
                   <div className="flex-shrink-0">
-                    <div className="w-8 h-8 bg-amber-100 rounded-full flex items-center justify-center">
-                      <Clock className="h-4 w-4 text-amber-600" />
+                    <div className="w-8 h-8 bg-blue-100 rounded-full flex items-center justify-center">
+                      <Users className="h-4 w-4 text-blue-600" />
                     </div>
                   </div>
                   <div className="flex-1">
-                    <h4 className="font-medium text-amber-800 mb-1">Need it faster?</h4>
-                                         <p className="text-sm text-amber-700 mb-3">
-                       Place a priority order at MRP price for faster delivery. Perfect when you can&apos;t wait for group orders.
-                     </p>
-                    <Button 
-                      variant="outline" 
-                      size="sm" 
-                      className="border-amber-300 text-amber-700 hover:bg-amber-100"
-                      asChild
-                    >
-                      <Link href={`/priority-orders/create?productId=${product.id}`}>
-                        <Truck className="h-4 w-4 mr-2" />
-                        Priority Order - {formatPrice(product.mrp)} per {product.unitSize} {product.unit}
-                      </Link>
-                    </Button>
+                    <h4 className="font-medium text-blue-800 mb-1">Save with Group Orders</h4>
+                    <p className="text-sm text-blue-700 mb-3">
+                      Join group orders to get discounted prices and free delivery. Perfect for bulk purchases.
+                    </p>
                   </div>
                 </div>
               </div>
@@ -294,9 +283,25 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                   )}
                 </div>
 
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-muted-foreground mb-4">
                   Price per {product.unitSize} {product.unit}
                 </p>
+
+                {/* Quick Add to Cart */}
+                <div className="border-t pt-4">
+                  <div className="flex items-center justify-between mb-3">
+                    <span className="text-sm font-medium">Quantity</span>
+                    <span className="text-sm text-muted-foreground">
+                      Min: {product.minOrderQty} • Max: {product.maxOrderQty || 'No limit'}
+                    </span>
+                  </div>
+                  <Button className="w-full bg-primary hover:bg-primary/90" asChild>
+                    <Link href={`/priority-orders/create?productId=${product.id}`}>
+                      <ShoppingCart className="h-4 w-4 mr-2" />
+                      Add to Cart - Priority Order
+                    </Link>
+                  </Button>
+                </div>
               </CardContent>
             </Card>
 
@@ -305,36 +310,30 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Package className="h-5 w-5 mr-2" />
-                  Product Information
+                  Product Details
                 </CardTitle>
               </CardHeader>
               <CardContent className="space-y-4">
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="flex items-center space-x-2">
-                    <Users className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      <span className="font-medium">Unit Size:</span> {product.unitSize} {product.unit}
-                    </span>
+                <div className="grid grid-cols-1 gap-3">
+                  <div className="flex items-center justify-between py-2 border-b border-border/50">
+                    <span className="text-sm text-muted-foreground">Unit Size</span>
+                    <span className="text-sm font-medium">{product.unitSize} {product.unit}</span>
                   </div>
-                  <div className="flex items-center space-x-2">
-                    <ShoppingCart className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      <span className="font-medium">Min Order:</span> {product.minOrderQty} {product.unit}
-                    </span>
+                  <div className="flex items-center justify-between py-2 border-b border-border/50">
+                    <span className="text-sm text-muted-foreground">Minimum Order</span>
+                    <span className="text-sm font-medium">{product.minOrderQty} {product.unit}</span>
                   </div>
                   {product.maxOrderQty && (
-                    <div className="flex items-center space-x-2">
-                      <Package className="h-4 w-4 text-muted-foreground" />
-                      <span className="text-sm">
-                        <span className="font-medium">Max Order:</span> {product.maxOrderQty} {product.unit}
-                      </span>
+                    <div className="flex items-center justify-between py-2 border-b border-border/50">
+                      <span className="text-sm text-muted-foreground">Maximum Order</span>
+                      <span className="text-sm font-medium">{product.maxOrderQty} {product.unit}</span>
                     </div>
                   )}
-                  <div className="flex items-center space-x-2">
-                    <Tag className="h-4 w-4 text-muted-foreground" />
-                    <span className="text-sm">
-                      <span className="font-medium">Category:</span> {product.category.name}
-                    </span>
+                  <div className="flex items-center justify-between py-2">
+                    <span className="text-sm text-muted-foreground">Category</span>
+                    <Badge variant="outline" className="text-xs">
+                      {product.category.name}
+                    </Badge>
                   </div>
                 </div>
               </CardContent>

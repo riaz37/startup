@@ -70,7 +70,7 @@ export async function PATCH(
     let needsRecalculation = false;
 
     // Update quantity if provided
-    if (quantity !== undefined) {
+    if (quantity !== undefined && order.groupOrder) {
       const requestedQuantity = parseInt(quantity);
       
       if (requestedQuantity < order.groupOrder.product.minOrderQty) {
@@ -142,7 +142,7 @@ export async function PATCH(
         });
 
         // Update order item
-        if (quantity !== undefined) {
+        if (quantity !== undefined && order.groupOrder) {
           const requestedQuantity = parseInt(quantity);
           await tx.orderItem.updateMany({
             where: { orderId },
@@ -154,22 +154,24 @@ export async function PATCH(
         }
 
         // Update group order totals
-        const currentQuantity = order.items[0]?.quantity || 1;
-        const requestedQuantity = parseInt(quantity);
-        const quantityDifference = requestedQuantity - currentQuantity;
-        const amountDifference = quantityDifference * order.groupOrder.pricePerUnit;
+        if (order.groupOrder && order.groupOrderId) {
+          const currentQuantity = order.items[0]?.quantity || 1;
+          const requestedQuantity = parseInt(quantity);
+          const quantityDifference = requestedQuantity - currentQuantity;
+          const amountDifference = quantityDifference * order.groupOrder.pricePerUnit;
 
-        await tx.groupOrder.update({
-          where: { id: order.groupOrderId },
-          data: {
-            currentAmount: {
-              increment: amountDifference,
+          await tx.groupOrder.update({
+            where: { id: order.groupOrderId },
+            data: {
+              currentAmount: {
+                increment: amountDifference,
+              },
+              currentQuantity: {
+                increment: quantityDifference,
+              },
             },
-            currentQuantity: {
-              increment: quantityDifference,
-            },
-          },
-        });
+          });
+        }
 
         return orderUpdate;
       });

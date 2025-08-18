@@ -202,7 +202,7 @@ export async function GET(request: NextRequest) {
         });
         
         return {
-          productId: groupOrder?.productId || "unknown",
+          productId: groupOrder?.productId ?? "unknown",
           productName: groupOrder?.product?.name || "Unknown Product",
           category: groupOrder?.product?.category?.name || "Uncategorized",
           revenue: product._sum?.totalAmount || 0,

@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { ThemeToggle } from "@/components/theme-toggle";
 import { UserProfileDropdown } from "@/components/navigation/user-profile-dropdown";
+import { CartDrawer } from "@/components/cart";
 import { ShoppingCart, Menu, X } from "lucide-react";
 
 interface NavigationProps {
@@ -67,6 +68,9 @@ export function Navigation({ user }: NavigationProps) {
           </div>
 
           <div className="flex items-center space-x-4">
+            {/* Cart */}
+            <CartDrawer />
+            
             <ThemeToggle />
             
             {/* Mobile menu button */}

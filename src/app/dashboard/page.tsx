@@ -1,6 +1,10 @@
-import { getCurrentUser } from "@/lib";
-import { redirect } from "next/navigation";
-import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
+"use client";
+
+import { useSession } from "next-auth/react";
+import { useRouter } from "next/navigation";
+import { useEffect } from "react";
+import { PageHeader, MainContainer } from "@/components/layout";
+import { ClientPageLayout } from "@/components/layout/client-page-layout";
 import { 
   DashboardStats, 
   QuickActions, 
@@ -22,114 +26,112 @@ import {
   Clock
 } from "lucide-react";
 import OrderHistoryWidget from "@/components/orders/order-history-widget";
-import { prisma } from "@/lib/database";
+import { useState } from "react";
 
-export default async function DashboardPage() {
-  const user = await getCurrentUser();
+interface DashboardData {
+  totalOrders: number;
+  groupOrdersJoined: number;
+  totalProducts: number;
+  totalSavings: number;
+  recentOrders: any[];
+  recentGroupOrders: any[];
+  userStats: any;
+}
 
-  if (!user) {
-    redirect("/auth/signin");
+export default function DashboardPage() {
+  const { data: session, status } = useSession();
+  const router = useRouter();
+  const [dashboardData, setDashboardData] = useState<DashboardData | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    if (status === "loading") return;
+
+    if (status === "unauthenticated") {
+      router.push("/auth/signin");
+      return;
+    }
+
+    if (session?.user) {
+      fetchDashboardData();
+    }
+  }, [session, status, router]);
+
+  const fetchDashboardData = async () => {
+    try {
+      setLoading(true);
+      
+      const response = await fetch('/api/dashboard');
+      if (!response.ok) {
+        throw new Error('Failed to fetch dashboard data');
+      }
+      
+      const data = await response.json();
+      setDashboardData(data);
+    } catch (error) {
+      console.error('Error fetching dashboard data:', error);
+    } finally {
+      setLoading(false);
+            }
+  };
+
+  // Show loading state
+  if (status === "loading" || loading) {
+    return (
+      <ClientPageLayout user={session?.user}>
+        <MainContainer>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading dashboard...</p>
+            </div>
+          </div>
+        </MainContainer>
+      </ClientPageLayout>
+    );
   }
 
-  // Fetch real dashboard data
-  const [
-    totalOrders,
-    groupOrdersJoined,
-    totalProducts,
-    totalSavings,
-    recentOrders,
-    recentGroupOrders,
-    userStats
-  ] = await Promise.all([
-    // Total orders count
-    prisma.order.count({
-      where: { userId: user.id }
-    }),
-    
-    // Group orders joined count (unique group orders from user's orders)
-    prisma.order.groupBy({
-      by: ['groupOrderId'],
-      where: { userId: user.id },
-      _count: { groupOrderId: true }
-    }).then(result => result.length),
-    
-    // Total products ordered
-    prisma.orderItem.aggregate({
-      where: { order: { userId: user.id } },
-      _sum: { quantity: true }
-    }),
-    
-    // Calculate total savings (sum of all order amounts)
-    prisma.order.aggregate({
-      where: { userId: user.id },
-      _sum: { totalAmount: true }
-    }),
-    
-    // Recent orders
-    prisma.order.findMany({
-      where: { userId: user.id },
-      include: {
-        items: {
-          include: {
-            product: {
-              include: { category: true }
-            }
-          }
-        },
-        groupOrder: {
-          include: {
-            product: { include: { category: true } }
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 5
-    }),
-    
-    // Recent group order activities (from user's orders)
-    prisma.order.findMany({
-      where: { userId: user.id },
-      include: {
-        groupOrder: {
-          include: {
-            product: { include: { category: true } }
-          }
-        }
-      },
-      orderBy: { createdAt: 'desc' },
-      take: 5
-    }),
-    
-    // User statistics
-    prisma.user.findUnique({
-      where: { id: user.id },
-      select: {
-        createdAt: true,
-        lastLoginAt: true,
-        orders: {
-          select: { id: true }
-        }
-      }
-    })
-  ]);
+  // Show unauthenticated state
+  if (status === "unauthenticated") {
+    return null; // Will redirect via useEffect
+  }
 
-  // Calculate total savings
-  const totalSavingsAmount = totalSavings._sum.totalAmount || 0;
-  
-  // Calculate products count
-  const productsCount = totalProducts._sum.quantity || 0;
-  
-  // Calculate member since
-  const memberSince = userStats?.createdAt ? 
-    Math.floor((Date.now() - userStats.createdAt.getTime()) / (1000 * 60 * 60 * 24)) : 0;
+  // Show error state if no session
+  if (!session?.user) {
+    return null; // Will redirect via useEffect
+  }
+
+  const user = session.user;
+
+  // Use dashboard data if available, otherwise show loading
+  if (!dashboardData) {
+    return (
+      <ClientPageLayout user={session?.user}>
+        <MainContainer>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-primary mx-auto mb-4"></div>
+              <p className="text-muted-foreground">Loading dashboard data...</p>
+            </div>
+          </div>
+        </MainContainer>
+      </ClientPageLayout>
+    );
+  }
+
+  // Calculate derived values
+  const totalSavingsAmount = dashboardData.totalSavings || 0;
+  const productsCount = dashboardData.totalProducts || 0;
+  const memberSince = dashboardData.userStats?.createdAt ? 
+    Math.floor((Date.now() - new Date(dashboardData.userStats.createdAt).getTime()) / (1000 * 60 * 60 * 24)) : 0;
 
   // Dashboard stats with real data
   const dashboardStats = [
     {
       icon: ShoppingCart,
       title: "Total Orders",
-      value: totalOrders.toString(),
-      change: `${recentOrders.length} this month`,
+      value: dashboardData.totalOrders.toString(),
+      change: `${dashboardData.recentOrders.length} this month`,
       trend: "up" as const,
       color: "primary" as const,
       description: "Your order history"
@@ -137,8 +139,8 @@ export default async function DashboardPage() {
     {
       icon: Users,
       title: "Group Orders",
-      value: groupOrdersJoined.toString(),
-      change: `${recentGroupOrders.length} recent`,
+      value: dashboardData.groupOrdersJoined.toString(),
+      change: `${dashboardData.recentGroupOrders.length} recent`,
       trend: "up" as const,
       color: "secondary" as const,
       description: "Bulk orders joined"
@@ -221,31 +223,33 @@ export default async function DashboardPage() {
 
   // Transform recent orders into activities
   const recentActivities = [
-    ...recentOrders.map(order => ({
+    ...dashboardData.recentOrders.map((order: any) => ({
       id: order.id,
       type: "order" as const,
       title: `Order #${order.id.slice(-6)}`,
       description: `${order.items.length} items - ${order.status}`,
-      timestamp: order.createdAt.toISOString(),
+      timestamp: order.createdAt,
       status: order.status,
       href: `/orders/${order.id}`,
       amount: order.totalAmount
     })),
-    ...recentGroupOrders.map(order => ({
+    ...dashboardData.recentGroupOrders
+      .filter((order: any) => order.groupOrder) // Additional safety filter
+      .map((order: any) => ({
       id: order.id,
       type: "group_order" as const,
-      title: `Joined ${order.groupOrder.product.name}`,
-      description: `Batch #${order.groupOrder.batchNumber} - ${order.groupOrder.status}`,
-      timestamp: order.createdAt.toISOString(),
-      status: order.groupOrder.status,
-      href: `/group-orders/${order.groupOrder.id}`,
-      progress: order.groupOrder.currentQuantity / order.groupOrder.targetQuantity
+        title: `Joined ${order.groupOrder!.product.name}`,
+        description: `Batch #${order.groupOrder!.batchNumber} - ${order.groupOrder!.status}`,
+        timestamp: order.createdAt,
+        status: order.groupOrder!.status,
+        href: `/group-orders/${order.groupOrder!.id}`,
+        progress: order.groupOrder!.currentQuantity / order.groupOrder!.targetQuantity
     }))
   ].sort((a, b) => new Date(b.timestamp).getTime() - new Date(a.timestamp).getTime())
    .slice(0, 8);
 
   return (
-    <PageLayout>
+    <ClientPageLayout user={session?.user}>
       <MainContainer>
         {/* Page Header */}
         <PageHeader
@@ -263,7 +267,7 @@ export default async function DashboardPage() {
                 Your Sohozdaam Journey
               </h2>
               <p className="text-muted-foreground">
-                Member for {memberSince} days • {totalOrders} orders placed
+                Member for {memberSince} days • {dashboardData.totalOrders} orders placed
               </p>
             </div>
             <div className="text-center">
@@ -274,7 +278,7 @@ export default async function DashboardPage() {
             </div>
             <div className="text-center">
               <div className="text-3xl font-bold text-secondary mb-1">
-                {groupOrdersJoined}
+                {dashboardData.groupOrdersJoined}
               </div>
               <div className="text-sm text-muted-foreground">Group Orders</div>
             </div>
@@ -321,6 +325,6 @@ export default async function DashboardPage() {
           <PaymentHistory userId={user.id} />
         </div>
       </MainContainer>
-    </PageLayout>
+    </ClientPageLayout>
   );
 }

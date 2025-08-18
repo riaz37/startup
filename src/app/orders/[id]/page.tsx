@@ -118,6 +118,11 @@ async function getOrderDetail(orderId: string): Promise<OrderDetail | null> {
     if (!order) {
       return null;
     }
+
+    // Check if group order exists
+    if (!order.groupOrder) {
+      return null; // Cannot display order without group order
+    }
     
     // Define status steps
     const statusSteps = [

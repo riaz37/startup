@@ -68,6 +68,9 @@ importers:
       '@tanstack/react-query-devtools':
         specifier: ^5.85.3
         version: 5.85.3(@tanstack/react-query@5.85.3(react@19.1.0))(react@19.1.0)
+      '@types/redis':
+        specifier: ^4.0.11
+        version: 4.0.11
       axios:
         specifier: ^1.11.0
         version: 1.11.0
@@ -122,6 +125,9 @@ importers:
       recharts:
         specifier: ^3.1.2
         version: 3.1.2(@types/react@19.1.9)(react-dom@19.1.0(react@19.1.0))(react-is@16.13.1)(react@19.1.0)(redux@5.0.1)
+      redis:
+        specifier: ^5.8.1
+        version: 5.8.1
       socket.io:
         specifier: ^4.8.1
         version: 4.8.1
@@ -143,6 +149,9 @@ importers:
       zod:
         specifier: ^3.23.8
         version: 3.25.76
+      zustand:
+        specifier: ^5.0.7
+        version: 5.0.7(@types/react@19.1.9)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0))
     devDependencies:
       '@eslint/eslintrc':
         specifier: ^3
@@ -979,6 +988,34 @@ packages:
   '@radix-ui/rect@1.1.1':
     resolution: {integrity: sha512-HPwpGIzkl28mWyZqG52jiqDJ12waP11Pa1lGoiyUkIEuMLBP0oeK/C89esbXrxsky5we7dfd8U58nm0SgAWpVw==}
 
+  '@redis/bloom@5.8.1':
+    resolution: {integrity: sha512-hJOJr/yX6BttnyZ+nxD3Ddiu2lPig4XJjyAK1v7OSHOJNUTfn3RHBryB9wgnBMBdkg9glVh2AjItxIXmr600MA==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.8.1
+
+  '@redis/client@5.8.1':
+    resolution: {integrity: sha512-hD5Tvv7G0t8b3w8ao3kQ4jEPUmUUC6pqA18c8ciYF5xZGfUGBg0olQHW46v6qSt4O5bxOuB3uV7pM6H5wEjBwA==}
+    engines: {node: '>= 18'}
+
+  '@redis/json@5.8.1':
+    resolution: {integrity: sha512-kyvM8Vn+WjJI++nRsIoI9TbdfCs1/TgD0Hp7Z7GiG6W4IEBzkXGQakli+R5BoJzUfgh7gED2fkncYy1NLprMNg==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.8.1
+
+  '@redis/search@5.8.1':
+    resolution: {integrity: sha512-CzuKNTInTNQkxqehSn7QiYcM+th+fhjQn5ilTvksP1wPjpxqK0qWt92oYg3XZc3tO2WuXkqDvTujc4D7kb6r/A==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.8.1
+
+  '@redis/time-series@5.8.1':
+    resolution: {integrity: sha512-klvdR96U9oSOyqvcectoAGhYlMOnMS3I5UWUOgdBn1buMODiwM/E4Eds7gxldKmtowe4rLJSF1CyIqyZTjy8Ow==}
+    engines: {node: '>= 18'}
+    peerDependencies:
+      '@redis/client': ^5.8.1
+
   '@reduxjs/toolkit@2.8.2':
     resolution: {integrity: sha512-MYlOhQ0sLdw4ud48FoC5w0dH9VfWQjtCjreKwYTT3l+r427qYC5Y8PihNutepr8XrNaBUDQo9khWUwQxZaqt5A==}
     peerDependencies:
@@ -1215,6 +1252,10 @@ packages:
 
   '@types/react@19.1.9':
     resolution: {integrity: sha512-WmdoynAX8Stew/36uTSVMcLJJ1KRh6L3IZRx1PZ7qJtBqT3dYTgyDTx8H1qoRghErydW7xw9mSJ3wS//tCRpFA==}
+
+  '@types/redis@4.0.11':
+    resolution: {integrity: sha512-bI+gth8La8Wg/QCR1+V1fhrL9+LZUSWfcqpOj2Kc80ZQ4ffbdL173vQd5wovmoV9i071FU9oP2g6etLuEwb6Rg==}
+    deprecated: This is a stub types definition. redis provides its own type definitions, so you do not need this installed.
 
   '@types/send@0.17.5':
     resolution: {integrity: sha512-z6F2D3cOStZvuk2SaP6YrwkNO65iTZcwA2ZkSABegdkAh/lf+Aa/YQndZVfmEXT5vgAp6zv06VQ3ejSVjAny4w==}
@@ -1545,6 +1586,10 @@ packages:
   clsx@2.1.1:
     resolution: {integrity: sha512-eYm0QWBtUrBWZWG0d386OGAw16Z995PiOVo2B7bjWSbHedGl5e0ZWaq65kOGgUSNesEIDkB9ISbTg/JK9dhCZA==}
     engines: {node: '>=6'}
+
+  cluster-key-slot@1.1.2:
+    resolution: {integrity: sha512-RMr0FhtfXemyinomL4hrWcYJxmX6deFdCxpJzhDttxgO1+bcCnkk+9drydLVDmAMG7NE6aN/fl4F7ucU/90gAA==}
+    engines: {node: '>=0.10.0'}
 
   color-convert@2.0.1:
     resolution: {integrity: sha512-RRECPsj7iu/xb5oKYcsFHSppFNnsj/52OVTRKb4zP5onXwVF3zVmmToNcOfGC+CRDpfK/U584fMg38ZHCaElKQ==}
@@ -2696,6 +2741,10 @@ packages:
       react-dom: ^16.0.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
       react-is: ^16.8.0 || ^17.0.0 || ^18.0.0 || ^19.0.0
 
+  redis@5.8.1:
+    resolution: {integrity: sha512-RZjBKYX/qFF809x6vDcE5VA6L3MmiuT+BkbXbIyyyeU0lPD47V4z8qTzN+Z/kKFwpojwCItOfaItYuAjNs8pTQ==}
+    engines: {node: '>= 18'}
+
   redux-thunk@3.1.0:
     resolution: {integrity: sha512-NW2r5T6ksUKXCabzhL9z+h206HQw/NJkcLm1GPImRQ8IzfXwRGqjVhKJGauHirT0DAuyy6hjdnMZaRoAcy0Klw==}
     peerDependencies:
@@ -3090,6 +3139,24 @@ packages:
 
   zod@3.25.76:
     resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
+
+  zustand@5.0.7:
+    resolution: {integrity: sha512-Ot6uqHDW/O2VdYsKLLU8GQu8sCOM1LcoE8RwvLv9uuRT9s6SOHCKs0ZEOhxg+I1Ld+A1Q5lwx+UlKXXUoCZITg==}
+    engines: {node: '>=12.20.0'}
+    peerDependencies:
+      '@types/react': '>=18.0.0'
+      immer: '>=9.0.6'
+      react: '>=18.0.0'
+      use-sync-external-store: '>=1.2.0'
+    peerDependenciesMeta:
+      '@types/react':
+        optional: true
+      immer:
+        optional: true
+      react:
+        optional: true
+      use-sync-external-store:
+        optional: true
 
 snapshots:
 
@@ -3818,6 +3885,26 @@ snapshots:
 
   '@radix-ui/rect@1.1.1': {}
 
+  '@redis/bloom@5.8.1(@redis/client@5.8.1)':
+    dependencies:
+      '@redis/client': 5.8.1
+
+  '@redis/client@5.8.1':
+    dependencies:
+      cluster-key-slot: 1.1.2
+
+  '@redis/json@5.8.1(@redis/client@5.8.1)':
+    dependencies:
+      '@redis/client': 5.8.1
+
+  '@redis/search@5.8.1(@redis/client@5.8.1)':
+    dependencies:
+      '@redis/client': 5.8.1
+
+  '@redis/time-series@5.8.1(@redis/client@5.8.1)':
+    dependencies:
+      '@redis/client': 5.8.1
+
   '@reduxjs/toolkit@2.8.2(react-redux@9.2.0(@types/react@19.1.9)(react@19.1.0)(redux@5.0.1))(react@19.1.0)':
     dependencies:
       '@standard-schema/spec': 1.0.0
@@ -4037,6 +4124,10 @@ snapshots:
   '@types/react@19.1.9':
     dependencies:
       csstype: 3.1.3
+
+  '@types/redis@4.0.11':
+    dependencies:
+      redis: 5.8.1
 
   '@types/send@0.17.5':
     dependencies:
@@ -4393,6 +4484,8 @@ snapshots:
       q: 1.5.1
 
   clsx@2.1.1: {}
+
+  cluster-key-slot@1.1.2: {}
 
   color-convert@2.0.1:
     dependencies:
@@ -5676,6 +5769,14 @@ snapshots:
       - '@types/react'
       - redux
 
+  redis@5.8.1:
+    dependencies:
+      '@redis/bloom': 5.8.1(@redis/client@5.8.1)
+      '@redis/client': 5.8.1
+      '@redis/json': 5.8.1(@redis/client@5.8.1)
+      '@redis/search': 5.8.1(@redis/client@5.8.1)
+      '@redis/time-series': 5.8.1(@redis/client@5.8.1)
+
   redux-thunk@3.1.0(redux@5.0.1):
     dependencies:
       redux: 5.0.1
@@ -6202,3 +6303,10 @@ snapshots:
   yocto-queue@0.1.0: {}
 
   zod@3.25.76: {}
+
+  zustand@5.0.7(@types/react@19.1.9)(immer@10.1.1)(react@19.1.0)(use-sync-external-store@1.5.0(react@19.1.0)):
+    optionalDependencies:
+      '@types/react': 19.1.9
+      immer: 10.1.1
+      react: 19.1.0
+      use-sync-external-store: 1.5.0(react@19.1.0)

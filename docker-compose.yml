@@ -4,4 +4,34 @@
 networks:
   sohozdaam-network:
     driver: bridge
-    name: sohozdaam-network 
+    name: sohozdaam-network
+
+services:
+  redis:
+    image: redis:7-alpine
+    container_name: sohozdaam-redis
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
+    command: redis-server --appendonly yes
+    networks:
+      - sohozdaam-network
+    restart: unless-stopped
+
+  redis-commander:
+    image: rediscommander/redis-commander:latest
+    container_name: sohozdaam-redis-commander
+    ports:
+      - "8081:8081"
+    environment:
+      - REDIS_HOSTS=local:redis:6379
+    depends_on:
+      - redis
+    networks:
+      - sohozdaam-network
+    restart: unless-stopped
+
+volumes:
+  redis_data:
+    driver: local 

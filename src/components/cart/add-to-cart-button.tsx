@@ -1,0 +1,191 @@
+"use client";
+
+import { useState } from "react";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Badge } from "@/components/ui/badge";
+import { useCartStore } from "@/stores/cart-store";
+import { useSession } from "next-auth/react";
+import { Product } from "@/types";
+import { ShoppingCart, Minus, Plus } from "lucide-react";
+import { toast } from "sonner";
+
+interface AddToCartButtonProps {
+  product: Product;
+  orderType: 'priority' | 'group';
+  groupOrderId?: string;
+  className?: string;
+}
+
+export function AddToCartButton({ 
+  product, 
+  orderType, 
+  groupOrderId, 
+  className 
+}: AddToCartButtonProps) {
+  const [quantity, setQuantity] = useState(product.minOrderQty);
+  const [isLoading, setIsLoading] = useState(false);
+  const { data: session } = useSession();
+  const { addToCart } = useCartStore();
+
+  const handleQuantityChange = (change: number) => {
+    const newQuantity = quantity + change;
+    if (newQuantity >= product.minOrderQty && 
+        (!product.maxOrderQty || newQuantity <= product.maxOrderQty)) {
+      setQuantity(newQuantity);
+    }
+  };
+
+  const handleAddToCart = async () => {
+    if (quantity < product.minOrderQty) {
+      toast.error(`Minimum order quantity is ${product.minOrderQty}`);
+      return;
+    }
+
+    if (product.maxOrderQty && quantity > product.maxOrderQty) {
+      toast.error(`Maximum order quantity is ${product.maxOrderQty}`);
+      return;
+    }
+
+    if (orderType === 'group' && !groupOrderId) {
+      toast.error('Group order ID is required');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      await addToCart({
+        productId: product.id,
+        quantity,
+        orderType,
+        groupOrderId,
+      });
+
+      toast.success(`${product.name} added to cart!`);
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Failed to add to cart');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const formatPrice = (price: number) => {
+    return new Intl.NumberFormat("en-BD", {
+      style: "currency",
+      currency: "BDT",
+      minimumFractionDigits: 0,
+      maximumFractionDigits: 0
+    }).format(price);
+  };
+
+  const getPrice = () => {
+    return orderType === 'priority' ? product.mrp : product.sellingPrice;
+  };
+
+  const getDiscount = () => {
+    if (orderType === 'priority') return 0;
+    return Math.round(((product.mrp - product.sellingPrice) / product.mrp) * 100);
+  };
+
+  return (
+    <div className={`space-y-4 ${className}`}>
+      {/* Price Display */}
+      <div className="space-y-2">
+        <div className="flex items-center gap-2">
+          <span className="text-2xl font-bold">{formatPrice(getPrice())}</span>
+          {orderType === 'group' && getDiscount() > 0 && (
+            <Badge variant="secondary" className="text-sm">
+              {getDiscount()}% OFF
+            </Badge>
+          )}
+        </div>
+        {orderType === 'group' && getDiscount() > 0 && (
+          <span className="text-sm text-muted-foreground line-through">
+            MRP: {formatPrice(product.mrp)}
+          </span>
+        )}
+      </div>
+
+      {/* Quantity Selector */}
+      <div className="space-y-2">
+        <Label htmlFor="quantity">Quantity</Label>
+        <div className="flex items-center gap-2">
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleQuantityChange(-1)}
+            disabled={quantity <= product.minOrderQty}
+            className="h-8 w-8"
+          >
+            <Minus className="h-3 w-3" />
+          </Button>
+          
+          <Input
+            id="quantity"
+            type="number"
+            value={quantity}
+            onChange={(e) => {
+              const value = parseInt(e.target.value);
+              if (!isNaN(value) && value >= product.minOrderQty) {
+                setQuantity(value);
+              }
+            }}
+            min={product.minOrderQty}
+            max={product.maxOrderQty}
+            className="w-20 text-center"
+          />
+          
+          <Button
+            variant="outline"
+            size="icon"
+            onClick={() => handleQuantityChange(1)}
+            disabled={product.maxOrderQty ? quantity >= product.maxOrderQty : false}
+            className="h-8 w-8"
+          >
+            <Plus className="h-3 w-3" />
+          </Button>
+        </div>
+        
+        <div className="text-xs text-muted-foreground">
+          Min: {product.minOrderQty} {product.unit}
+          {product.maxOrderQty && ` • Max: ${product.maxOrderQty} ${product.unit}`}
+        </div>
+      </div>
+
+      {/* Total Price */}
+      <div className="text-lg font-semibold">
+        Total: {formatPrice(getPrice() * quantity)}
+      </div>
+
+      {/* Add to Cart Button */}
+      <Button
+        onClick={handleAddToCart}
+        disabled={isLoading}
+        className="w-full"
+        size="lg"
+      >
+        {isLoading ? (
+          <div className="flex items-center gap-2">
+            <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></div>
+            Adding...
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <ShoppingCart className="h-4 w-4" />
+            Add to Cart
+          </div>
+        )}
+      </Button>
+
+      {/* Order Type Info */}
+      <div className="text-sm text-muted-foreground text-center">
+        {orderType === 'priority' ? (
+          <p>Priority orders are delivered within 24-48 hours at MRP price</p>
+        ) : (
+          <p>Group orders unlock bulk pricing and are delivered when threshold is met</p>
+        )}
+      </div>
+    </div>
+  );
+} 

@@ -87,18 +87,20 @@ export async function POST(
 
     // Send confirmation email
     try {
-      await emailService.sendOrderConfirmation({
-        to: order.user.email,
-        userName: order.user.name,
-        orderNumber: order.orderNumber,
-        productName: order.groupOrder.product.name,
-        quantity: 1, // Default quantity, can be enhanced later
-        unit: order.groupOrder.product.unit,
-        totalAmount: order.totalAmount,
-        deliveryAddress: `${order.address.addressLine1}, ${order.address.city}, ${order.address.state} ${order.address.pincode}`,
-        estimatedDelivery: order.groupOrder.estimatedDelivery?.toLocaleDateString() || 'TBD',
-        orderId: order.id,
-      });
+      if (order.groupOrder) {
+        await emailService.sendOrderConfirmation({
+          to: order.user.email,
+          userName: order.user.name,
+          orderNumber: order.orderNumber,
+          productName: order.groupOrder.product.name,
+          quantity: 1, // Default quantity, can be enhanced later
+          unit: order.groupOrder.product.unit,
+          totalAmount: order.totalAmount,
+          deliveryAddress: `${order.address.addressLine1}, ${order.address.city}, ${order.address.state} ${order.address.pincode}`,
+          estimatedDelivery: order.groupOrder.estimatedDelivery?.toLocaleDateString() || 'TBD',
+          orderId: order.id,
+        });
+      }
     } catch (emailError) {
       console.error('Failed to send confirmation email:', emailError);
       // Don't fail the request if email fails

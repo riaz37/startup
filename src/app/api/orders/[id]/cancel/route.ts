@@ -29,6 +29,7 @@ export async function POST(
             product: true,
           },
         },
+        items: true,
         payments: {
           where: { status: "COMPLETED" },
           take: 1,
@@ -83,18 +84,20 @@ export async function POST(
         },
       });
 
-      // Update group order totals
-      await tx.groupOrder.update({
-        where: { id: order.groupOrderId },
-        data: {
-          currentAmount: {
-            decrement: order.totalAmount,
+      // Update group order totals if group order exists
+      if (order.groupOrderId) {
+        await tx.groupOrder.update({
+          where: { id: order.groupOrderId },
+          data: {
+            currentAmount: {
+              decrement: order.totalAmount,
+            },
+            currentQuantity: {
+              decrement: order.items[0]?.quantity || 1,
+            },
           },
-          currentQuantity: {
-            decrement: order.items[0]?.quantity || 1,
-          },
-        },
-      });
+        });
+      }
 
       // If payment was made, create refund record
       if (hasPayment) {
@@ -124,7 +127,7 @@ export async function POST(
 
     // Send cancellation email
     try {
-      const { emailService } = await import("@/lib");
+      const { emailService } = await import("@/lib/email");
       await emailService.sendCustomEmail({
         to: order.user.email,
         subject: `Order Cancelled - ${order.orderNumber}`,

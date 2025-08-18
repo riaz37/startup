@@ -667,6 +667,60 @@ export interface PickupLocation {
 }
 
 // ============================================================================
+// CART TYPES
+// ============================================================================
+
+export interface CartItem {
+  id: string;
+  productId: string;
+  name: string;
+  slug: string;
+  imageUrl?: string;
+  unit: string;
+  unitSize: number;
+  mrp: number;
+  sellingPrice: number;
+  quantity: number;
+  minOrderQty: number;
+  maxOrderQty?: number;
+  categoryId: string;
+  categoryName: string;
+  orderType: 'priority' | 'group';
+  groupOrderId?: string; // Only for group orders
+  expiresAt?: string; // For group orders
+}
+
+export interface Cart {
+  id: string;
+  userId?: string; // undefined for guest carts
+  sessionId?: string; // for guest carts
+  items: CartItem[];
+  totalItems: number;
+  subtotal: number;
+  totalDiscount: number;
+  totalAmount: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface AddToCartRequest {
+  productId: string;
+  quantity: number;
+  orderType: 'priority' | 'group';
+  groupOrderId?: string;
+}
+
+export interface UpdateCartItemRequest {
+  itemId: string;
+  quantity: number;
+}
+
+export interface CartResponse {
+  cart: Cart;
+  message?: string;
+}
+
+// ============================================================================
 // RESPONSE TYPES
 // ============================================================================
 
