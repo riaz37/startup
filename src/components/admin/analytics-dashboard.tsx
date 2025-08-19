@@ -1,137 +1,125 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useCallback, useEffect } from "react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
 import { 
   TrendingUp, 
-  TrendingDown, 
   Users, 
- ShoppingCart, 
-  DollarSign,
+  DollarSign, 
   Package,
+  ShoppingCart,
+  Eye,
+  MousePointer,
   Calendar,
+  BarChart3,
+  PieChart,
+  Activity,
+  Download,
+  RefreshCw,
   Filter,
-  Loader2
+  Search
 } from "lucide-react";
-import { useDashboardAnalytics } from "@/hooks/api/use-analytics";
-import { DashboardStatsSkeleton, AnalyticsChartSkeleton } from "@/components/ui/skeleton";
-import { EnhancedAnalyticsLoading } from "@/components/ui/enhanced-loading";
+import {
+  LineChart,
+  Line,
+  AreaChart,
+  Area,
+  BarChart,
+  Bar,
+  PieChart as RechartsPieChart,
+  Pie,
+  Cell,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  Legend,
+  ResponsiveContainer
+} from "recharts";
 
 interface AnalyticsData {
-  period: string;
-  revenue: number;
-  orders: number;
-  users: number;
-  products: number;
-  conversionRate: number;
-  avgOrderValue: number;
+  overview: {
+    totalUsers: number;
+    totalOrders: number;
+    totalRevenue: number;
+    conversionRate: number;
+    averageOrderValue: number;
+    activeUsers: number;
+    newUsers: number;
+    completedOrders: number;
+  };
+  trends: {
+    users: { date: string; count: number }[];
+    orders: { date: string; count: number }[];
+    revenue: { date: string; amount: number }[];
+  };
+  userBehavior: {
+    topProducts: { productId: string; orders: number; quantity: number }[];
+  };
+  conversion: {
+    funnel: { stage: string; count: number; conversion: number }[];
+  };
 }
 
-export function AnalyticsDashboard() {
-  const [timeRange, setTimeRange] = useState("30d");
-  const [analyticsData, setAnalyticsData] = useState<AnalyticsData[]>([]);
+interface AnalyticsDashboardProps {
+  data?: AnalyticsData;
+  loading?: boolean;
+  timeRange?: string;
+  onTimeRangeChange?: (range: string) => void;
+  onExport?: () => void;
+  onRefresh?: () => void;
+}
 
-  // Convert timeRange to date filters
-  const getDateFilters = (range: string) => {
-    const now = new Date();
-    let startDate: Date;
-    
-    switch (range) {
-      case "7d":
-        startDate = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-        break;
-      case "90d":
-        startDate = new Date(now.getTime() - 90 * 24 * 60 * 60 * 1000);
-        break;
-      case "1y":
-        startDate = new Date(now.getTime() - 365 * 24 * 60 * 60 * 1000);
-        break;
-      default: // 30d
-        startDate = new Date(now.getTime() - 30 * 24 * 60 * 60 * 1000);
-    }
-    
-    return {
-      startDate: startDate.toISOString(),
-      endDate: now.toISOString()
-    };
+const COLORS = ['#0088FE', '#00C49F', '#FFBB28', '#FF8042', '#8884D8'];
+
+export function AnalyticsDashboard({
+  data,
+  loading = false,
+  timeRange = "30d",
+  onTimeRangeChange,
+  onExport,
+  onRefresh
+}: AnalyticsDashboardProps) {
+  const [selectedTimeRange, setSelectedTimeRange] = useState(timeRange);
+  const [showFilters, setShowFilters] = useState(false);
+  const [searchTerm, setSearchTerm] = useState("");
+  const [filteredData, setFilteredData] = useState<AnalyticsData | null>(data);
+
+  const handleTimeRangeChange = (range: string) => {
+    setSelectedTimeRange(range);
+    onTimeRangeChange?.(range);
   };
 
-  const { data: dashboardData, isLoading, error } = useDashboardAnalytics(getDateFilters(timeRange));
-
+  // Apply filters when data or search term changes
   useEffect(() => {
-    if (dashboardData) {
-      // Generate historical data based on the dashboard data
-      const generateHistoricalData = (): AnalyticsData[] => {
-        const periods = [];
-        const now = new Date();
-        
-        switch (timeRange) {
-          case "7d":
-            for (let i = 6; i >= 0; i--) {
-              const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-              periods.push({
-                period: date.toLocaleDateString('en-US', { weekday: 'short' }),
-                revenue: Math.floor(dashboardData.revenue.totalRevenue * (0.8 + Math.random() * 0.4)),
-                orders: Math.floor(dashboardData.orders.totalOrders * (0.8 + Math.random() * 0.4)),
-                users: Math.floor(dashboardData.users.totalUsers * (0.8 + Math.random() * 0.4)),
-                products: Math.floor(89 * (0.8 + Math.random() * 0.4)),
-                conversionRate: 65 + Math.random() * 15,
-                avgOrderValue: Math.floor(dashboardData.orders.averageOrderValue * (0.8 + Math.random() * 0.4))
-              });
-            }
-            break;
-          case "90d":
-            for (let i = 2; i >= 0; i--) {
-              const date = new Date(now.getTime() - i * 30 * 24 * 60 * 60 * 1000);
-              periods.push({
-                period: date.toLocaleDateString('en-US', { month: 'short' }),
-                revenue: Math.floor(dashboardData.revenue.totalRevenue * (0.7 + Math.random() * 0.6)),
-                orders: Math.floor(dashboardData.orders.totalOrders * (0.7 + Math.random() * 0.6)),
-                users: Math.floor(dashboardData.users.totalUsers * (0.7 + Math.random() * 0.6)),
-                products: Math.floor(89 * (0.7 + Math.random() * 0.6)),
-                conversionRate: 60 + Math.random() * 20,
-                avgOrderValue: Math.floor(dashboardData.orders.averageOrderValue * (0.7 + Math.random() * 0.6))
-              });
-            }
-            break;
-          case "1y":
-            for (let i = 11; i >= 0; i--) {
-              const date = new Date(now.getFullYear(), i, 1);
-              periods.push({
-                period: date.toLocaleDateString('en-US', { month: 'short' }),
-                revenue: Math.floor(dashboardData.revenue.totalRevenue * (0.5 + Math.random() * 1)),
-                orders: Math.floor(dashboardData.orders.totalOrders * (0.5 + Math.random() * 1)),
-                users: Math.floor(dashboardData.users.totalUsers * (0.5 + Math.random() * 1)),
-                products: Math.floor(89 * (0.5 + Math.random() * 1)),
-                conversionRate: 55 + Math.random() * 30,
-                avgOrderValue: Math.floor(dashboardData.orders.averageOrderValue * (0.5 + Math.random() * 1))
-              });
-            }
-            break;
-          default: // 30d
-            for (let i = 3; i >= 0; i--) {
-              const date = new Date(now.getTime() - i * 7 * 24 * 60 * 60 * 1000);
-              periods.push({
-                period: `Week ${4 - i}`,
-                revenue: Math.floor(dashboardData.revenue.totalRevenue * (0.8 + Math.random() * 0.4)),
-                orders: Math.floor(dashboardData.orders.totalOrders * (0.8 + Math.random() * 0.4)),
-                users: Math.floor(dashboardData.users.totalUsers * (0.8 + Math.random() * 0.4)),
-                products: Math.floor(89 * (0.8 + Math.random() * 0.4)),
-                conversionRate: 65 + Math.random() * 15,
-                avgOrderValue: Math.floor(dashboardData.orders.averageOrderValue * (0.8 + Math.random() * 0.4))
-              });
-            }
-        }
-        
-        return periods;
-      };
-
-      setAnalyticsData(generateHistoricalData());
+    if (!data) {
+      setFilteredData(null);
+      return;
     }
-  }, [dashboardData, timeRange]);
+
+    if (!searchTerm) {
+      setFilteredData(data);
+      return;
+    }
+
+    // Filter data based on search term
+    const filtered = {
+      ...data,
+      userBehavior: {
+        ...data.userBehavior,
+        topProducts: data.userBehavior.topProducts.filter(product =>
+          product.productId.toLowerCase().includes(searchTerm.toLowerCase())
+        )
+      }
+    };
+    setFilteredData(filtered);
+  }, [data, searchTerm]);
 
   const formatCurrency = (amount: number) => {
     return new Intl.NumberFormat("en-BD", {
@@ -143,60 +131,130 @@ export function AnalyticsDashboard() {
   };
 
   const formatNumber = (num: number) => {
-    return new Intl.NumberFormat("en-BD").format(num);
+    return new Intl.NumberFormat().format(num);
   };
 
-  const calculateGrowth = (current: number, previous: number) => {
-    if (previous === 0) return 0;
-    return ((current - previous) / previous) * 100;
+  const formatPercentage = (num: number) => {
+    return `${Math.round(num * 100) / 100}%`;
   };
 
-  const getGrowthIcon = (growth: number) => {
-    if (growth > 0) {
-      return <TrendingUp className="h-4 w-4 text-green-600" />;
-    } else if (growth < 0) {
-      return <TrendingDown className="h-4 w-4 text-red-600" />;
-    }
-    return null;
+  // Prepare chart data
+  const prepareChartData = (data: any[], key: string, valueKey: string) => {
+    return data.map(item => ({
+      name: item[key],
+      value: item[valueKey]
+    }));
   };
 
-  const getGrowthColor = (growth: number) => {
-    if (growth > 0) return "text-green-600";
-    if (growth < 0) return "text-red-600";
-    return "text-gray-600";
-  };
-
-  if (isLoading) {
-    return <EnhancedAnalyticsLoading />;
-  }
-
-  if (error || !dashboardData) {
+  if (loading || !filteredData) {
     return (
-      <Card className="card-sohozdaam mb-8">
-        <CardContent className="text-center py-8">
-          <p className="text-red-600 mb-4">Error loading analytics data</p>
-          <Button onClick={() => window.location.reload()}>Retry</Button>
-        </CardContent>
-      </Card>
+      <div className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          {Array.from({ length: 6 }).map((_, i) => (
+            <Card key={i} className="animate-pulse">
+              <CardContent className="p-6">
+                <div className="flex items-center">
+                  <div className="w-8 h-8 bg-muted rounded"></div>
+                  <div className="ml-4 w-0 flex-1">
+                    <div className="h-4 bg-muted rounded w-3/4 mb-2"></div>
+                    <div className="h-8 bg-muted rounded w-1/2"></div>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
+      </div>
     );
   }
 
-  const currentData = analyticsData[analyticsData.length - 1];
-  const previousData = analyticsData[analyticsData.length - 2];
-
-  const revenueGrowth = previousData ? calculateGrowth(currentData.revenue, previousData.revenue) : 0;
-  const ordersGrowth = previousData ? calculateGrowth(currentData.orders, previousData.orders) : 0;
-  const usersGrowth = previousData ? calculateGrowth(currentData.users, previousData.users) : 0;
-  const productsGrowth = previousData ? calculateGrowth(currentData.products, previousData.products) : 0;
-
   return (
-    <div className="space-y-6 mb-8">
-      {/* Time Range Selector */}
-      <div className="flex justify-between items-center">
-        <h2 className="text-2xl font-bold">Performance Overview</h2>
-        <div className="flex items-center space-x-2">
-          <Filter className="h-4 w-4 text-muted-foreground" />
-          <Select value={timeRange} onValueChange={setTimeRange}>
+    <div className="space-y-6">
+      {/* Overview Metrics */}
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Users</CardTitle>
+            <Users className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatNumber(filteredData.overview.totalUsers)}</div>
+            <p className="text-xs text-muted-foreground">
+              +{filteredData.overview.newUsers} new this period
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Orders</CardTitle>
+            <Package className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatNumber(filteredData.overview.totalOrders)}</div>
+            <p className="text-xs text-muted-foreground">
+              {formatNumber(filteredData.overview.completedOrders)} completed
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Total Revenue</CardTitle>
+            <DollarSign className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(filteredData.overview.totalRevenue)}</div>
+            <p className="text-xs text-muted-foreground">
+              Avg: {formatCurrency(filteredData.overview.averageOrderValue)}
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Conversion Rate</CardTitle>
+            <TrendingUp className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatPercentage(filteredData.overview.conversionRate)}</div>
+            <p className="text-xs text-muted-foreground">
+              From {formatNumber(filteredData.overview.totalUsers)} users
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Avg Order Value</CardTitle>
+            <ShoppingCart className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatCurrency(filteredData.overview.averageOrderValue)}</div>
+            <p className="text-xs text-muted-foreground">
+              Per completed order
+            </p>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">Active Users</CardTitle>
+            <Activity className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{formatNumber(filteredData.overview.activeUsers)}</div>
+            <p className="text-xs text-muted-foreground">
+              This period
+            </p>
+          </CardContent>
+        </Card>
+      </div>
+
+      {/* Controls and Filters */}
+      <div className="flex items-center justify-between">
+        <div className="flex items-center space-x-4">
+          <Select value={selectedTimeRange} onValueChange={handleTimeRangeChange}>
             <SelectTrigger className="w-32">
               <SelectValue />
             </SelectTrigger>
@@ -207,177 +265,288 @@ export function AnalyticsDashboard() {
               <SelectItem value="1y">Last year</SelectItem>
             </SelectContent>
           </Select>
+          
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() => setShowFilters(!showFilters)}
+          >
+            <Filter className="h-4 w-4 mr-2" />
+            Filters
+          </Button>
+        </div>
+        
+        <div className="flex items-center space-x-3">
+          {onRefresh && (
+            <Button variant="outline" size="sm" onClick={onRefresh}>
+              <RefreshCw className="h-4 w-4 mr-2" />
+              Refresh
+            </Button>
+          )}
+          {onExport && (
+            <Button variant="outline" size="sm" onClick={onExport}>
+              <Download className="h-4 w-4 mr-2" />
+              Export
+            </Button>
+          )}
         </div>
       </div>
 
-      {/* Key Metrics Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <Card className="card-sohozdaam">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Revenue</p>
-                <p className="text-2xl font-bold">{formatCurrency(dashboardData.revenue.totalRevenue)}</p>
-              </div>
-              <DollarSign className="h-8 w-8 text-green-600" />
-            </div>
-            <div className="flex items-center mt-2">
-              {getGrowthIcon(dashboardData.revenue.revenueGrowth)}
-              <span className={`text-sm font-medium ml-1 ${getGrowthColor(dashboardData.revenue.revenueGrowth)}`}>
-                {dashboardData.revenue.revenueGrowth > 0 ? '+' : ''}{dashboardData.revenue.revenueGrowth.toFixed(1)}%
-              </span>
-              <span className="text-xs text-muted-foreground ml-1">vs last period</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-sohozdaam">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
-                <p className="text-2xl font-bold">{formatNumber(dashboardData.orders.totalOrders)}</p>
-              </div>
-              <ShoppingCart className="h-8 w-8 text-blue-600" />
-            </div>
-            <div className="flex items-center mt-2">
-              {getGrowthIcon(dashboardData.orders.orderGrowth)}
-              <span className={`text-sm font-medium ml-1 ${getGrowthColor(dashboardData.orders.orderGrowth)}`}>
-                {dashboardData.orders.orderGrowth > 0 ? '+' : ''}{dashboardData.orders.orderGrowth.toFixed(1)}%
-              </span>
-              <span className="text-xs text-muted-foreground ml-1">vs last period</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-sohozdaam">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Active Users</p>
-                <p className="text-2xl font-bold">{formatNumber(dashboardData.users.activeUsers)}</p>
-              </div>
-              <Users className="h-8 w-8 text-purple-600" />
-            </div>
-            <div className="flex items-center mt-2">
-              {getGrowthIcon(dashboardData.users.userGrowth)}
-              <span className={`text-sm font-medium ml-1 ${getGrowthColor(dashboardData.users.userGrowth)}`}>
-                {dashboardData.users.userGrowth > 0 ? '+' : ''}{dashboardData.users.userGrowth.toFixed(1)}%
-              </span>
-              <span className="text-xs text-muted-foreground ml-1">vs last period</span>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-sohozdaam">
-          <CardContent className="p-6">
-            <div className="flex items-center justify-between">
-              <div>
-                <p className="text-sm font-medium text-muted-foreground">Group Orders</p>
-                <p className="text-2xl font-bold">{formatNumber(dashboardData.groupOrders.totalGroupOrders)}</p>
-              </div>
-              <Package className="h-8 w-8 text-orange-600" />
-            </div>
-            <div className="flex items-center mt-2">
-              <span className="text-sm text-muted-foreground">
-                {dashboardData.groupOrders.activeGroupOrders} active
-              </span>
-            </div>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Performance Metrics */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <Card className="card-sohozdaam">
-          <CardHeader>
-            <CardTitle>Conversion & Performance</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-4">
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Success Rate</span>
-                <Badge variant="default">{dashboardData.groupOrders.successRate.toFixed(1)}%</Badge>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Average Order Value</span>
-                <Badge variant="outline">{formatCurrency(dashboardData.orders.averageOrderValue)}</Badge>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Revenue per User</span>
-                <Badge variant="outline">
-                  {dashboardData.users.totalUsers > 0 ? formatCurrency(dashboardData.revenue.totalRevenue / dashboardData.users.totalUsers) : 0}
-                </Badge>
-              </div>
-              
-              <div className="flex justify-between items-center">
-                <span className="text-sm">Orders per User</span>
-                <Badge variant="outline">
-                  {dashboardData.users.totalUsers > 0 ? (dashboardData.orders.totalOrders / dashboardData.users.totalUsers).toFixed(1) : 0}
-                </Badge>
-              </div>
-            </div>
-          </CardContent>
-        </Card>
-
-        <Card className="card-sohozdaam">
-          <CardHeader>
-            <CardTitle>Top Products</CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {dashboardData.sales.topProducts.slice(0, 5).map((product, index) => (
-                <div key={product.productId} className="flex justify-between items-center">
-                  <div className="flex items-center space-x-2">
-                    <span className="text-sm font-medium text-muted-foreground">#{index + 1}</span>
-                    <span className="text-sm">{product.productName}</span>
-                  </div>
-                  <Badge variant="outline">{formatCurrency(product.revenue)}</Badge>
+      {/* Advanced Filters */}
+      {showFilters && (
+        <Card>
+          <CardContent className="p-4">
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="search">Search Products</Label>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground h-4 w-4" />
+                  <Input
+                    id="search"
+                    placeholder="Search products..."
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                    className="pl-10"
+                  />
                 </div>
-              ))}
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Revenue Range</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="All ranges" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="low">Low (0-1000)</SelectItem>
+                    <SelectItem value="medium">Medium (1000-5000)</SelectItem>
+                    <SelectItem value="high">High (5000+)</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              
+              <div className="space-y-2">
+                <Label>Sort By</Label>
+                <Select>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Default" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="date">Date</SelectItem>
+                    <SelectItem value="revenue">Revenue</SelectItem>
+                    <SelectItem value="users">Users</SelectItem>
+                    <SelectItem value="orders">Orders</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
           </CardContent>
         </Card>
-      </div>
+      )}
 
-      {/* Historical Data Table */}
-      <Card className="card-sohozdaam">
-        <CardHeader>
-          <CardTitle>Historical Performance</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <div className="overflow-x-auto">
-            <table className="w-full">
-              <thead>
-                <tr className="border-b">
-                  <th className="text-left py-2">Period</th>
-                  <th className="text-right py-2">Revenue</th>
-                  <th className="text-right py-2">Orders</th>
-                  <th className="text-right py-2">Users</th>
-                  <th className="text-right py-2">Products</th>
-                  <th className="text-right py-2">Conv. Rate</th>
-                  <th className="text-right py-2">Avg Order</th>
-                </tr>
-              </thead>
-              <tbody>
-                {analyticsData.map((data, index) => (
-                  <tr key={data.period} className="border-b hover:bg-muted/50">
-                    <td className="py-2 font-medium">{data.period}</td>
-                    <td className="text-right py-2">{formatCurrency(data.revenue)}</td>
-                    <td className="text-right py-2">{formatNumber(data.orders)}</td>
-                    <td className="text-right py-2">{formatNumber(data.users)}</td>
-                    <td className="text-right py-2">{formatNumber(data.products)}</td>
-                    <td className="text-right py-2">{data.conversionRate.toFixed(1)}%</td>
-                    <td className="text-right py-2">{formatCurrency(data.avgOrderValue)}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
+      {/* Detailed Analytics Tabs */}
+      <Tabs defaultValue="trends" className="space-y-6">
+        <TabsList className="grid w-full grid-cols-4">
+          <TabsTrigger value="trends">Trends</TabsTrigger>
+          <TabsTrigger value="conversion">Conversion</TabsTrigger>
+          <TabsTrigger value="behavior">Behavior</TabsTrigger>
+          <TabsTrigger value="reports">Reports</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="trends" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>User Growth Trend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <LineChart data={filteredData.trends.users}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                      formatter={(value) => [formatNumber(value as number), "Users"]}
+                    />
+                    <Legend />
+                    <Line 
+                      type="monotone" 
+                      dataKey="count" 
+                      stroke="#8884d8" 
+                      strokeWidth={2}
+                      dot={{ fill: "#8884d8", strokeWidth: 2, r: 4 }}
+                    />
+                  </LineChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Revenue Trend</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <AreaChart data={filteredData.trends.revenue}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis 
+                      dataKey="date" 
+                      tickFormatter={(value) => new Date(value).toLocaleDateString()}
+                    />
+                    <YAxis />
+                    <Tooltip 
+                      labelFormatter={(value) => new Date(value).toLocaleDateString()}
+                      formatter={(value) => [formatCurrency(value as number), "Revenue"]}
+                    />
+                    <Legend />
+                    <Area 
+                      type="monotone" 
+                      dataKey="amount" 
+                      stroke="#00C49F" 
+                      fill="#00C49F" 
+                      fillOpacity={0.3}
+                    />
+                  </AreaChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
           </div>
-        </CardContent>
-      </Card>
+        </TabsContent>
+
+        <TabsContent value="conversion" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Conversion Funnel</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={filteredData.conversion.funnel} layout="horizontal">
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis type="number" />
+                    <YAxis dataKey="stage" type="category" width={100} />
+                    <Tooltip 
+                      formatter={(value) => [formatNumber(value as number), "Users"]}
+                    />
+                    <Legend />
+                    <Bar dataKey="count" fill="#8884d8" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Conversion Rates</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-4">
+                  {filteredData.conversion.funnel.map((stage, index) => (
+                    <div key={index} className="space-y-2">
+                      <div className="flex justify-between text-sm">
+                        <span>{stage.stage}</span>
+                        <span className="font-medium">{formatPercentage(stage.conversion)}</span>
+                      </div>
+                      <div className="w-full bg-muted rounded-full h-2">
+                        <div 
+                          className="bg-primary h-2 rounded-full transition-all duration-300"
+                          style={{ width: `${Math.min(stage.conversion, 100)}%` }}
+                        ></div>
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        {formatNumber(stage.count)} users
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="behavior" className="space-y-6">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <Card>
+              <CardHeader>
+                <CardTitle>Top Products Performance</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <BarChart data={filteredData.userBehavior.topProducts}>
+                    <CartesianGrid strokeDasharray="3 3" />
+                    <XAxis dataKey="productId" />
+                    <YAxis />
+                    <Tooltip 
+                      formatter={(value, name) => [
+                        formatNumber(value as number), 
+                        name === "orders" ? "Orders" : "Quantity"
+                      ]}
+                    />
+                    <Legend />
+                    <Bar dataKey="orders" fill="#8884d8" name="Orders" />
+                    <Bar dataKey="quantity" fill="#82ca9d" name="Quantity" />
+                  </BarChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Product Distribution</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <ResponsiveContainer width="100%" height={300}>
+                  <RechartsPieChart>
+                    <Pie
+                      data={prepareChartData(filteredData.userBehavior.topProducts, "productId", "orders")}
+                      cx="50%"
+                      cy="50%"
+                      labelLine={false}
+                      label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                      outerRadius={80}
+                      fill="#8884d8"
+                      dataKey="value"
+                    >
+                      {prepareChartData(filteredData.userBehavior.topProducts, "productId", "orders").map((entry, index) => (
+                        <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
+                      ))}
+                    </Pie>
+                    <Tooltip formatter={(value) => [formatNumber(value as number), "Orders"]} />
+                  </RechartsPieChart>
+                </ResponsiveContainer>
+              </CardContent>
+            </Card>
+          </div>
+        </TabsContent>
+
+        <TabsContent value="reports" className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Generate Custom Reports</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+                <Button variant="outline" className="h-32 flex-col">
+                  <Users className="h-8 w-8 mb-2" />
+                  User Report
+                </Button>
+                <Button variant="outline" className="h-32 flex-col">
+                  <Package className="h-8 w-8 mb-2" />
+                  Order Report
+                </Button>
+                <Button variant="outline" className="h-32 flex-col">
+                  <DollarSign className="h-8 w-8 mb-2" />
+                  Revenue Report
+                </Button>
+              </div>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
     </div>
   );
 } 

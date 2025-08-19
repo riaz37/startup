@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { useWebSocketContext } from "@/contexts/websocket-context";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
@@ -39,25 +39,22 @@ interface RealTimeOrderTrackingProps {
 export function RealTimeOrderTracking({ orderId, initialStatus }: RealTimeOrderTrackingProps) {
   const [orderStatus, setOrderStatus] = useState<OrderStatus>(initialStatus);
   const [statusHistory, setStatusHistory] = useState<Array<{ status: string; timestamp: string; message: string }>>([]);
-  const [isConnected, setIsConnected] = useState(false);
 
-  const { isConnected: wsConnected, lastMessage } = useWebSocket({
-    onMessage: (message) => {
-      if (message.type === 'order:updated' && message.data.orderId === orderId) {
-        handleOrderUpdate(message.data);
-      } else if (message.type === 'delivery:inTransit' && message.data.orderId === orderId) {
-        handleDeliveryUpdate(message.data);
-      } else if (message.type === 'delivery:completed' && message.data.orderId === orderId) {
-        handleDeliveryComplete(message.data);
+  const { isConnected, lastMessage } = useWebSocketContext();
+
+  // Handle WebSocket messages
+  useEffect(() => {
+    if (lastMessage && lastMessage.event && lastMessage.data) {
+      const data = lastMessage.data as Record<string, unknown>;
+      if (lastMessage.event === 'order:updated' && data.orderId === orderId) {
+        handleOrderUpdate(data);
+      } else if (lastMessage.event === 'delivery:inTransit' && data.orderId === orderId) {
+        handleDeliveryUpdate(data);
+      } else if (lastMessage.event === 'delivery:completed' && data.orderId === orderId) {
+        handleDeliveryComplete(data);
       }
-    },
-    onConnect: () => {
-      setIsConnected(true);
-    },
-    onDisconnect: () => {
-      setIsConnected(false);
-    },
-  });
+    }
+  }, [lastMessage, orderId]);
 
   useEffect(() => {
     // Initialize status history
@@ -70,20 +67,20 @@ export function RealTimeOrderTracking({ orderId, initialStatus }: RealTimeOrderT
     ]);
   }, [initialStatus]);
 
-  const handleOrderUpdate = (data: any) => {
+  const handleOrderUpdate = (data: Record<string, unknown>) => {
     const newStatus = {
       ...orderStatus,
-      status: data.status,
+      status: String(data.status),
       lastUpdated: new Date().toISOString(),
     };
 
     setOrderStatus(newStatus);
     
     // Add to status history
-    const statusMessage = getStatusMessage(data.status, data);
+    const statusMessage = getStatusMessage(String(data.status), data);
     setStatusHistory(prev => [
       {
-        status: data.status,
+        status: String(data.status),
         timestamp: new Date().toISOString(),
         message: statusMessage,
       },
@@ -91,11 +88,11 @@ export function RealTimeOrderTracking({ orderId, initialStatus }: RealTimeOrderT
     ]);
   };
 
-  const handleDeliveryUpdate = (data: any) => {
+  const handleDeliveryUpdate = (data: Record<string, unknown>) => {
     const newStatus = {
       ...orderStatus,
       deliveryStatus: 'IN_TRANSIT',
-      trackingNumber: data.trackingNumber,
+      trackingNumber: data.trackingNumber ? String(data.trackingNumber) : undefined,
       lastUpdated: new Date().toISOString(),
     };
 
@@ -105,13 +102,13 @@ export function RealTimeOrderTracking({ orderId, initialStatus }: RealTimeOrderT
       {
         status: 'IN_TRANSIT',
         timestamp: new Date().toISOString(),
-        message: `Order is now in transit${data.trackingNumber ? ` (Tracking: ${data.trackingNumber})` : ''}`,
+        message: `Order is now in transit${data.trackingNumber ? ` (Tracking: ${String(data.trackingNumber)})` : ''}`,
       },
       ...prev,
     ]);
   };
 
-  const handleDeliveryComplete = (data: any) => {
+  const handleDeliveryComplete = (data: Record<string, unknown>) => {
     const newStatus = {
       ...orderStatus,
       deliveryStatus: 'DELIVERED',
@@ -130,7 +127,7 @@ export function RealTimeOrderTracking({ orderId, initialStatus }: RealTimeOrderT
     ]);
   };
 
-  const getStatusMessage = (status: string, data?: any): string => {
+  const getStatusMessage = (status: string, data?: Record<string, unknown>): string => {
     switch (status) {
       case 'PENDING':
         return 'Order is pending confirmation';
@@ -143,7 +140,7 @@ export function RealTimeOrderTracking({ orderId, initialStatus }: RealTimeOrderT
       case 'DELIVERED':
         return 'Order has been delivered successfully';
       case 'CANCELLED':
-        return `Order has been cancelled${data?.reason ? `: ${data.reason}` : ''}`;
+        return `Order has been cancelled${data?.reason ? `: ${String(data.reason)}` : ''}`;
       case 'REFUNDED':
         return 'Order has been refunded';
       default:
@@ -186,7 +183,7 @@ export function RealTimeOrderTracking({ orderId, initialStatus }: RealTimeOrderT
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: "outline", text: status };
     
     return (
-      <Badge variant={config.variant as any}>
+      <Badge variant={config.variant as "default" | "secondary" | "destructive" | "outline"}>
         {config.text}
       </Badge>
     );
@@ -204,7 +201,7 @@ export function RealTimeOrderTracking({ orderId, initialStatus }: RealTimeOrderT
     const config = statusConfig[status as keyof typeof statusConfig] || { variant: "outline", text: status };
     
     return (
-      <Badge variant={config.variant as any}>
+      <Badge variant={config.variant as "default" | "secondary" | "destructive" | "outline"}>
         {config.text}
       </Badge>
     );
@@ -233,14 +230,14 @@ export function RealTimeOrderTracking({ orderId, initialStatus }: RealTimeOrderT
   return (
     <div className="space-y-6">
       {/* Connection Status */}
-      <Alert variant={wsConnected ? "default" : "destructive"}>
-        {wsConnected ? (
+      <Alert variant={isConnected ? "default" : "destructive"}>
+        {isConnected ? (
           <Wifi className="h-4 w-4" />
         ) : (
           <WifiOff className="h-4 w-4" />
         )}
         <AlertDescription>
-          {wsConnected ? "Real-time tracking active" : "Real-time tracking disconnected"}
+          {isConnected ? "Real-time tracking active" : "Real-time tracking disconnected"}
         </AlertDescription>
       </Alert>
 

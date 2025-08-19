@@ -13,7 +13,13 @@ import {
 } from "lucide-react";
 
 // Enhanced Product Grid Loading
-export function EnhancedProductGridLoading({ count = 12 }: { count?: number }) {
+export function EnhancedProductGridLoading({ 
+  count = 12, 
+  className = "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+}: { 
+  count?: number;
+  className?: string;
+}) {
   return (
     <div className="space-y-6">
       {/* Search and Filter Loading */}
@@ -38,7 +44,7 @@ export function EnhancedProductGridLoading({ count = 12 }: { count?: number }) {
       </div>
 
       {/* Products Grid Loading */}
-      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+      <div className={className}>
         {Array.from({ length: count }).map((_, i) => (
           <div key={i} className="group relative overflow-hidden rounded-lg border-2 border-transparent bg-card hover:shadow-lg transition-all duration-300">
             {/* Shimmer Effect */}
@@ -113,7 +119,13 @@ export function EnhancedProductGridLoading({ count = 12 }: { count?: number }) {
 }
 
 // Enhanced Group Orders Loading
-export function EnhancedGroupOrdersLoading({ count = 8 }: { count?: number }) {
+export function EnhancedGroupOrdersLoading({ 
+  count = 8, 
+  className = "grid grid-cols-1 gap-8 lg:grid-cols-2" 
+}: { 
+  count?: number;
+  className?: string;
+}) {
   return (
     <div className="space-y-6">
       {/* Status Overview Loading */}
@@ -148,7 +160,7 @@ export function EnhancedGroupOrdersLoading({ count = 8 }: { count?: number }) {
       </div>
 
       {/* Group Orders Grid Loading */}
-      <div className="grid grid-cols-1 gap-8 lg:grid-cols-2">
+      <div className={className}>
         {Array.from({ length: count }).map((_, i) => (
           <div key={i} className="border rounded-lg overflow-hidden bg-card relative group">
             <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -238,7 +250,13 @@ export function EnhancedGroupOrdersLoading({ count = 8 }: { count?: number }) {
 }
 
 // Enhanced Analytics Loading
-export function EnhancedAnalyticsLoading() {
+export function EnhancedAnalyticsLoading({
+  statsClassName = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6",
+  chartsClassName = "grid grid-cols-1 lg:grid-cols-2 gap-6"
+}: {
+  statsClassName?: string;
+  chartsClassName?: string;
+}) {
   return (
     <div className="space-y-6 mb-8">
       {/* Header Loading */}
@@ -248,7 +266,7 @@ export function EnhancedAnalyticsLoading() {
       </div>
 
       {/* Stats Cards Loading */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+      <div className={statsClassName}>
         {[1, 2, 3, 4].map((i) => (
           <div key={i} className="border rounded-lg p-6 bg-card relative overflow-hidden group">
             <div className="absolute inset-0 -translate-x-full animate-[shimmer_2s_infinite] bg-gradient-to-r from-transparent via-white/20 to-transparent" />
@@ -270,7 +288,7 @@ export function EnhancedAnalyticsLoading() {
       </div>
 
       {/* Charts Loading */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className={chartsClassName}>
         {[1, 2].map((i) => (
           <div key={i} className="border rounded-lg p-6 bg-card">
             <div className="space-y-4">

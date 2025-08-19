@@ -254,7 +254,10 @@ export default function ProductsPage() {
 
         {/* Products Grid/List with Progressive Loading */}
         {loading ? (
-          <EnhancedProductGridLoading count={12} />
+          <EnhancedProductGridLoading 
+            count={12} 
+            className={viewMode === "list" ? "space-y-6" : "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4"}
+          />
         ) : filteredProducts.length === 0 ? (
           <EmptyState
             icon={Package}

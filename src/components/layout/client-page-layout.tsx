@@ -15,7 +15,9 @@ export function ClientPageLayout({ children, showFooter = true }: ClientPageLayo
   return (
     <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
       <Navigation user={session?.user} />
-      {children}
+      <div className="responsive-content-wrapper">
+        {children}
+      </div>
       {showFooter && <Footer />}
     </div>
   );

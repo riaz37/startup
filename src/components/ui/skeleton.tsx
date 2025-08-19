@@ -92,9 +92,13 @@ export function GroupOrderCardSkeleton() {
 }
 
 // Dashboard Stats Skeleton
-export function DashboardStatsSkeleton() {
+export function DashboardStatsSkeleton({ 
+  className = "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6" 
+}: { 
+  className?: string;
+}) {
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className={className}>
       {[1, 2, 3, 4].map((i) => (
         <div key={i} className="border rounded-lg p-6 bg-card">
           <div className="flex items-center justify-between">
@@ -175,9 +179,15 @@ export function ImageSkeleton({ className }: { className?: string }) {
 }
 
 // Search Results Skeleton
-export function SearchResultsSkeleton({ count = 6 }: { count?: number }) {
+export function SearchResultsSkeleton({ 
+  count = 6, 
+  className = "grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4" 
+}: { 
+  count?: number;
+  className?: string;
+}) {
   return (
-    <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4">
+    <div className={className}>
       {Array.from({ length: count }).map((_, i) => (
         <ProductCardSkeleton key={i} />
       ))}

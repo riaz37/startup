@@ -26,15 +26,18 @@ export function AddToCartButton({
   className,
   compact = false
 }: AddToCartButtonProps) {
-  const [quantity, setQuantity] = useState(product.minOrderQty);
+  const [quantity, setQuantity] = useState(Math.max(1, product.minOrderQty || 1));
   const [isLoading, setIsLoading] = useState(false);
   const { data: session } = useSession();
   const { addToCart } = useCartStore();
 
+  // Ensure quantity is always valid
+  const minQuantity = Math.max(1, product.minOrderQty || 1);
+  const maxQuantity = product.maxOrderQty || 999;
+
   const handleQuantityChange = (change: number) => {
     const newQuantity = quantity + change;
-    if (newQuantity >= product.minOrderQty && 
-        (!product.maxOrderQty || newQuantity <= product.maxOrderQty)) {
+    if (newQuantity >= minQuantity && newQuantity <= maxQuantity) {
       setQuantity(newQuantity);
     }
   };
@@ -55,6 +58,31 @@ export function AddToCartButton({
       return;
     }
 
+    // Debug logging
+    console.log('Adding to cart with:', {
+      productId: product.id,
+      quantity,
+      orderType,
+      groupOrderId,
+      product: product.name
+    });
+
+    // Validate required fields
+    if (!product.id) {
+      toast.error('Product ID is missing');
+      return;
+    }
+
+    if (!quantity || quantity <= 0) {
+      toast.error('Quantity must be greater than 0');
+      return;
+    }
+
+    if (!orderType) {
+      toast.error('Order type is required');
+      return;
+    }
+
     setIsLoading(true);
     try {
       await addToCart({
@@ -66,6 +94,7 @@ export function AddToCartButton({
 
       toast.success(`${product.name} added to cart!`);
     } catch (error) {
+      console.error('Add to cart error:', error);
       toast.error(error instanceof Error ? error.message : 'Failed to add to cart');
     } finally {
       setIsLoading(false);

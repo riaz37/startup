@@ -68,7 +68,7 @@ export default function GroupOrderDetailPage() {
   const fetchGroupOrder = async (id: string) => {
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/group-orders/${id}`);
+      const response = await fetch(`/api/admin/group-orders/${id}`);
       if (response.ok) {
         const data = await response.json();
         setGroupOrder(data.groupOrder);
@@ -82,7 +82,7 @@ export default function GroupOrderDetailPage() {
     }
   };
 
-  const handleStatusUpdate = async (newStatus: string, additionalData?: any) => {
+  const handleStatusUpdate = async (newStatus: string, additionalData?: { actualDelivery?: string }) => {
     try {
       const response = await fetch(`/api/admin/group-orders/${params.id}/status`, {
         method: "PATCH",
@@ -301,12 +301,24 @@ export default function GroupOrderDetailPage() {
                 <div className="space-y-2">
                   <div className="flex items-center justify-between text-sm">
                     <span>Progress</span>
-                    <span className="font-medium">{Math.round(groupOrder.progressPercentage)}%</span>
+                    <span className="font-medium">
+                      {isNaN(groupOrder.progressPercentage) || !isFinite(groupOrder.progressPercentage) 
+                        ? "0%" 
+                        : `${Math.round(groupOrder.progressPercentage)}%`
+                      }
+                    </span>
                   </div>
                   <div className="w-full bg-muted rounded-full h-3">
                     <div
                       className="bg-primary h-3 rounded-full transition-all duration-300"
-                      style={{ width: `${Math.min(groupOrder.progressPercentage, 100)}%` }}
+                      style={{ 
+                        width: `${Math.min(
+                          isNaN(groupOrder.progressPercentage) || !isFinite(groupOrder.progressPercentage) 
+                            ? 0 
+                            : groupOrder.progressPercentage, 
+                          100
+                        )}%` 
+                      }}
                     />
                   </div>
                 </div>
@@ -315,13 +327,20 @@ export default function GroupOrderDetailPage() {
                   <div>
                     <span className="text-muted-foreground">Current Quantity:</span>
                     <span className="ml-2 font-medium">
-                      {groupOrder.currentQuantity} / {groupOrder.targetQuantity} units
+                      {isNaN(groupOrder.currentQuantity) || !isFinite(groupOrder.currentQuantity) 
+                        ? 0 
+                        : Math.max(0, groupOrder.currentQuantity)
+                      } / {groupOrder.targetQuantity} units
                     </span>
                   </div>
                   <div>
                     <span className="text-muted-foreground">Current Amount:</span>
                     <span className="ml-2 font-medium">
-                      {formatCurrency(groupOrder.currentAmount)} / {formatCurrency(groupOrder.minThreshold)}
+                      {formatCurrency(
+                        isNaN(groupOrder.currentAmount) || !isFinite(groupOrder.currentAmount) 
+                          ? 0 
+                          : Math.max(0, groupOrder.currentAmount)
+                      )} / {formatCurrency(groupOrder.minThreshold)}
                     </span>
                   </div>
                 </div>
@@ -365,7 +384,10 @@ export default function GroupOrderDetailPage() {
               <CardHeader>
                 <CardTitle className="flex items-center">
                   <Users className="h-5 w-5 mr-2" />
-                  Orders ({groupOrder.participantCount})
+                  Orders ({isNaN(groupOrder.participantCount) || !isFinite(groupOrder.participantCount) 
+                    ? 0 
+                    : Math.max(0, groupOrder.participantCount)
+                  })
                 </CardTitle>
               </CardHeader>
               <CardContent>
@@ -380,11 +402,11 @@ export default function GroupOrderDetailPage() {
                         <div>
                           <p className="font-medium">Order #{order.id.slice(-8)}</p>
                           <p className="text-sm text-muted-foreground">
-                            {order.items.reduce((sum, item) => sum + item.quantity, 0)} units
+                            {order.items.reduce((sum, item) => sum + (item.quantity || 0), 0)} units
                           </p>
                         </div>
                         <div className="text-right">
-                          <p className="font-medium">{formatCurrency(order.totalAmount)}</p>
+                          <p className="font-medium">{formatCurrency(order.totalAmount || 0)}</p>
                         </div>
                       </div>
                     ))}
@@ -414,7 +436,12 @@ export default function GroupOrderDetailPage() {
                   <Users className="h-5 w-5 text-muted-foreground" />
                   <div>
                     <p className="text-sm font-medium">Participants</p>
-                    <p className="text-2xl font-bold">{groupOrder.participantCount}</p>
+                    <p className="text-2xl font-bold">
+                      {isNaN(groupOrder.participantCount) || !isFinite(groupOrder.participantCount) 
+                        ? 0 
+                        : Math.max(0, groupOrder.participantCount)
+                      }
+                    </p>
                   </div>
                 </div>
                 
@@ -451,7 +478,10 @@ export default function GroupOrderDetailPage() {
                       {formatDate(groupOrder.expiresAt)}
                     </p>
                     <p className="text-xs text-muted-foreground">
-                      {groupOrder.timeRemaining} days remaining
+                      {isNaN(groupOrder.timeRemaining) || !isFinite(groupOrder.timeRemaining) 
+                        ? 0 
+                        : Math.max(0, groupOrder.timeRemaining)
+                      } days remaining
                     </p>
                   </div>
                   

@@ -4,3 +4,5 @@ export { AdminNavigation } from "./admin-navigation";
 export { PriceManagementPanel } from "./price-management-panel";
 export { PriceTrendsChart } from "./price-trends-chart";
 export { PriorityOrdersManagementPanel } from "./priority-orders-management-panel";
+export { OrderManagementPanel } from "./order-management-panel";
+export { AnalyticsDashboard } from "./analytics-dashboard";

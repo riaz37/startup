@@ -53,23 +53,23 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
   };
 
   return (
-    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+    <div className="stats-grid-responsive">
       {stats.map((stat, index) => (
         <Card 
           key={index} 
-          className="group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border shadow-sm"
+          className="mobile-card group hover:shadow-lg transition-all duration-300 hover:-translate-y-1 border shadow-sm"
         >
-          <CardContent className="p-6">
-            <div className="space-y-4">
+          <CardContent className="p-4 sm:p-6">
+            <div className="space-y-3 sm:space-y-4">
               {/* Icon and Title */}
               <div className="flex items-center justify-between">
-                <div className={`p-3 rounded-xl ${getColorClasses(stat.color)} group-hover:scale-110 transition-transform duration-300`}>
-                  <stat.icon className="h-6 w-6" />
+                <div className={`p-2 sm:p-3 rounded-xl ${getColorClasses(stat.color)} group-hover:scale-110 transition-transform duration-300`}>
+                  <stat.icon className="h-5 w-5 sm:h-6 sm:w-6" />
                 </div>
                 {stat.change && (
                   <Badge 
                     variant="outline" 
-                    className={`${getTrendColor(stat.trend)} text-xs font-medium px-2 py-1`}
+                    className={`${getTrendColor(stat.trend)} text-responsive-xs font-medium px-2 py-1`}
                   >
                     <span className="mr-1">{getTrendIcon(stat.trend)}</span>
                     {stat.change}
@@ -79,14 +79,14 @@ export function DashboardStats({ stats }: DashboardStatsProps) {
               
               {/* Value and Description */}
               <div>
-                <p className="text-3xl font-bold text-foreground mb-1">
+                <p className="text-responsive-2xl sm:text-responsive-3xl font-bold text-foreground mb-1">
                   {stat.value}
                 </p>
-                <p className="text-sm font-medium text-muted-foreground mb-2">
+                <p className="text-responsive-sm sm:text-responsive-base font-medium text-muted-foreground mb-2">
                   {stat.title}
                 </p>
                 {stat.description && (
-                  <p className="text-xs text-muted-foreground">
+                  <p className="text-responsive-xs sm:text-responsive-sm text-muted-foreground">
                     {stat.description}
                   </p>
                 )}

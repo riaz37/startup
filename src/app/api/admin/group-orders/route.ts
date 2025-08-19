@@ -44,10 +44,16 @@ export async function GET(request: NextRequest) {
       const currentQuantity = order.orders.reduce((sum, o) => sum + o.items.reduce((itemSum, item) => itemSum + item.quantity, 0), 0);
       const currentAmount = order.orders.reduce((sum, o) => sum + o.totalAmount, 0);
       
-      // Calculate progress percentage
-      const progressPercentage = order.targetQuantity > 0 
-        ? (currentQuantity / order.targetQuantity) * 100 
-        : 0;
+      // Calculate progress percentage with safety checks
+      let progressPercentage = 0;
+      if (order.targetQuantity > 0 && currentQuantity >= 0) {
+        progressPercentage = Math.min((currentQuantity / order.targetQuantity) * 100, 100);
+      }
+      
+      // Ensure progressPercentage is a valid number
+      if (isNaN(progressPercentage) || !isFinite(progressPercentage)) {
+        progressPercentage = 0;
+      }
 
       // Calculate time remaining
       const now = new Date();
@@ -66,15 +72,15 @@ export async function GET(request: NextRequest) {
         id: order.id,
         batchNumber: order.batchNumber,
         minThreshold: order.minThreshold,
-        currentAmount,
+        currentAmount: Math.max(0, currentAmount),
         targetQuantity: order.targetQuantity,
-        currentQuantity,
+        currentQuantity: Math.max(0, currentQuantity),
         pricePerUnit: order.pricePerUnit,
         status,
         expiresAt: order.expiresAt,
         estimatedDelivery: order.estimatedDelivery,
-        progressPercentage,
-        participantCount,
+        progressPercentage: Math.round(progressPercentage * 100) / 100, // Round to 2 decimal places
+        participantCount: Math.max(0, participantCount),
         timeRemaining: Math.max(0, timeRemaining),
         product: order.product,
         createdAt: order.createdAt,

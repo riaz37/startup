@@ -10,4 +10,12 @@ export { handleApiError as handleApiClientError } from './api';
 export { handleApiError as handleApiUtilsError } from './utils';
 
 // Export services (these are client-safe)
-export * from './services'; 
+export * from './services';
+
+// Export email management types and service
+export { 
+  emailManagementService,
+  BulkEmailRequest,
+  BulkEmailResult,
+  UserPreview
+} from './services/email-management-service'; 

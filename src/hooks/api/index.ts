@@ -26,4 +26,5 @@ export * from './use-addresses';
 export * from './use-analytics';
 
 // Email management hooks
-export * from './use-email-management'; 
+export * from './use-email-management';
+export * from './use-admin-stats'; 

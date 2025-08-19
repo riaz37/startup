@@ -1,4 +1,19 @@
-import { prisma } from "@/lib/database";
+import apiClient from '../api/api-client';
+
+export interface DiscountConfig {
+  id: string;
+  name: string;
+  description?: string;
+  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue: number;
+  minQuantity?: number;
+  maxQuantity?: number;
+  startDate?: Date;
+  endDate?: Date;
+  isActive: boolean;
+  createdAt: Date;
+  updatedAt: Date;
+}
 
 export interface CreateDiscountConfigData {
   name: string;
@@ -11,152 +26,99 @@ export interface CreateDiscountConfigData {
   endDate?: Date;
 }
 
-export interface UpdateDiscountConfigData extends Partial<CreateDiscountConfigData> {
+export interface UpdateDiscountConfigData {
+  name?: string;
+  description?: string;
+  discountType?: 'PERCENTAGE' | 'FIXED_AMOUNT';
+  discountValue?: number;
+  minQuantity?: number;
+  maxQuantity?: number;
+  startDate?: Date;
+  endDate?: Date;
   isActive?: boolean;
 }
 
-export interface DiscountConfig {
-  id: string;
-  name: string;
-  description?: string | null;
-  discountType: 'PERCENTAGE' | 'FIXED_AMOUNT';
-  discountValue: number;
-  isActive: boolean;
-  minQuantity?: number | null;
-  maxQuantity?: number | null;
-  startDate?: Date | null;
-  endDate?: Date | null;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface ApplicableDiscount extends DiscountConfig {
-  discountAmount: number;
+export interface BulkDiscountOperation {
+  operation: 'activate' | 'deactivate' | 'delete';
+  discountIds: string[];
 }
 
 export class DiscountService {
-  // Create a new discount configuration
-  static async createDiscountConfig(data: CreateDiscountConfigData) {
-    return await prisma.discountConfig.create({
-      data: {
-        name: data.name,
-        description: data.description,
-        discountType: data.discountType,
-        discountValue: data.discountValue,
-        minQuantity: data.minQuantity,
-        maxQuantity: data.maxQuantity,
-        startDate: data.startDate,
-        endDate: data.endDate,
-      },
-    });
-  }
-
-  // Get all discount configurations
-  static async getAllDiscountConfigs() {
-    return await prisma.discountConfig.findMany({
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  // Get active discount configurations
-  static async getActiveDiscountConfigs() {
-    const now = new Date();
-    return await prisma.discountConfig.findMany({
-      where: {
-        isActive: true,
-        OR: [
-          { startDate: null },
-          { startDate: { lte: now } },
-        ],
-        AND: [
-          { endDate: null },
-          { endDate: { gte: now } },
-        ],
-      },
-      orderBy: { createdAt: 'desc' },
-    });
-  }
-
-  // Get discount configuration by ID
-  static async getDiscountConfigById(id: string) {
-    return await prisma.discountConfig.findUnique({
-      where: { id },
-    });
-  }
-
-  // Update discount configuration
-  static async updateDiscountConfig(id: string, data: UpdateDiscountConfigData) {
-    return await prisma.discountConfig.update({
-      where: { id },
-      data,
-    });
-  }
-
-  // Delete discount configuration
-  static async deleteDiscountConfig(id: string) {
-    return await prisma.discountConfig.delete({
-      where: { id },
-    });
-  }
-
-  // Calculate discount for a given quantity and base price
-  static calculateDiscount(basePrice: number, quantity: number, discountConfigs: DiscountConfig[]) {
-    let totalDiscount = 0;
-    const applicableDiscounts: ApplicableDiscount[] = [];
-
-    for (const config of discountConfigs) {
-      if (!config.isActive) continue;
-
-      // Check date range
-      const now = new Date();
-      if (config.startDate && config.startDate > now) continue;
-      if (config.endDate && config.endDate < now) continue;
-
-      // Check quantity range
-      if (config.minQuantity && quantity < config.minQuantity) continue;
-      if (config.maxQuantity && quantity > config.maxQuantity) continue;
-
-      let discountAmount = 0;
-      if (config.discountType === 'PERCENTAGE') {
-        discountAmount = (basePrice * config.discountValue) / 100;
-      } else if (config.discountType === 'FIXED_AMOUNT') {
-        discountAmount = config.discountValue;
-      }
-
-      totalDiscount += discountAmount;
-      applicableDiscounts.push({
-        ...config,
-        discountAmount,
-      });
+  async getDiscounts(): Promise<DiscountConfig[]> {
+    try {
+      const response = await apiClient.get('/api/admin/discounts');
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch discounts');
     }
-
-    return {
-      totalDiscount,
-      discountedPrice: basePrice - totalDiscount,
-      applicableDiscounts,
-    };
   }
 
-  // Get default bulk discount (for backward compatibility)
-  static async getDefaultBulkDiscount() {
-    const defaultDiscount = await prisma.discountConfig.findFirst({
-      where: {
-        name: 'Default Bulk Purchase Discount',
-        isActive: true,
-      },
-    });
-
-    if (!defaultDiscount) {
-      // Create default discount if none exists
-      return await this.createDiscountConfig({
-        name: 'Default Bulk Purchase Discount',
-        description: 'Default 10% discount for bulk purchases',
-        discountType: 'PERCENTAGE',
-        discountValue: 10,
-        minQuantity: 1,
-      });
+  async getDiscount(id: string): Promise<DiscountConfig> {
+    try {
+      const response = await apiClient.get(`/api/admin/discounts/${id}`);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch discount');
     }
-
-    return defaultDiscount;
   }
-} 
+
+  async createDiscount(data: CreateDiscountConfigData): Promise<DiscountConfig> {
+    try {
+      const response = await apiClient.post('/api/admin/discounts', data);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to create discount');
+    }
+  }
+
+  async updateDiscount(id: string, data: UpdateDiscountConfigData): Promise<DiscountConfig> {
+    try {
+      const response = await apiClient.put(`/api/admin/discounts/${id}`, data);
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to update discount');
+    }
+  }
+
+  async deleteDiscount(id: string): Promise<void> {
+    try {
+      await apiClient.delete(`/api/admin/discounts/${id}`);
+    } catch (error) {
+      throw new Error('Failed to delete discount');
+    }
+  }
+
+  async toggleDiscountStatus(id: string, isActive: boolean): Promise<DiscountConfig> {
+    try {
+      const response = await apiClient.patch(`/api/admin/discounts/${id}/toggle`, { isActive });
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to toggle discount status');
+    }
+  }
+
+  async bulkOperation(operation: BulkDiscountOperation): Promise<void> {
+    try {
+      await apiClient.post('/api/admin/discounts/bulk', operation);
+    } catch (error) {
+      throw new Error('Failed to perform bulk operation');
+    }
+  }
+
+  async getDiscountStats(): Promise<{
+    total: number;
+    active: number;
+    inactive: number;
+    expired: number;
+    scheduled: number;
+  }> {
+    try {
+      const response = await apiClient.get('/api/admin/discounts/stats');
+      return response.data;
+    } catch (error) {
+      throw new Error('Failed to fetch discount stats');
+    }
+  }
+}
+
+export const discountService = new DiscountService(); 

@@ -4,7 +4,7 @@ import { prisma } from "@/lib";
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -17,7 +17,7 @@ export async function PATCH(
     }
 
     const { quantity, addressId, notes } = await request.json();
-    const orderId = params.id;
+    const { id: orderId } = await params;
 
     // Fetch order with related data
     const order = await prisma.order.findUnique({

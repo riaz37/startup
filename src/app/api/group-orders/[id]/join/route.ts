@@ -121,6 +121,7 @@ export async function POST(
           addressId,
           orderNumber,
           totalAmount,
+          total: totalAmount, // Add the missing total field
           status: orderStatus,
           paymentStatus: paymentStatus,
           paymentMethod: paymentMethod || null
@@ -134,7 +135,8 @@ export async function POST(
           productId: groupOrder.productId,
           quantity: requestedQuantity,
           unitPrice: groupOrder.pricePerUnit,
-          totalPrice: totalAmount
+          totalPrice: totalAmount,
+          price: groupOrder.pricePerUnit // Add the missing price field
         }
       });
 
@@ -145,9 +147,9 @@ export async function POST(
             orderId: order.id,
             amount: totalAmount,
             currency: "BDT",
-            paymentMethod: "CASH_ON_DELIVERY" as any,
-            gatewayProvider: null as any,
-            status: "CASH_ON_DELIVERY" as any,
+            paymentMethod: "CASH_ON_DELIVERY",
+            gatewayProvider: null,
+            status: "CASH_ON_DELIVERY",
             processedAt: new Date(),
           },
         });

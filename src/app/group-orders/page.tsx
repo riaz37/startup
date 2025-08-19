@@ -191,7 +191,7 @@ export default function GroupOrdersPage() {
 
         {/* Status Overview */}
         <div className="mb-8 status-overview">
-          <div className="grid grid-cols-2 md:grid-cols-4 gap-3 sm:gap-4">
+          <div className="grid-stats-4">
             <div className="bg-card border rounded-lg p-3 sm:p-4 text-center hover:shadow-md transition-shadow">
               <div className="text-xl sm:text-2xl font-bold text-primary">{getStatusCount('COLLECTING')}</div>
               <div className="text-xs sm:text-sm text-muted-foreground">Collecting</div>
@@ -298,7 +298,7 @@ export default function GroupOrdersPage() {
               renderItem={renderGroupOrderCard}
               skeletonComponent={GroupOrderCardSkeleton}
               pageSize={8}
-              className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-6 group-orders-grid"
+              className="grid-group-orders group-orders-grid"
             />
           </div>
         )}

@@ -1,48 +1,60 @@
 import { NextRequest, NextResponse } from "next/server";
-import { prisma } from "@/lib";
-import { getCurrentUser } from "@/lib";
+import { getCurrentUser, prisma } from "@/lib";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const user = await getCurrentUser();
     
     if (!user) {
       return NextResponse.json(
-        { error: "Authentication required" },
+        { error: "Unauthorized" },
         { status: 401 }
       );
     }
 
-    const { id } = await params;
-    const order = await prisma.order.findFirst({
-      where: {
-        id: id,
-        userId: user.id
-      },
+    const { id } = params;
+
+    // Users can only see their own orders, admins can see all
+    const where: { id: string; userId?: string } = { id };
+    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+      where.userId = user.id;
+    }
+
+    const order = await prisma.order.findUnique({
+      where,
       include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         groupOrder: {
           include: {
             product: {
               select: {
+                id: true,
                 name: true,
                 unit: true,
                 unitSize: true,
-                imageUrl: true
-              }
-            }
-          }
+                imageUrl: true,
+              },
+            },
+          },
         },
         address: true,
         items: true,
-        delivery: {
-          include: {
-            pickupLocation: true
-          }
-        }
-      }
+        payments: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
+      },
     });
 
     if (!order) {
@@ -52,24 +64,8 @@ export async function GET(
       );
     }
 
-    // Calculate order progress based on group order status
-    const statusSteps = [
-      { key: "COLLECTING", label: "Collecting Orders", description: "Waiting for more participants" },
-      { key: "THRESHOLD_MET", label: "Threshold Met", description: "Minimum orders reached" },
-      { key: "ORDERED", label: "Order Placed", description: "Order placed with supplier" },
-      { key: "SHIPPED", label: "Shipped", description: "Order is on the way" },
-      { key: "DELIVERED", label: "Ready for Pickup", description: "Ready for collection" }
-    ];
+    return NextResponse.json(order);
 
-    const currentStepIndex = statusSteps.findIndex(step => step.key === order.groupOrder.status);
-    const progress = currentStepIndex >= 0 ? ((currentStepIndex + 1) / statusSteps.length) * 100 : 0;
-
-    return NextResponse.json({
-      ...order,
-      statusSteps,
-      currentStepIndex,
-      progress
-    });
   } catch (error) {
     console.error("Error fetching order:", error);
     return NextResponse.json(
@@ -81,55 +77,92 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: Promise<{ id: string }> }
+  { params }: { params: { id: string } }
 ) {
   try {
     const user = await getCurrentUser();
     
-    if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
+    if (!user) {
       return NextResponse.json(
-        { error: "Unauthorized. Only admins can update orders." },
+        { error: "Unauthorized" },
+        { status: 401 }
+      );
+    }
+
+    // Only admins can update orders
+    if (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN") {
+      return NextResponse.json(
+        { error: "Forbidden: Admin access required" },
         { status: 403 }
       );
     }
 
-    const { id } = await params;
-    const body = await request.json();
-    const { status, paymentStatus, deliveredAt } = body;
+    const { id } = params;
+    const updates = await request.json();
 
-    const updateData: any = {};
+    // Validate updates
+    const allowedFields = ['status', 'paymentStatus', 'notes', 'estimatedDelivery'] as const;
+    const validUpdates: Record<string, any> = {};
     
-    if (status) {
-      updateData.status = status;
-    }
-    
-    if (paymentStatus) {
-      updateData.paymentStatus = paymentStatus;
+    for (const field of allowedFields) {
+      if (updates[field] !== undefined) {
+        validUpdates[field] = updates[field];
+      }
     }
 
-    if (deliveredAt) {
-      updateData.deliveredAt = new Date(deliveredAt);
+    if (Object.keys(validUpdates).length === 0) {
+      return NextResponse.json(
+        { error: "No valid fields to update" },
+        { status: 400 }
+      );
     }
 
-    const order = await prisma.order.update({
-      where: { id: id },
-      data: updateData,
+    // Add updatedAt timestamp
+    validUpdates.updatedAt = new Date();
+
+    // Update the order
+    const updatedOrder = await prisma.order.update({
+      where: { id },
+      data: validUpdates,
       include: {
+        user: {
+          select: {
+            id: true,
+            name: true,
+            email: true,
+          },
+        },
         groupOrder: {
           include: {
             product: {
               select: {
+                id: true,
                 name: true,
                 unit: true,
-                unitSize: true
-              }
-            }
-          }
-        }
-      }
+                unitSize: true,
+                imageUrl: true,
+              },
+            },
+          },
+        },
+        address: true,
+        items: true,
+        payments: {
+          orderBy: {
+            createdAt: "desc",
+          },
+          take: 1,
+        },
+      },
     });
 
-    return NextResponse.json(order);
+    // Note: Audit logging could be implemented here when OrderAuditLog model is added to schema
+
+    return NextResponse.json({
+      message: "Order updated successfully",
+      order: updatedOrder,
+    });
+
   } catch (error) {
     console.error("Error updating order:", error);
     return NextResponse.json(

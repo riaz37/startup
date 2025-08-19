@@ -4,7 +4,7 @@ import { prisma } from "@/lib";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -17,7 +17,7 @@ export async function POST(
     }
 
     const { reason } = await request.json();
-    const orderId = params.id;
+    const { id: orderId } = await params;
 
     // Fetch order with related data
     const order = await prisma.order.findUnique({

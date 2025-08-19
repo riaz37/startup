@@ -24,6 +24,7 @@ model User {
   password      String?   // For email/password auth
   isVerified    Boolean   @default(false)
   role          Role      @default(CUSTOMER)
+  status        UserStatus @default(ACTIVE) // Add status field for user management
   emailVerified DateTime? // For NextAuth
   image         String?   // For OAuth providers
   isActive      Boolean   @default(true)
@@ -49,6 +50,11 @@ model User {
   // New relations for price management
   priceHistory ProductPriceHistory[] @relation("PriceHistoryAdmin")
   priceAlerts PriceAlert[]
+
+  // Email management relations
+  createdEmailTemplates EmailTemplate[] @relation("EmailTemplateCreator")
+  createdEmailCampaigns EmailCampaign[] @relation("EmailCampaignCreator")
+  emailDeliveries EmailDelivery[] @relation("UserEmailDeliveries")
 
   @@map("users")
 }
@@ -182,6 +188,8 @@ model GroupOrder {
   expiresAt         DateTime // When to stop collecting orders
   estimatedDelivery DateTime? // Expected delivery date
   actualDelivery    DateTime? // Actual delivery date
+  groupOrderImageUrl String? // URL of the group order image
+  groupOrderImagePublicId String? // Cloudinary public ID for the image
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 
@@ -202,6 +210,7 @@ model Order {
   orderNumber   String        @unique // ORD-2024-001, etc.
   status        OrderStatus   @default(PENDING)
   totalAmount   Float
+  total         Float         // Add this field for analytics compatibility
   paymentStatus PaymentStatus @default(PENDING)
   paymentMethod PaymentMethod? // Updated to use enum
   paymentId     String? // Payment gateway transaction ID
@@ -231,6 +240,7 @@ model OrderItem {
   quantity   Int
   unitPrice  Float // Price per unit at time of order
   totalPrice Float // quantity * unitPrice
+  price      Float  // Add this field for analytics compatibility
   createdAt  DateTime @default(now())
 
   // Relations
@@ -574,6 +584,13 @@ enum PriceAlertType {
   ANY_CHANGE
 }
 
+enum UserStatus {
+  ACTIVE
+  BANNED
+  PENDING
+  SUSPENDED
+}
+
 // Price History Tracking
 model ProductPriceHistory {
   id        String   @id @default(cuid())
@@ -744,4 +761,154 @@ model CartItem {
   product Product @relation(fields: [productId], references: [id])
 
   @@map("cart_items")
+}
+
+// Email Management System
+model EmailTemplate {
+  id          String   @id @default(cuid())
+  name        String   @unique
+  subject     String
+  content     String   @db.Text
+  variables   String[] // Array of template variables like {{userName}}, {{orderId}}
+  category    EmailTemplateCategory
+  isActive    Boolean  @default(true)
+  createdBy   String   // User ID who created the template
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  creator     User     @relation("EmailTemplateCreator", fields: [createdBy], references: [id])
+  campaigns   EmailCampaign[]
+  deliveries  EmailDelivery[]
+
+  @@map("email_templates")
+}
+
+model EmailCampaign {
+  id          String   @id @default(cuid())
+  name        String
+  description String?
+  templateId  String
+  status      EmailCampaignStatus @default(DRAFT)
+  targetAudience EmailTargetAudience
+  targetFilters Json? // JSON object for filtering users (e.g., {role: "CUSTOMER", isActive: true})
+  scheduledAt DateTime?
+  sentAt      DateTime?
+  totalSent   Int      @default(0)
+  totalDelivered Int   @default(0)
+  totalFailed Int      @default(0)
+  createdBy   String
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  template    EmailTemplate @relation(fields: [templateId], references: [id])
+  creator     User          @relation("EmailCampaignCreator", fields: [createdBy], references: [id])
+  deliveries  EmailDelivery[]
+
+  @@map("email_campaigns")
+}
+
+model EmailDelivery {
+  id          String   @id @default(cuid())
+  campaignId  String?
+  templateId  String?
+  userId      String?  // User who received the email (if applicable)
+  to          String
+  subject     String
+  content     String   @db.Text
+  status      EmailDeliveryStatus @default(PENDING)
+  sentAt      DateTime?
+  deliveredAt DateTime?
+  failedAt    DateTime?
+  error       String?
+  retryCount  Int      @default(0)
+  maxRetries  Int      @default(3)
+  metadata    Json?    // Additional delivery metadata
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  // Relations
+  campaign    EmailCampaign? @relation(fields: [campaignId], references: [id])
+  template    EmailTemplate? @relation(fields: [templateId], references: [id])
+  user        User?          @relation("UserEmailDeliveries", fields: [userId], references: [id])
+
+  @@map("email_deliveries")
+}
+
+enum EmailTemplateCategory {
+  WELCOME
+  ORDER_CONFIRMATION
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  SHIPPING_UPDATE
+  DELIVERY_CONFIRMATION
+  PRICE_ALERT
+  DISCOUNT_OFFER
+  NEWSLETTER
+  CUSTOM
+}
+
+enum EmailCampaignStatus {
+  DRAFT
+  SCHEDULED
+  SENDING
+  COMPLETED
+  PAUSED
+  CANCELLED
+}
+
+enum EmailTargetAudience {
+  ALL_USERS
+  CUSTOMERS_ONLY
+  ADMIN_USERS
+  SPECIFIC_USERS
+  FILTERED_USERS
+}
+
+enum EmailDeliveryStatus {
+  PENDING
+  SENDING
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+// Analytics
+model AnalyticsEvent {
+  id        String   @id @default(cuid())
+  userId    String?
+  eventType AnalyticsEventType
+  eventData Json? // JSON data associated with the event
+  createdAt DateTime @default(now())
+
+  @@map("analytics_events")
+}
+
+enum AnalyticsEventType {
+  USER_LOGIN
+  USER_LOGOUT
+  USER_REGISTERED
+  PRODUCT_VIEWED
+  CART_VIEWED
+  CART_ITEM_ADDED
+  CART_ITEM_REMOVED
+  ORDER_PLACED
+  ORDER_CONFIRMED
+  ORDER_CANCELLED
+  ORDER_DELIVERED
+  PAYMENT_SUCCESS
+  PAYMENT_FAILED
+  PRIORITY_ORDER_PLACED
+  PRIORITY_ORDER_CONFIRMED
+  PRIORITY_ORDER_CANCELLED
+  PRIORITY_ORDER_DELIVERED
+  REVIEW_SUBMITTED
+  NOTIFICATION_VIEWED
+  SETTINGS_UPDATED
+  DISCOUNT_CONFIG_UPDATED
+  PRODUCT_PRICE_UPDATED
+  PRICE_ALERT_TRIGGERED
+  ANALYTICS_EVENT_CUSTOM
 }

@@ -8,15 +8,15 @@ import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
-import { 
-  ArrowLeft, 
-  Package, 
-  Star, 
-  Users, 
+import {
+  ArrowLeft,
+  Package,
+  Star,
+  Users,
   ShoppingCart,
   Heart,
   Share2,
-  Truck
+  Truck,
 } from "lucide-react";
 
 interface Product {
@@ -70,7 +70,7 @@ async function getProduct(id: string): Promise<Product | null> {
             },
           },
           orderBy: {
-            createdAt: 'desc',
+            createdAt: "desc",
           },
         },
       },
@@ -81,9 +81,11 @@ async function getProduct(id: string): Promise<Product | null> {
     }
 
     // Calculate average rating and review count
-    const avgRating = product.reviews.length > 0
-      ? product.reviews.reduce((sum, review) => sum + review.rating, 0) / product.reviews.length
-      : 0;
+    const avgRating =
+      product.reviews.length > 0
+        ? product.reviews.reduce((sum, review) => sum + review.rating, 0) /
+          product.reviews.length
+        : 0;
 
     return {
       id: product.id,
@@ -139,9 +141,7 @@ function renderStars(rating: number) {
 
   const emptyStars = 5 - Math.ceil(rating);
   for (let i = 0; i < emptyStars; i++) {
-    stars.push(
-      <Star key={`empty-${i}`} className="h-4 w-4 text-gray-300" />
-    );
+    stars.push(<Star key={`empty-${i}`} className="h-4 w-4 text-gray-300" />);
   }
 
   return stars;
@@ -156,7 +156,11 @@ function formatPrice(price: number) {
   }).format(price);
 }
 
-export default async function ProductPage({ params }: { params: Promise<{ id: string }> }) {
+export default async function ProductPage({
+  params,
+}: {
+  params: Promise<{ id: string }>;
+}) {
   const { id } = await params;
   const product = await getProduct(id);
   const user = await getCurrentUser();
@@ -165,17 +169,18 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
     notFound();
   }
 
-  const discount = product.mrp > product.sellingPrice 
-    ? Math.round(((product.mrp - product.sellingPrice) / product.mrp) * 100)
-    : 0;
+  const discount =
+    product.mrp > product.sellingPrice
+      ? Math.round(((product.mrp - product.sellingPrice) / product.mrp) * 100)
+      : 0;
 
   return (
     <PageLayout>
       <MainContainer>
         {/* Back Navigation */}
         <div className="mb-6">
-          <Link 
-            href="/products" 
+          <Link
+            href="/products"
             className="inline-flex items-center text-sm text-muted-foreground hover:text-foreground transition-colors"
           >
             <ArrowLeft className="h-4 w-4 mr-2" />
@@ -207,24 +212,6 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                 </div>
               )}
             </Card>
-
-            {/* Action Buttons */}
-            <div className="flex flex-col space-y-3">
-              <div className="flex space-x-3">
-                <Button className="flex-1 bg-primary hover:bg-primary/90" asChild>
-                  <Link href={`/group-orders/create?productId=${product.id}`}>
-                    <Users className="h-4 w-4 mr-2" />
-                    Create Group Order
-                  </Link>
-                </Button>
-                <Button variant="outline" size="icon">
-                  <Heart className="h-4 w-4" />
-                </Button>
-                <Button variant="outline" size="icon">
-                  <Share2 className="h-4 w-4" />
-                </Button>
-              </div>
-            </div>
           </div>
 
           {/* Product Details Section */}
@@ -248,14 +235,15 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                       </div>
                     )}
                   </div>
-                  
+
                   {product.reviewCount > 0 && (
                     <div className="text-right">
                       <div className="flex items-center mb-1">
                         {renderStars(product.avgRating)}
                       </div>
                       <p className="text-sm text-muted-foreground">
-                        {product.avgRating.toFixed(1)} out of 5 ({product.reviewCount} reviews)
+                        {product.avgRating.toFixed(1)} out of 5 (
+                        {product.reviewCount} reviews)
                       </p>
                     </div>
                   )}
@@ -270,11 +258,17 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
                   <div className="flex items-center justify-between mb-3">
                     <span className="text-sm font-medium">Quantity</span>
                     <span className="text-sm text-muted-foreground">
-                      Min: {product.minOrderQty} • Max: {product.maxOrderQty || 'No limit'}
+                      Min: {product.minOrderQty} • Max:{" "}
+                      {product.maxOrderQty || "No limit"}
                     </span>
                   </div>
-                  <Button className="w-full bg-primary hover:bg-primary/90" asChild>
-                    <Link href={`/priority-orders/create?productId=${product.id}`}>
+                  <Button
+                    className="w-full bg-primary hover:bg-primary/90"
+                    asChild
+                  >
+                    <Link
+                      href={`/priority-orders/create?productId=${product.id}`}
+                    >
                       <ShoppingCart className="h-4 w-4 mr-2" />
                       Add to Cart - Priority Order
                     </Link>
@@ -294,21 +288,35 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <CardContent className="space-y-4">
                 <div className="grid grid-cols-1 gap-3">
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
-                    <span className="text-sm text-muted-foreground">Unit Size</span>
-                    <span className="text-sm font-medium">{product.unitSize} {product.unit}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Unit Size
+                    </span>
+                    <span className="text-sm font-medium">
+                      {product.unitSize} {product.unit}
+                    </span>
                   </div>
                   <div className="flex items-center justify-between py-2 border-b border-border/50">
-                    <span className="text-sm text-muted-foreground">Minimum Order</span>
-                    <span className="text-sm font-medium">{product.minOrderQty} {product.unit}</span>
+                    <span className="text-sm text-muted-foreground">
+                      Minimum Order
+                    </span>
+                    <span className="text-sm font-medium">
+                      {product.minOrderQty} {product.unit}
+                    </span>
                   </div>
                   {product.maxOrderQty && (
                     <div className="flex items-center justify-between py-2 border-b border-border/50">
-                      <span className="text-sm text-muted-foreground">Maximum Order</span>
-                      <span className="text-sm font-medium">{product.maxOrderQty} {product.unit}</span>
+                      <span className="text-sm text-muted-foreground">
+                        Maximum Order
+                      </span>
+                      <span className="text-sm font-medium">
+                        {product.maxOrderQty} {product.unit}
+                      </span>
                     </div>
                   )}
                   <div className="flex items-center justify-between py-2">
-                    <span className="text-sm text-muted-foreground">Category</span>
+                    <span className="text-sm text-muted-foreground">
+                      Category
+                    </span>
                     <Badge variant="outline" className="text-xs">
                       {product.category.name}
                     </Badge>
@@ -363,7 +371,10 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               <CardContent>
                 <div className="space-y-6">
                   {product.reviews.map((review) => (
-                    <div key={review.id} className="border-b border-border pb-4 last:border-b-0">
+                    <div
+                      key={review.id}
+                      className="border-b border-border pb-4 last:border-b-0"
+                    >
                       <div className="flex items-center justify-between mb-3">
                         <div className="flex items-center space-x-3">
                           <div className="w-8 h-8 bg-primary/10 rounded-full flex items-center justify-center">
@@ -404,7 +415,8 @@ export default async function ProductPage({ params }: { params: Promise<{ id: st
               Ready to Order?
             </h3>
             <p className="text-muted-foreground mb-4">
-              Choose between priority orders for immediate delivery or join group orders for better prices
+              Choose between priority orders for immediate delivery or join
+              group orders for better prices
             </p>
             <div className="flex justify-center space-x-3">
               <Button className="bg-primary hover:bg-primary/90" asChild>

@@ -1,19 +1,21 @@
 "use client";
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Badge } from '@/components/ui/badge';
 import { Switch } from '@/components/ui/switch';
+import { Checkbox } from '@/components/ui/checkbox';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Textarea } from '@/components/ui/textarea';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { Plus, Edit, Trash2, Calendar, Package } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Plus, Edit, Trash2, Calendar, Package, BarChart3, Download, Upload, Filter } from 'lucide-react';
 import { useDiscounts } from '@/hooks/api/use-discounts';
-import { CreateDiscountConfigData, UpdateDiscountConfigData } from '@/lib/services/discount-service';
+import { toast } from 'sonner';
 
 interface DiscountFormData {
   name: string;
@@ -41,14 +43,31 @@ export function DiscountManagementPanel() {
   const { discounts, isLoading, error, createDiscount, updateDiscount, deleteDiscount, toggleDiscountStatus } = useDiscounts();
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
+  const [isBulkDialogOpen, setIsBulkDialogOpen] = useState(false);
   const [editingDiscount, setEditingDiscount] = useState<any>(null);
   const [formData, setFormData] = useState<DiscountFormData>(initialFormData);
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [selectedDiscounts, setSelectedDiscounts] = useState<string[]>([]);
+  const [bulkOperation, setBulkOperation] = useState<'activate' | 'deactivate' | 'delete'>('activate');
+  const [filterType, setFilterType] = useState<string>('all');
+  const [filterStatus, setFilterStatus] = useState<string>('all');
+
+  // Filter discounts based on current filters
+  const filteredDiscounts = discounts.filter(discount => {
+    if (filterType !== 'all' && discount.discountType !== filterType) return false;
+    if (filterStatus !== 'all') {
+      if (filterStatus === 'active' && !discount.isActive) return false;
+      if (filterStatus === 'inactive' && discount.isActive) return false;
+      if (filterStatus === 'expired' && (!discount.endDate || new Date(discount.endDate) >= new Date())) return false;
+      if (filterStatus === 'scheduled' && (!discount.startDate || new Date(discount.startDate) <= new Date())) return false;
+    }
+    return true;
+  });
 
   const handleCreateDiscount = async () => {
     setIsSubmitting(true);
     try {
-      const discountData: CreateDiscountConfigData = {
+      const discountData = {
         name: formData.name,
         description: formData.description || undefined,
         discountType: formData.discountType,
@@ -63,9 +82,10 @@ export function DiscountManagementPanel() {
       if (result) {
         setIsCreateDialogOpen(false);
         setFormData(initialFormData);
+        toast.success('Discount created successfully');
       }
     } catch (error) {
-      console.error('Error creating discount:', error);
+      toast.error('Failed to create discount');
     } finally {
       setIsSubmitting(false);
     }
@@ -76,7 +96,7 @@ export function DiscountManagementPanel() {
     
     setIsSubmitting(true);
     try {
-      const discountData: UpdateDiscountConfigData = {
+      const discountData = {
         name: formData.name,
         description: formData.description || undefined,
         discountType: formData.discountType,
@@ -92,9 +112,10 @@ export function DiscountManagementPanel() {
         setIsEditDialogOpen(false);
         setEditingDiscount(null);
         setFormData(initialFormData);
+        toast.success('Discount updated successfully');
       }
     } catch (error) {
-      console.error('Error updating discount:', error);
+      toast.error('Failed to update discount');
     } finally {
       setIsSubmitting(false);
     }
@@ -117,7 +138,62 @@ export function DiscountManagementPanel() {
 
   const handleDeleteDiscount = async (id: string) => {
     if (confirm('Are you sure you want to delete this discount?')) {
-      await deleteDiscount(id);
+      try {
+        await deleteDiscount(id);
+        toast.success('Discount deleted successfully');
+      } catch (error) {
+        toast.error('Failed to delete discount');
+      }
+    }
+  };
+
+  const handleBulkOperation = async () => {
+    if (selectedDiscounts.length === 0) {
+      toast.error('Please select at least one discount');
+      return;
+    }
+
+    if (bulkOperation === 'delete' && !confirm(`Are you sure you want to delete ${selectedDiscounts.length} discount(s)?`)) {
+      return;
+    }
+
+    try {
+      const response = await fetch('/api/admin/discounts/bulk', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          operation: bulkOperation,
+          discountIds: selectedDiscounts
+        })
+      });
+
+      if (response.ok) {
+        toast.success(`Bulk operation completed successfully`);
+        setSelectedDiscounts([]);
+        setIsBulkDialogOpen(false);
+        // Refresh discounts
+        window.location.reload();
+      } else {
+        throw new Error('Bulk operation failed');
+      }
+    } catch (error) {
+      toast.error('Failed to perform bulk operation');
+    }
+  };
+
+  const handleSelectAll = (checked: boolean) => {
+    if (checked) {
+      setSelectedDiscounts(filteredDiscounts.map(d => d.id));
+    } else {
+      setSelectedDiscounts([]);
+    }
+  };
+
+  const handleSelectDiscount = (discountId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedDiscounts(prev => [...prev, discountId]);
+    } else {
+      setSelectedDiscounts(prev => prev.filter(id => id !== discountId));
     }
   };
 
@@ -142,6 +218,31 @@ export function DiscountManagementPanel() {
     }
     
     return <Badge variant="default">Active</Badge>;
+  };
+
+  const exportDiscounts = () => {
+    const csvContent = [
+      ['Name', 'Description', 'Type', 'Value', 'Min Quantity', 'Max Quantity', 'Start Date', 'End Date', 'Status'],
+      ...filteredDiscounts.map(d => [
+        d.name,
+        d.description || '',
+        d.discountType,
+        d.discountValue,
+        d.minQuantity || '',
+        d.maxQuantity || '',
+        d.startDate ? new Date(d.startDate).toLocaleDateString() : '',
+        d.endDate ? new Date(d.endDate).toLocaleDateString() : '',
+        d.isActive ? 'Active' : 'Inactive'
+      ])
+    ].map(row => row.map(cell => `"${cell}"`).join(',')).join('\n');
+
+    const blob = new Blob([csvContent], { type: 'text/csv' });
+    const url = window.URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'discounts.csv';
+    a.click();
+    window.URL.revokeObjectURL(url);
   };
 
   if (isLoading) {
@@ -170,142 +271,204 @@ export function DiscountManagementPanel() {
             Configure bulk purchase discounts and promotional offers
           </p>
         </div>
-        <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
-          <DialogTrigger asChild>
-            <Button>
-              <Plus className="h-4 w-4 mr-2" />
-              Add Discount
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="max-w-md">
-            <DialogHeader>
-              <DialogTitle>Create New Discount</DialogTitle>
-            </DialogHeader>
-            <div className="space-y-4">
-              <div>
-                <Label htmlFor="name">Discount Name</Label>
-                <Input
-                  id="name"
-                  value={formData.name}
-                  onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
-                  placeholder="e.g., Bulk Purchase Discount"
-                />
-              </div>
-              
-              <div>
-                <Label htmlFor="description">Description</Label>
-                <Textarea
-                  id="description"
-                  value={formData.description}
-                  onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
-                  placeholder="Optional description"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
+        <div className="flex space-x-2">
+          <Button variant="outline" onClick={exportDiscounts}>
+            <Download className="h-4 w-4 mr-2" />
+            Export
+          </Button>
+          <Dialog open={isCreateDialogOpen} onOpenChange={setIsCreateDialogOpen}>
+            <DialogTrigger asChild>
+              <Button>
+                <Plus className="h-4 w-4 mr-2" />
+                Add Discount
+              </Button>
+            </DialogTrigger>
+            <DialogContent className="max-w-md">
+              <DialogHeader>
+                <DialogTitle>Create New Discount</DialogTitle>
+              </DialogHeader>
+              <div className="space-y-4">
                 <div>
-                  <Label htmlFor="discountType">Type</Label>
-                  <Select
-                    value={formData.discountType}
-                    onValueChange={(value: 'PERCENTAGE' | 'FIXED_AMOUNT') => 
-                      setFormData(prev => ({ ...prev, discountType: value }))
-                    }
+                  <Label htmlFor="name">Discount Name</Label>
+                  <Input
+                    id="name"
+                    value={formData.name}
+                    onChange={(e) => setFormData(prev => ({ ...prev, name: e.target.value }))}
+                    placeholder="e.g., Bulk Purchase Discount"
+                  />
+                </div>
+                
+                <div>
+                  <Label htmlFor="description">Description</Label>
+                  <Textarea
+                    id="description"
+                    value={formData.description}
+                    onChange={(e) => setFormData(prev => ({ ...prev, description: e.target.value }))}
+                    placeholder="Optional description"
+                  />
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="discountType">Type</Label>
+                    <Select
+                      value={formData.discountType}
+                      onValueChange={(value: 'PERCENTAGE' | 'FIXED_AMOUNT') => 
+                        setFormData(prev => ({ ...prev, discountType: value }))
+                      }
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                        <SelectItem value="FIXED_AMOUNT">Fixed Amount</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="discountValue">
+                      {formData.discountType === 'PERCENTAGE' ? 'Percentage (%)' : 'Amount (৳)'}
+                    </Label>
+                    <Input
+                      id="discountValue"
+                      type="number"
+                      value={formData.discountValue}
+                      onChange={(e) => setFormData(prev => ({ ...prev, discountValue: e.target.value }))}
+                      placeholder={formData.discountType === 'PERCENTAGE' ? '10' : '50'}
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="minQuantity">Min Quantity</Label>
+                    <Input
+                      id="minQuantity"
+                      type="number"
+                      value={formData.minQuantity}
+                      onChange={(e) => setFormData(prev => ({ ...prev, minQuantity: e.target.value }))}
+                      placeholder="1"
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="maxQuantity">Max Quantity</Label>
+                    <Input
+                      id="maxQuantity"
+                      type="number"
+                      value={formData.maxQuantity}
+                      onChange={(e) => setFormData(prev => ({ ...prev, maxQuantity: e.target.value }))}
+                      placeholder="100"
+                    />
+                  </div>
+                </div>
+
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <Label htmlFor="startDate">Start Date</Label>
+                    <Input
+                      id="startDate"
+                      type="date"
+                      value={formData.startDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
+                    />
+                  </div>
+                  
+                  <div>
+                    <Label htmlFor="endDate">End Date</Label>
+                    <Input
+                      id="endDate"
+                      type="date"
+                      value={formData.endDate}
+                      onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
+                    />
+                  </div>
+                </div>
+
+                <div className="flex gap-2 pt-4">
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsCreateDialogOpen(false)}
+                    className="flex-1"
                   >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="PERCENTAGE">Percentage</SelectItem>
-                      <SelectItem value="FIXED_AMOUNT">Fixed Amount</SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-                
-                <div>
-                  <Label htmlFor="discountValue">
-                    {formData.discountType === 'PERCENTAGE' ? 'Percentage (%)' : 'Amount (৳)'}
-                  </Label>
-                  <Input
-                    id="discountValue"
-                    type="number"
-                    value={formData.discountValue}
-                    onChange={(e) => setFormData(prev => ({ ...prev, discountValue: e.target.value }))}
-                    placeholder={formData.discountType === 'PERCENTAGE' ? '10' : '50'}
-                  />
+                    Cancel
+                  </Button>
+                  <Button
+                    onClick={handleCreateDiscount}
+                    disabled={isSubmitting || !formData.name || !formData.discountValue}
+                    className="flex-1"
+                  >
+                    {isSubmitting ? 'Creating...' : 'Create Discount'}
+                  </Button>
                 </div>
               </div>
+            </DialogContent>
+          </Dialog>
+        </div>
+      </div>
 
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="minQuantity">Min Quantity</Label>
-                  <Input
-                    id="minQuantity"
-                    type="number"
-                    value={formData.minQuantity}
-                    onChange={(e) => setFormData(prev => ({ ...prev, minQuantity: e.target.value }))}
-                    placeholder="1"
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="maxQuantity">Max Quantity</Label>
-                  <Input
-                    id="maxQuantity"
-                    type="number"
-                    value={formData.maxQuantity}
-                    onChange={(e) => setFormData(prev => ({ ...prev, maxQuantity: e.target.value }))}
-                    placeholder="100"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="date"
-                    value={formData.startDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, startDate: e.target.value }))}
-                  />
-                </div>
-                
-                <div>
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input
-                    id="endDate"
-                    type="date"
-                    value={formData.endDate}
-                    onChange={(e) => setFormData(prev => ({ ...prev, endDate: e.target.value }))}
-                  />
-                </div>
-              </div>
-
-              <div className="flex gap-2 pt-4">
+      {/* Filters and Bulk Actions */}
+      <Card>
+        <CardHeader>
+          <div className="flex items-center justify-between">
+            <CardTitle>Filters & Bulk Actions</CardTitle>
+            {selectedDiscounts.length > 0 && (
+              <div className="flex items-center space-x-2">
+                <span className="text-sm text-muted-foreground">
+                  {selectedDiscounts.length} selected
+                </span>
                 <Button
                   variant="outline"
-                  onClick={() => setIsCreateDialogOpen(false)}
-                  className="flex-1"
+                  size="sm"
+                  onClick={() => setIsBulkDialogOpen(true)}
                 >
-                  Cancel
-                </Button>
-                <Button
-                  onClick={handleCreateDiscount}
-                  disabled={isSubmitting || !formData.name || !formData.discountValue}
-                  className="flex-1"
-                >
-                  {isSubmitting ? 'Creating...' : 'Create Discount'}
+                  Bulk Actions
                 </Button>
               </div>
+            )}
+          </div>
+        </CardHeader>
+        <CardContent>
+          <div className="flex items-center space-x-4">
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="filter-type">Type:</Label>
+              <Select value={filterType} onValueChange={setFilterType}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Types</SelectItem>
+                  <SelectItem value="PERCENTAGE">Percentage</SelectItem>
+                  <SelectItem value="FIXED_AMOUNT">Fixed Amount</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
-          </DialogContent>
-        </Dialog>
-      </div>
+            
+            <div className="flex items-center space-x-2">
+              <Label htmlFor="filter-status">Status:</Label>
+              <Select value={filterStatus} onValueChange={setFilterStatus}>
+                <SelectTrigger className="w-32">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="all">All Status</SelectItem>
+                  <SelectItem value="active">Active</SelectItem>
+                  <SelectItem value="inactive">Inactive</SelectItem>
+                  <SelectItem value="expired">Expired</SelectItem>
+                  <SelectItem value="scheduled">Scheduled</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+        </CardContent>
+      </Card>
 
       {/* Discounts List */}
       <Card>
         <CardHeader>
-          <CardTitle>Active Discounts</CardTitle>
+          <CardTitle>Active Discounts ({filteredDiscounts.length})</CardTitle>
         </CardHeader>
         <CardContent>
           {error && (
@@ -314,21 +477,35 @@ export function DiscountManagementPanel() {
             </Alert>
           )}
 
-          {discounts.length === 0 ? (
+          {filteredDiscounts.length === 0 ? (
             <div className="text-center py-8">
               <Package className="h-12 w-12 text-muted-foreground mx-auto mb-4" />
-              <p className="text-muted-foreground">No discounts configured yet</p>
+              <p className="text-muted-foreground">No discounts found</p>
               <p className="text-sm text-muted-foreground mt-1">
-                Create your first discount to get started
+                {discounts.length === 0 ? 'Create your first discount to get started' : 'Try adjusting your filters'}
               </p>
             </div>
           ) : (
             <div className="space-y-4">
-              {discounts.map((discount) => (
+              {/* Select All Row */}
+              <div className="flex items-center space-x-3 p-3 border rounded-lg bg-muted/50">
+                <Checkbox
+                  checked={selectedDiscounts.length === filteredDiscounts.length}
+                  onCheckedChange={handleSelectAll}
+                />
+                <span className="text-sm font-medium">Select All</span>
+              </div>
+              
+              {filteredDiscounts.map((discount) => (
                 <div
                   key={discount.id}
-                  className="flex items-center justify-between p-4 border rounded-lg"
+                  className="flex items-center space-x-3 p-4 border rounded-lg"
                 >
+                  <Checkbox
+                    checked={selectedDiscounts.includes(discount.id)}
+                    onCheckedChange={(checked) => handleSelectDiscount(discount.id, checked as boolean)}
+                  />
+                  
                   <div className="flex-1">
                     <div className="flex items-center space-x-3">
                       <div>
@@ -388,6 +565,56 @@ export function DiscountManagementPanel() {
           )}
         </CardContent>
       </Card>
+
+      {/* Bulk Operations Dialog */}
+      <Dialog open={isBulkDialogOpen} onOpenChange={setIsBulkDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Bulk Operations</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label>Operation</Label>
+              <Select value={bulkOperation} onValueChange={(value: any) => setBulkOperation(value)}>
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="activate">Activate</SelectItem>
+                  <SelectItem value="deactivate">Deactivate</SelectItem>
+                  <SelectItem value="delete">Delete</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            
+            <div>
+              <p className="text-sm text-muted-foreground">
+                This will {bulkOperation} {selectedDiscounts.length} discount(s).
+                {bulkOperation === 'delete' && ' This action cannot be undone.'}
+              </p>
+            </div>
+            
+            <div className="flex gap-2 pt-4">
+              <Button
+                variant="outline"
+                onClick={() => setIsBulkDialogOpen(false)}
+                className="flex-1"
+              >
+                Cancel
+              </Button>
+              <Button
+                onClick={handleBulkOperation}
+                variant={bulkOperation === 'delete' ? 'destructive' : 'default'}
+                className="flex-1"
+              >
+                {bulkOperation === 'activate' && 'Activate'}
+                {bulkOperation === 'deactivate' && 'Deactivate'}
+                {bulkOperation === 'delete' && 'Delete'}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
 
       {/* Edit Dialog */}
       <Dialog open={isEditDialogOpen} onOpenChange={setIsEditDialogOpen}>

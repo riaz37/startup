@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useWebSocket } from "@/hooks/use-websocket";
+import { useWebSocketContext } from "@/contexts/websocket-context";
 import { WebSocketMessage } from "@/types";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -34,30 +34,40 @@ export function RealTimeNotifications() {
   const [showNotifications, setShowNotifications] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
 
-  const { isConnected, lastMessage, connect, disconnect } = useWebSocket({
-    onMessage: (message) => {
-      handleWebSocketMessage(message);
-    },
-    onConnect: () => {
-      toast.success("Real-time updates connected!");
-    },
-    onDisconnect: () => {
-      toast.warning("Real-time updates disconnected");
-    },
-  });
+  const { isConnected, lastMessage, connect, disconnect } = useWebSocketContext();
 
-  const handleWebSocketMessage = (message: WebSocketMessage) => {
-    const { type, data, timestamp } = message;
+  // Handle WebSocket messages
+  useEffect(() => {
+    if (lastMessage) {
+      handleWebSocketMessage(lastMessage);
+    }
+  }, [lastMessage]);
+
+  // Handle connection status changes
+  useEffect(() => {
+    if (isConnected) {
+      toast.success("Real-time updates connected!");
+    } else {
+      toast.warning("Real-time updates disconnected");
+    }
+  }, [isConnected]);
+
+  const handleWebSocketMessage = (message: any) => {
+    if (!message || !message.event || !message.data || !message.timestamp) {
+      return; // Invalid message format
+    }
+    
+    const { event, data, timestamp } = message;
     
     let notification: RealTimeNotification;
 
-    switch (type) {
+    switch (event) {
       case 'order:updated':
         notification = {
-          id: `order-${data.orderId}-${Date.now()}`,
+          id: `order-${String(data.orderId)}-${Date.now()}`,
           type: 'info',
           title: 'Order Updated',
-          message: `Your order ${data.orderNumber || data.orderId} status has been updated to ${data.status}`,
+          message: `Your order ${String(data.orderNumber || data.orderId)} status has been updated to ${String(data.status)}`,
           timestamp,
           data,
           isRead: false,
@@ -66,10 +76,10 @@ export function RealTimeNotifications() {
 
       case 'payment:success':
         notification = {
-          id: `payment-${data.orderId}-${Date.now()}`,
+          id: `payment-${String(data.orderId)}-${Date.now()}`,
           type: 'success',
           title: 'Payment Successful',
-          message: `Payment of ৳${data.amount} has been processed successfully`,
+          message: `Payment of ৳${String(data.amount)} has been processed successfully`,
           timestamp,
           data,
           isRead: false,
@@ -78,10 +88,10 @@ export function RealTimeNotifications() {
 
       case 'payment:failed':
         notification = {
-          id: `payment-failed-${data.orderId}-${Date.now()}`,
+          id: `payment-failed-${String(data.orderId)}-${Date.now()}`,
           type: 'error',
           title: 'Payment Failed',
-          message: `Payment failed: ${data.reason || 'Unknown error'}`,
+          message: `Payment failed: ${String(data.reason || 'Unknown error')}`,
           timestamp,
           data,
           isRead: false,
@@ -90,10 +100,10 @@ export function RealTimeNotifications() {
 
       case 'groupOrder:thresholdMet':
         notification = {
-          id: `group-${data.groupOrderId}-${Date.now()}`,
+          id: `group-${String(data.groupOrderId)}-${Date.now()}`,
           type: 'success',
           title: 'Group Order Threshold Met!',
-          message: `The group order for ${data.productName} has reached its minimum threshold`,
+          message: `The group order for ${String(data.productName)} has reached its minimum threshold`,
           timestamp,
           data,
           isRead: false,
@@ -102,10 +112,10 @@ export function RealTimeNotifications() {
 
       case 'delivery:scheduled':
         notification = {
-          id: `delivery-${data.deliveryId}-${Date.now()}`,
+          id: `delivery-${String(data.deliveryId)}-${Date.now()}`,
           type: 'info',
           title: 'Delivery Scheduled',
-          message: `Your delivery has been scheduled for ${new Date(data.scheduledDate).toLocaleDateString()}`,
+          message: `Your delivery has been scheduled for ${new Date(String(data.scheduledDate)).toLocaleDateString()}`,
           timestamp,
           data,
           isRead: false,
@@ -114,10 +124,10 @@ export function RealTimeNotifications() {
 
       case 'delivery:inTransit':
         notification = {
-          id: `delivery-transit-${data.deliveryId}-${Date.now()}`,
+          id: `delivery-transit-${String(data.deliveryId)}-${Date.now()}`,
           type: 'info',
           title: 'Delivery In Transit',
-          message: `Your order is now on its way! ${data.trackingNumber ? `Tracking: ${data.trackingNumber}` : ''}`,
+          message: `Your order is now on its way! ${data.trackingNumber ? `Tracking: ${String(data.trackingNumber)}` : ''}`,
           timestamp,
           data,
           isRead: false,
@@ -126,7 +136,7 @@ export function RealTimeNotifications() {
 
       case 'delivery:completed':
         notification = {
-          id: `delivery-completed-${data.deliveryId}-${Date.now()}`,
+          id: `delivery-completed-${String(data.deliveryId)}-${Date.now()}`,
           type: 'success',
           title: 'Delivery Completed!',
           message: `Your order has been delivered successfully`,
@@ -138,10 +148,10 @@ export function RealTimeNotifications() {
 
       case 'delivery:failed':
         notification = {
-          id: `delivery-failed-${data.deliveryId}-${Date.now()}`,
+          id: `delivery-failed-${String(data.deliveryId)}-${Date.now()}`,
           type: 'error',
           title: 'Delivery Failed',
-          message: `Delivery could not be completed: ${data.reason || 'Unknown error'}`,
+          message: `Delivery could not be completed: ${String(data.reason || 'Unknown error')}`,
           timestamp,
           data,
           isRead: false,
@@ -150,10 +160,10 @@ export function RealTimeNotifications() {
 
       case 'notification:new':
         notification = {
-          id: data.notificationId || `notif-${Date.now()}`,
+          id: String(data.notificationId) || `notif-${Date.now()}`,
           type: 'info',
-          title: data.title || 'New Notification',
-          message: data.message || 'You have a new notification',
+          title: String(data.title || 'New Notification'),
+          message: String(data.message || 'You have a new notification'),
           timestamp,
           data,
           isRead: false,

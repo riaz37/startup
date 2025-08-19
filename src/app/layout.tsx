@@ -6,6 +6,7 @@ import { Toaster } from "@/components/ui/sonner";
 import { AuthProvider } from "@/components/auth/auth-provider";
 import { WebSocketProvider } from "@/contexts/websocket-context";
 import { QueryProvider } from "@/providers/query-provider";
+import { ResponsiveDebug } from "@/components/common/responsive-debug";
 
 const inter = Inter({ subsets: ["latin"] });
 
@@ -33,6 +34,7 @@ export default function RootLayout({
               <WebSocketProvider>
                 {children}
                 <Toaster />
+                <ResponsiveDebug />
               </WebSocketProvider>
             </AuthProvider>
           </QueryProvider>

@@ -107,9 +107,16 @@ export async function PATCH(
     const currentQuantity = updatedOrder.orders.reduce((sum: number, o) => sum + o.items.reduce((itemSum: number, item) => itemSum + item.quantity, 0), 0);
     const currentAmount = updatedOrder.orders.reduce((sum: number, o) => sum + o.totalAmount, 0);
     
-    const progressPercentage = updatedOrder.targetQuantity > 0 
-      ? (currentQuantity / updatedOrder.targetQuantity) * 100 
-      : 0;
+    // Calculate progress percentage with safety checks
+    let progressPercentage = 0;
+    if (updatedOrder.targetQuantity > 0 && currentQuantity >= 0) {
+      progressPercentage = Math.min((currentQuantity / updatedOrder.targetQuantity) * 100, 100);
+    }
+    
+    // Ensure progressPercentage is a valid number
+    if (isNaN(progressPercentage) || !isFinite(progressPercentage)) {
+      progressPercentage = 0;
+    }
 
     const now = new Date();
     const expiresAt = new Date(updatedOrder.expiresAt);
@@ -119,16 +126,16 @@ export async function PATCH(
       id: updatedOrder.id,
       batchNumber: updatedOrder.batchNumber,
       minThreshold: updatedOrder.minThreshold,
-      currentAmount,
+      currentAmount: Math.max(0, currentAmount),
       targetQuantity: updatedOrder.targetQuantity,
-      currentQuantity,
+      currentQuantity: Math.max(0, currentQuantity),
       pricePerUnit: updatedOrder.pricePerUnit,
       status: updatedOrder.status,
       expiresAt: updatedOrder.expiresAt,
       estimatedDelivery: updatedOrder.estimatedDelivery,
       actualDelivery: updatedOrder.actualDelivery,
-      progressPercentage,
-      participantCount,
+      progressPercentage: Math.round(progressPercentage * 100) / 100, // Round to 2 decimal places
+      participantCount: Math.max(0, participantCount),
       timeRemaining: Math.max(0, timeRemaining),
       product: updatedOrder.product,
       createdAt: updatedOrder.createdAt,

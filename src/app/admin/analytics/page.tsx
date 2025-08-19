@@ -1,294 +1,168 @@
 "use client";
 
-import { MainContainer } from "@/components/layout";
-import { AdminNavigation } from "@/components/admin";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { useState, useEffect, useCallback } from "react";
+import { ClientPageLayout, MainContainer } from "@/components/layout";
+import { AnalyticsDashboard } from "@/components/admin";
+import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { 
-  BarChart3, 
-  TrendingUp, 
-  Users, 
-  Package, 
-  DollarSign,
-  ShoppingCart,
-  Calendar,
-  Target,
-  Loader2
+  BarChart3,
+  Download,
+  Wifi,
+  WifiOff,
+  RefreshCw
 } from "lucide-react";
-import { AnalyticsDashboard } from "@/components/admin/analytics-dashboard";
-import { useDashboardAnalytics } from "@/hooks/api/use-analytics";
 import { useSession } from "next-auth/react";
+import { useAdminAnalytics } from "@/hooks/api/use-admin-analytics";
+import { useWebSocketContext } from "@/contexts/websocket-context";
 
-
-export default function AnalyticsPage() {
+export default function AdminAnalyticsPage() {
   const { data: session } = useSession();
   const user = session?.user;
-  const { data: analyticsData, isLoading, error } = useDashboardAnalytics();
+  const [isRealTime, setIsRealTime] = useState(false);
+  const [lastUpdate, setLastUpdate] = useState<Date>(new Date());
+  
+  const { data, loading, error, fetchAnalytics, exportData } = useAdminAnalytics();
+  
+  // WebSocket connection for real-time updates
+  const { isConnected, lastMessage } = useWebSocketContext();
+
+  // Handle real-time data updates
+  useEffect(() => {
+    if (isRealTime && isConnected && lastMessage) {
+      try {
+        if (lastMessage.event === "analytics_update") {
+          // Update analytics data in real-time
+          setLastUpdate(new Date());
+          // You can implement more sophisticated real-time updates here
+        }
+      } catch (error) {
+        console.error("Error parsing real-time message:", error);
+      }
+    }
+  }, [isRealTime, isConnected, lastMessage]);
+
+  // Auto-refresh when real-time is enabled
+  useEffect(() => {
+    if (!isRealTime) return;
+
+    const interval = setInterval(() => {
+      fetchAnalytics();
+      setLastUpdate(new Date());
+    }, 30000); // Refresh every 30 seconds
+
+    return () => clearInterval(interval);
+  }, [isRealTime, fetchAnalytics]);
 
   if (!user || (user.role !== "ADMIN" && user.role !== "SUPER_ADMIN")) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <p className="text-red-600 mb-4">Access denied. Admin privileges required.</p>
+      <ClientPageLayout>
+        <MainContainer>
+          <div className="flex items-center justify-center min-h-[400px]">
+            <div className="text-center">
+              <p className="text-red-600 mb-4">Access denied. Admin privileges required.</p>
+            </div>
           </div>
-        </div>
-      </div>
+        </MainContainer>
+      </ClientPageLayout>
     );
   }
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
-            <p>Loading analytics...</p>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  if (error || !analyticsData) {
-    return (
-      <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-        <div className="flex items-center justify-center min-h-screen">
-          <div className="text-center">
-            <p className="text-red-600 mb-4">Error loading analytics data</p>
-            <button onClick={() => window.location.reload()} className="px-4 py-2 bg-primary text-white rounded">
-              Retry
-            </button>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat("en-BD", {
-      style: "currency",
-      currency: "BDT",
-      minimumFractionDigits: 0,
-      maximumFractionDigits: 0
-    }).format(amount);
+  const handleExport = () => {
+    exportData("csv");
   };
 
-  const formatNumber = (num: number) => {
-    return new Intl.NumberFormat("en-BD").format(num);
+  const handleRefresh = () => {
+    fetchAnalytics();
+    setLastUpdate(new Date());
+  };
+
+  const toggleRealTime = () => {
+    setIsRealTime(!isRealTime);
+    if (!isRealTime) {
+      setLastUpdate(new Date());
+    }
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-background via-background to-secondary/20">
-              <AdminNavigation user={{ name: user?.name || 'Admin', role: user?.role || 'ADMIN' }} />
-
+    <ClientPageLayout>
       <MainContainer>
-        {/* Header Section */}
-        <div className="text-center mb-12">
-          <div className="flex items-center justify-center mb-4">
-            <BarChart3 className="h-8 w-8 text-primary mr-3" />
-            <h1 className="text-4xl font-bold">
-              Business{" "}
-              <span className="bg-gradient-to-r from-primary via-primary/80 to-primary/60 bg-clip-text text-transparent">
-                Analytics
-              </span>
-            </h1>
-          </div>
-          <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Comprehensive insights into platform performance, user behavior, and business metrics.
-          </p>
-        </div>
-
-        {/* Analytics Dashboard */}
-        <AnalyticsDashboard />
-
-        {/* Key Metrics Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          <Card className="card-sohozdaam">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Users className="h-8 w-8 text-blue-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Users</p>
-                  <p className="text-2xl font-bold">{formatNumber(analyticsData.users.totalUsers)}</p>
-                  <p className="text-xs text-green-600">+{analyticsData.users.userGrowth.toFixed(1)}% this month</p>
-                </div>
+        {/* Header */}
+        <div className="mb-8">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center">
+              <div className="h-12 w-12 bg-gradient-to-br from-primary to-primary/60 rounded-lg flex items-center justify-center mr-4">
+                <BarChart3 className="h-6 w-6 text-primary-foreground" />
               </div>
-            </CardContent>
-          </Card>
-
-          <Card className="card-sohozdaam">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <ShoppingCart className="h-8 w-8 text-green-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Total Orders</p>
-                  <p className="text-2xl font-bold">{formatNumber(analyticsData.orders.totalOrders)}</p>
-                  <p className="text-xs text-green-600">+{analyticsData.orders.orderGrowth.toFixed(1)}% this month</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="card-sohozdaam">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <DollarSign className="h-8 w-8 text-yellow-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Revenue</p>
-                  <p className="text-2xl font-bold">{formatCurrency(analyticsData.revenue.totalRevenue)}</p>
-                  <p className="text-xs text-green-600">+{analyticsData.revenue.revenueGrowth.toFixed(1)}% this month</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="card-sohozdaam">
-            <CardContent className="p-6">
-              <div className="flex items-center space-x-2">
-                <Package className="h-8 w-8 text-purple-600" />
-                <div>
-                  <p className="text-sm font-medium text-muted-foreground">Group Orders</p>
-                  <p className="text-2xl font-bold">{formatNumber(analyticsData.groupOrders.totalGroupOrders)}</p>
-                  <p className="text-xs text-green-600">{analyticsData.groupOrders.activeGroupOrders} active</p>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Performance Metrics */}
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
-          <Card className="card-sohozdaam">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <TrendingUp className="h-6 w-6 text-primary mr-2" />
-                Conversion Rates
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Group Order Success Rate</span>
-                  <Badge variant="default">{analyticsData.groupOrders.successRate.toFixed(1)}%</Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Order Completion Rate</span>
-                  <Badge variant="default">
-                    {analyticsData.orders.totalOrders > 0 
-                      ? ((analyticsData.orders.completedOrders / analyticsData.orders.totalOrders) * 100).toFixed(1)
-                      : 0}%
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">User Verification Rate</span>
-                  <Badge variant="default">
-                    {analyticsData.users.totalUsers > 0 
-                      ? ((analyticsData.users.totalUsers - (analyticsData.users.totalUsers - analyticsData.users.activeUsers)) / analyticsData.users.totalUsers * 100).toFixed(1)
-                      : 0}%
-                  </Badge>
-                </div>
-                <div className="flex justify-between items-center">
-                  <span className="text-sm">Revenue per User</span>
-                  <Badge variant="default">
-                    {formatCurrency(analyticsData.users.totalUsers > 0 
-                      ? analyticsData.revenue.totalRevenue / analyticsData.users.totalUsers
-                      : 0)}
-                  </Badge>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="card-sohozdaam">
-            <CardHeader>
-              <CardTitle className="flex items-center">
-                <Target className="h-6 w-6 text-primary mr-2" />
-                Business Goals
-              </CardTitle>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-4">
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Monthly Revenue Target</span>
-                    <span>{formatCurrency(analyticsData.revenue.totalRevenue)} / ৳3.0M</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full" 
-                      style={{ width: `${Math.min((analyticsData.revenue.totalRevenue / 3000000) * 100, 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>User Growth Target</span>
-                    <span>{formatNumber(analyticsData.users.totalUsers)} / 1,500</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full" 
-                      style={{ width: `${Math.min((analyticsData.users.totalUsers / 1500) * 100, 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-                
-                <div>
-                  <div className="flex justify-between text-sm mb-2">
-                    <span>Order Volume Target</span>
-                    <span>{formatNumber(analyticsData.orders.totalOrders)} / 4,000</span>
-                  </div>
-                  <div className="w-full bg-gray-200 rounded-full h-2">
-                    <div 
-                      className="bg-primary h-2 rounded-full" 
-                      style={{ width: `${Math.min((analyticsData.orders.totalOrders / 4000) * 100, 100)}%` }}
-                    ></div>
-                  </div>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        </div>
-
-        {/* Time-based Analytics */}
-        <Card className="card-sohozdaam mb-8">
-          <CardHeader>
-            <CardTitle className="flex items-center">
-              <Calendar className="h-6 w-6 text-primary mr-2" />
-              Monthly Performance Trends
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-              <div className="text-center">
-                <h4 className="font-medium mb-2">Revenue Growth</h4>
-                <div className={`text-2xl font-bold ${analyticsData.revenue.revenueGrowth >= 0 ? 'text-green-600' : 'text-red-600'}`}>
-                  {analyticsData.revenue.revenueGrowth >= 0 ? '+' : ''}{analyticsData.revenue.revenueGrowth.toFixed(1)}%
-                </div>
-                <p className="text-sm text-muted-foreground">vs. last month</p>
-              </div>
-              
-              <div className="text-center">
-                <h4 className="font-medium mb-2">User Growth</h4>
-                <div className={`text-2xl font-bold ${analyticsData.users.userGrowth >= 0 ? 'text-blue-600' : 'text-red-600'}`}>
-                  {analyticsData.users.userGrowth >= 0 ? '+' : ''}{analyticsData.users.userGrowth.toFixed(1)}%
-                </div>
-                <p className="text-sm text-muted-foreground">vs. last month</p>
-              </div>
-              
-              <div className="text-center">
-                <h4 className="font-medium mb-2">Order Growth</h4>
-                <div className={`text-2xl font-bold ${analyticsData.orders.orderGrowth >= 0 ? 'text-purple-600' : 'text-red-600'}`}>
-                  {analyticsData.orders.orderGrowth >= 0 ? '+' : ''}{analyticsData.orders.orderGrowth.toFixed(1)}%
-                </div>
-                <p className="text-sm text-muted-foreground">vs. last month</p>
+              <div>
+                <h1 className="text-4xl font-bold">Analytics Dashboard</h1>
+                <p className="text-muted-foreground">Comprehensive insights into platform performance</p>
               </div>
             </div>
-          </CardContent>
-        </Card>
+            <div className="flex items-center space-x-3">
+              <Button
+                variant={isRealTime ? "default" : "outline"}
+                size="sm"
+                onClick={toggleRealTime}
+                className={isRealTime ? "bg-green-600 hover:bg-green-700" : ""}
+              >
+                {isRealTime ? (
+                  <>
+                    <Wifi className="h-4 w-4 mr-2" />
+                    Live
+                  </>
+                ) : (
+                  <>
+                    <WifiOff className="h-4 w-4 mr-2" />
+                    Offline
+                  </>
+                )}
+              </Button>
+              
+              <Button variant="outline" size="sm" onClick={handleRefresh}>
+                <RefreshCw className="h-4 w-4 mr-2" />
+                Refresh
+              </Button>
+              
+              <Button variant="outline" onClick={handleExport}>
+                <Download className="h-4 w-4 mr-2" />
+                Export
+              </Button>
+            </div>
+          </div>
+          
+          {/* Status Bar */}
+          <div className="flex items-center justify-between mt-4 p-3 bg-muted rounded-lg">
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                <div className={`w-2 h-2 rounded-full ${isConnected ? 'bg-green-500' : 'bg-red-500'}`} />
+                <span className="text-sm text-muted-foreground">
+                  {isConnected ? 'Connected' : 'Disconnected'}
+                </span>
+              </div>
+              
+              {isRealTime && (
+                <Badge variant="secondary" className="bg-green-100 text-green-800">
+                  <Wifi className="h-3 w-3 mr-1" />
+                  Real-time
+                </Badge>
+              )}
+            </div>
+            
+            <div className="text-sm text-muted-foreground">
+              Last updated: {lastUpdate.toLocaleTimeString()}
+            </div>
+          </div>
+        </div>
+
+        {/* Analytics Dashboard Component */}
+        <AnalyticsDashboard
+          data={data}
+          loading={loading}
+          onExport={handleExport}
+          onRefresh={handleRefresh}
+        />
       </MainContainer>
-    </div>
+    </ClientPageLayout>
   );
 } 

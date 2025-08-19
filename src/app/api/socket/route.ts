@@ -1,19 +1,22 @@
 import { NextRequest, NextResponse } from "next/server";
-import { websocketManager } from "@/lib/websocket/websocket";
-import type { WebSocketEvents } from "@/lib/websocket/websocket";
+import { socketServer } from "@/lib/websocket/socket-server";
 
+// This route handles Socket.IO connections and actions
 export async function GET(request: NextRequest) {
   try {
-    // This endpoint is used to check WebSocket server status
     return NextResponse.json({
-      status: "WebSocket server is running",
-      connectedUsers: websocketManager.getConnectedUsersCount(),
-      connectedAdmins: websocketManager.getConnectedAdminsCount(),
+      status: "Socket.IO server ready",
+      message: "Use Socket.IO client to connect to this endpoint",
+      path: "/api/socket",
+      transports: ["websocket", "polling"],
+      deployment: "universal",
+      connectedUsers: socketServer.getConnectedUsersCount(),
+      connectedAdmins: socketServer.getConnectedAdminsCount(),
     });
   } catch (error) {
-    console.error("WebSocket status check error:", error);
+    console.error("Socket.IO handler error:", error);
     return NextResponse.json(
-      { error: "Failed to check WebSocket status" },
+      { error: "Failed to initialize Socket.IO handler" },
       { status: 500 }
     );
   }
@@ -25,27 +28,23 @@ export async function POST(request: NextRequest) {
 
     switch (action) {
       case "broadcast":
-        // Broadcast message to all connected users
-        websocketManager.emitToAll(data.event as keyof WebSocketEvents, data.payload);
+        socketServer.emitToAll(data.event, data.payload);
         return NextResponse.json({ success: true, message: "Message broadcasted" });
 
       case "notifyUser":
-        // Send notification to specific user
         const { userId, event, payload } = data;
-        websocketManager.emitToUser(userId, event as keyof WebSocketEvents, payload);
+        socketServer.emitToUser(userId, event, payload);
         return NextResponse.json({ success: true, message: "User notified" });
 
       case "notifyAdmins":
-        // Send notification to admin users
-        websocketManager.emitToAdmins(data.event as keyof WebSocketEvents, data.payload);
+        socketServer.emitToAdmins(data.event, data.payload);
         return NextResponse.json({ success: true, message: "Admins notified" });
 
       case "getStats":
-        // Get WebSocket server statistics
         return NextResponse.json({
-          connectedUsers: websocketManager.getConnectedUsersCount(),
-          connectedAdmins: websocketManager.getConnectedAdminsCount(),
-          onlineUsers: websocketManager.getOnlineUsers(),
+          connectedUsers: socketServer.getConnectedUsersCount(),
+          connectedAdmins: socketServer.getConnectedAdminsCount(),
+          onlineUsers: socketServer.getOnlineUsers(),
         });
 
       default:
@@ -55,9 +54,9 @@ export async function POST(request: NextRequest) {
         );
     }
   } catch (error) {
-    console.error("WebSocket action error:", error);
+    console.error("Socket.IO action error:", error);
     return NextResponse.json(
-      { error: "Failed to perform WebSocket action" },
+      { error: "Failed to perform Socket.IO action" },
       { status: 500 }
     );
   }

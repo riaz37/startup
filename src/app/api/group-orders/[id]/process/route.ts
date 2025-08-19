@@ -3,7 +3,7 @@ import { requireAdmin, prisma } from "@/lib";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await requireAdmin();
@@ -16,13 +16,14 @@ export async function POST(
       );
     }
 
+    const { id } = await params;
     let result;
 
     switch (action) {
       case "check-threshold":
         // Check if group order has met threshold
         const groupOrder = await prisma.groupOrder.findUnique({
-          where: { id: params.id },
+          where: { id },
           include: { orders: true }
         });
 
@@ -45,7 +46,7 @@ export async function POST(
       case "ship":
         // Mark group order as shipped
         result = await prisma.groupOrder.update({
-          where: { id: params.id },
+          where: { id },
           data: { status: "SHIPPED" }
         });
         break;
@@ -53,7 +54,7 @@ export async function POST(
       case "deliver":
         // Mark group order as delivered
         result = await prisma.groupOrder.update({
-          where: { id: params.id },
+          where: { id },
           data: { status: "DELIVERED" }
         });
         break;
@@ -67,7 +68,7 @@ export async function POST(
         }
         // Cancel group order
         result = await prisma.groupOrder.update({
-          where: { id: params.id },
+          where: { id },
           data: { 
             status: "CANCELLED",
             // You might want to add a cancellationReason field to your schema

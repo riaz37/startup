@@ -23,6 +23,8 @@ import {
   DollarSign,
   Loader2
 } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Label } from "@/components/ui/label";
 import Link from "next/link";
 
 interface GroupOrder {
@@ -58,6 +60,8 @@ export default function AdminGroupOrdersPage() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [sortBy, setSortBy] = useState("createdAt");
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+  const [isBulkUpdating, setIsBulkUpdating] = useState(false);
 
   useEffect(() => {
     fetchGroupOrders();
@@ -140,7 +144,7 @@ export default function AdminGroupOrdersPage() {
     setFilteredOrders(filtered);
   };
 
-  const handleStatusUpdate = async (orderId: string, newStatus: string, additionalData?: any) => {
+  const handleStatusUpdate = async (orderId: string, newStatus: string, additionalData?: Record<string, unknown>) => {
     try {
       const response = await fetch(`/api/admin/group-orders/${orderId}/status`, {
         method: "PATCH",
@@ -164,6 +168,95 @@ export default function AdminGroupOrdersPage() {
       }
     } catch (error) {
       setError(error instanceof Error ? error.message : "Failed to update status");
+    }
+  };
+
+  const handleBulkStatusUpdate = async (newStatus: string) => {
+    if (selectedOrders.length === 0) return;
+    
+    setIsBulkUpdating(true);
+    try {
+      const promises = selectedOrders.map(orderId => 
+        fetch(`/api/admin/group-orders/${orderId}/status`, {
+          method: "PATCH",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ status: newStatus }),
+        })
+      );
+
+      const responses = await Promise.all(promises);
+      const failedUpdates = responses.filter(response => !response.ok);
+      
+      if (failedUpdates.length > 0) {
+        throw new Error(`${failedUpdates.length} orders failed to update`);
+      }
+
+      // Update local state
+      setGroupOrders(prev => 
+        prev.map(order => 
+          selectedOrders.includes(order.id) 
+            ? { ...order, status: newStatus }
+            : order
+        )
+      );
+
+      setSelectedOrders([]);
+      setError("");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to update some orders");
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  const handleBulkDelete = async () => {
+    if (selectedOrders.length === 0) return;
+    
+    if (!confirm(`Are you sure you want to delete ${selectedOrders.length} group orders? This action cannot be undone.`)) {
+      return;
+    }
+
+    setIsBulkUpdating(true);
+    try {
+      const promises = selectedOrders.map(orderId => 
+        fetch(`/api/admin/group-orders/${orderId}`, {
+          method: "DELETE",
+        })
+      );
+
+      const responses = await Promise.all(promises);
+      const failedDeletes = responses.filter(response => !response.ok);
+      
+      if (failedDeletes.length > 0) {
+        throw new Error(`${failedDeletes.length} orders failed to delete`);
+      }
+
+      // Remove deleted orders from local state
+      setGroupOrders(prev => prev.filter(order => !selectedOrders.includes(order.id)));
+      setSelectedOrders([]);
+      setError("");
+    } catch (error) {
+      setError(error instanceof Error ? error.message : "Failed to delete some orders");
+    } finally {
+      setIsBulkUpdating(false);
+    }
+  };
+
+  const handleSelectAll = () => {
+    if (selectedOrders.length === filteredOrders.length) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(filteredOrders.map(order => order.id));
+    }
+  };
+
+  const handleSelectOrder = (orderId: string, checked: boolean) => {
+    if (checked) {
+      setSelectedOrders(prev => [...prev, orderId]);
+    } else {
+      setSelectedOrders(prev => prev.filter(id => id !== orderId));
     }
   };
 
@@ -361,11 +454,77 @@ export default function AdminGroupOrdersPage() {
           </CardContent>
         </Card>
 
+        {/* Bulk Actions Toolbar */}
+        {selectedOrders.length > 0 && (
+          <Card className="mb-6 border-primary/20 bg-primary/5">
+            <CardContent className="pt-6">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center space-x-4">
+                  <span className="text-sm font-medium text-primary">
+                    {selectedOrders.length} order{selectedOrders.length !== 1 ? 's' : ''} selected
+                  </span>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setSelectedOrders([])}
+                  >
+                    Clear Selection
+                  </Button>
+                </div>
+                
+                <div className="flex items-center space-x-2">
+                  <select
+                    onChange={(e) => handleBulkStatusUpdate(e.target.value)}
+                    className="px-3 py-2 border border-input rounded-md bg-background text-sm"
+                    disabled={isBulkUpdating}
+                  >
+                    <option value="">Bulk Status Update</option>
+                    <option value="COLLECTING">Mark as Collecting</option>
+                    <option value="THRESHOLD_MET">Mark as Threshold Met</option>
+                    <option value="ORDERED">Mark as Ordered</option>
+                    <option value="SHIPPED">Mark as Shipped</option>
+                    <option value="DELIVERED">Mark as Delivered</option>
+                    <option value="EXPIRED">Mark as Expired</option>
+                  </select>
+                  
+                  <Button
+                    variant="destructive"
+                    size="sm"
+                    onClick={handleBulkDelete}
+                    disabled={isBulkUpdating}
+                  >
+                    {isBulkUpdating ? (
+                      <Loader2 className="h-4 w-4 animate-spin mr-2" />
+                    ) : (
+                      <Trash2 className="h-4 w-4 mr-2" />
+                    )}
+                    Bulk Delete
+                  </Button>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* Group Orders List */}
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center justify-between">
-              <span>Group Orders ({filteredOrders.length})</span>
+              <div className="flex items-center space-x-4">
+                <span>Group Orders ({filteredOrders.length})</span>
+                {filteredOrders.length > 0 && (
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="select-all"
+                      checked={selectedOrders.length === filteredOrders.length && filteredOrders.length > 0}
+                      onCheckedChange={handleSelectAll}
+                    />
+                    <Label htmlFor="select-all" className="text-sm text-muted-foreground">
+                      Select All
+                    </Label>
+                  </div>
+                )}
+              </div>
               <Button
                 variant="outline"
                 size="sm"
@@ -403,6 +562,13 @@ export default function AdminGroupOrdersPage() {
                   <div key={order.id} className="p-6 border rounded-lg hover:bg-muted/50 transition-colors">
                     <div className="flex items-center justify-between">
                       <div className="flex items-center space-x-4">
+                        <div className="flex-shrink-0">
+                          <Checkbox
+                            id={`order-${order.id}`}
+                            checked={selectedOrders.includes(order.id)}
+                            onCheckedChange={(checked) => handleSelectOrder(order.id, checked as boolean)}
+                          />
+                        </div>
                         <div className="flex-shrink-0">
                           {getStatusBadge(order.status)}
                         </div>

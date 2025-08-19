@@ -1,4 +1,5 @@
 import nodemailer from "nodemailer";
+import { prisma } from "@/lib/database";
 import {
   orderConfirmationTemplate,
   paymentSuccessTemplate,
@@ -20,66 +21,6 @@ const transporter = nodemailer.createTransport({
   },
 });
 
-// Email delivery tracking
-interface EmailDelivery {
-  id: string;
-  to: string;
-  subject: string;
-  template: string;
-  status: 'pending' | 'sent' | 'delivered' | 'failed';
-  sentAt?: Date;
-  deliveredAt?: Date;
-  error?: string;
-  retryCount: number;
-}
-
-class EmailDeliveryTracker {
-  private deliveries = new Map<string, EmailDelivery>();
-
-  trackDelivery(emailId: string, delivery: Omit<EmailDelivery, 'id'>) {
-    this.deliveries.set(emailId, {
-      id: emailId,
-      ...delivery,
-      retryCount: 0,
-    });
-  }
-
-  markSent(emailId: string) {
-    const delivery = this.deliveries.get(emailId);
-    if (delivery) {
-      delivery.status = 'sent';
-      delivery.sentAt = new Date();
-    }
-  }
-
-  markDelivered(emailId: string) {
-    const delivery = this.deliveries.get(emailId);
-    if (delivery) {
-      delivery.status = 'delivered';
-      delivery.deliveredAt = new Date();
-    }
-  }
-
-  markFailed(emailId: string, error: string) {
-    const delivery = this.deliveries.get(emailId);
-    if (delivery) {
-      delivery.status = 'failed';
-      delivery.error = error;
-      delivery.retryCount++;
-    }
-  }
-
-  getDeliveryStatus(emailId: string): EmailDelivery | undefined {
-    return this.deliveries.get(emailId);
-  }
-
-  getFailedDeliveries(): EmailDelivery[] {
-    return Array.from(this.deliveries.values()).filter(d => d.status === 'failed');
-  }
-}
-
-const emailTracker = new EmailDeliveryTracker();
-
 // Email service class
 export class EmailService {
   private static instance: EmailService;
@@ -93,47 +34,70 @@ export class EmailService {
     return EmailService.instance;
   }
 
-  // Send email with tracking
+  // Send email with database tracking
   private async sendEmailWithTracking(
     to: string,
     subject: string,
     html: string,
-    template: string
+    template: string,
+    userId?: string,
+    campaignId?: string
   ) {
-    const emailId = `${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-    
-    // Track delivery
-    emailTracker.trackDelivery(emailId, {
-      to,
-      subject,
-      template,
-      status: 'pending',
-      retryCount: 0,
-    });
-
+    let delivery;
     try {
+      // Create delivery record in database
+      delivery = await prisma.emailDelivery.create({
+        data: {
+          to,
+          subject,
+          content: html,
+          status: 'PENDING',
+          templateId: template,
+          userId,
+          campaignId,
+          retryCount: 0,
+          maxRetries: 3,
+        },
+      });
+
+      // Send email
       const info = await transporter.sendMail({
         from: `"Sohozdaam" <${process.env.SMTP_USER}>`,
         to,
         subject,
         html,
         headers: {
-          'X-Email-ID': emailId,
+          'X-Email-ID': delivery.id,
           'X-Template': template,
         },
       });
 
-      // Mark as sent
-      emailTracker.markSent(emailId);
-      
-      console.log(`Email sent successfully: ${emailId} to ${to}`);
-      return { success: true, emailId, messageId: info.messageId };
+      // Update delivery status to sent
+      await prisma.emailDelivery.update({
+        where: { id: delivery.id },
+        data: {
+          status: 'SENT',
+          sentAt: new Date(),
+        },
+      });
+
+      console.log(`Email sent successfully: ${delivery.id} to ${to}`);
+      return { success: true, emailId: delivery.id, messageId: info.messageId };
     } catch (error) {
-      // Mark as failed
-      emailTracker.markFailed(emailId, error instanceof Error ? error.message : 'Unknown error');
-      
-      console.error(`Email failed to send: ${emailId} to ${to}`, error);
-      return { success: false, emailId, error };
+      // Update delivery status to failed
+      if (delivery) {
+        await prisma.emailDelivery.update({
+          where: { id: delivery.id },
+          data: {
+            status: 'FAILED',
+            failedAt: new Date(),
+            error: error instanceof Error ? error.message : 'Unknown error',
+          },
+        });
+      }
+
+      console.error(`Email failed to send: ${delivery?.id || 'unknown'} to ${to}`, error);
+      return { success: false, emailId: delivery?.id, error };
     }
   }
 
@@ -352,13 +316,17 @@ export class EmailService {
     to: string;
     subject: string;
     html: string;
+    userId?: string;
+    campaignId?: string;
   }) {
     try {
       const result = await this.sendEmailWithTracking(
         data.to,
         data.subject,
         data.html,
-        'custom_email'
+        'custom_email',
+        data.userId,
+        data.campaignId
       );
 
       if (result.success) {
@@ -374,22 +342,43 @@ export class EmailService {
 
   // Retry failed emails
   async retryFailedEmails() {
-    const failedDeliveries = emailTracker.getFailedDeliveries();
+    const failedDeliveries = await prisma.emailDelivery.findMany({
+      where: { 
+        status: 'FAILED',
+        retryCount: { lt: 3 } // Max 3 retries
+      }
+    });
+
     const results = [];
 
     for (const delivery of failedDeliveries) {
-      if (delivery.retryCount < 3) { // Max 3 retries
-        try {
-          // Re-send the email (you might want to store the original HTML)
-          const result = await this.sendCustomEmail({
-            to: delivery.to,
-            subject: delivery.subject,
-            html: `<p>Retry attempt for: ${delivery.subject}</p>`,
-          });
-          results.push({ emailId: delivery.id, result });
-        } catch (error) {
-          results.push({ emailId: delivery.id, error });
-        }
+      try {
+        // Update retry count and status
+        await prisma.emailDelivery.update({
+          where: { id: delivery.id },
+          data: {
+            retryCount: { increment: 1 },
+            status: 'PENDING',
+            failedAt: null,
+            error: null
+          }
+        });
+
+        // Re-send the email
+        const result = await this.sendCustomEmail({
+          to: delivery.to,
+          subject: delivery.subject,
+          html: delivery.content,
+          userId: delivery.userId || undefined,
+          campaignId: delivery.campaignId || undefined
+        });
+
+        results.push({ emailId: delivery.id, result });
+      } catch (error) {
+        results.push({ 
+          emailId: delivery.id, 
+          error: error instanceof Error ? error.message : 'Unknown error' 
+        });
       }
     }
 
@@ -397,26 +386,31 @@ export class EmailService {
   }
 
   // Get email delivery status
-  getEmailDeliveryStatus(emailId: string) {
-    return emailTracker.getDeliveryStatus(emailId);
+  async getEmailDeliveryStatus(emailId: string) {
+    return await prisma.emailDelivery.findUnique({
+      where: { id: emailId }
+    });
   }
 
-  // Get email delivery statistics
-  getEmailDeliveryStats() {
-    const deliveries = Array.from(emailTracker.getFailedDeliveries());
-    const total = deliveries.length;
-    const pending = deliveries.filter(d => d.status === 'pending').length;
-    const sent = deliveries.filter(d => d.status === 'sent').length;
-    const delivered = deliveries.filter(d => d.status === 'delivered').length;
-    const failed = deliveries.filter(d => d.status === 'failed').length;
+  // Get email delivery statistics from database
+  async getEmailDeliveryStats() {
+    const [totalSent, totalDelivered, totalFailed, totalPending] = await Promise.all([
+      prisma.emailDelivery.count({ where: { status: { in: ['SENT', 'DELIVERED'] } } }),
+      prisma.emailDelivery.count({ where: { status: 'DELIVERED' } }),
+      prisma.emailDelivery.count({ where: { status: 'FAILED' } }),
+      prisma.emailDelivery.count({ where: { status: 'PENDING' } })
+    ]);
+
+    const total = totalSent + totalDelivered + totalFailed + totalPending;
+    const successRate = total > 0 ? ((totalDelivered + totalSent) / total) * 100 : 0;
 
     return {
       total,
-      pending,
-      sent,
-      delivered,
-      failed,
-      successRate: total > 0 ? ((sent + delivered) / total) * 100 : 0,
+      pending: totalPending,
+      sent: totalSent,
+      delivered: totalDelivered,
+      failed: totalFailed,
+      successRate: Math.round(successRate * 100) / 100,
     };
   }
 
