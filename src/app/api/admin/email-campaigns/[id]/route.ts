@@ -22,19 +22,20 @@ const updateCampaignSchema = z.object({
     "SPECIFIC_USERS",
     "FILTERED_USERS"
   ]).optional(),
-  targetFilters: z.record(z.any()).optional(),
+  targetFilters: z.record(z.unknown()).optional(),
   scheduledAt: z.string().datetime().optional()
 });
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
     const campaign = await prisma.emailCampaign.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         template: {
           select: {
@@ -66,7 +67,7 @@ export async function GET(
     }
     
     return NextResponse.json({ campaign });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching email campaign:", error);
     return NextResponse.json(
       { error: "Failed to fetch email campaign" },
@@ -77,17 +78,18 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
     const body = await request.json();
     const validatedData = updateCampaignSchema.parse(body);
     
     // Check if campaign exists
     const existingCampaign = await prisma.emailCampaign.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
     
     if (!existingCampaign) {
@@ -118,7 +120,7 @@ export async function PUT(
     }
     
     const updatedCampaign = await prisma.emailCampaign.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...validatedData,
         scheduledAt
@@ -142,7 +144,7 @@ export async function PUT(
     });
     
     return NextResponse.json({ campaign: updatedCampaign });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating email campaign:", error);
     
     if (error instanceof z.ZodError) {
@@ -161,14 +163,16 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
+    
     // Check if campaign exists
     const existingCampaign = await prisma.emailCampaign.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -202,11 +206,11 @@ export async function DELETE(
     }
     
     await prisma.emailCampaign.delete({
-      where: { id: params.id }
+      where: { id }
     });
     
     return NextResponse.json({ message: "Email campaign deleted successfully" });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error deleting email campaign:", error);
     return NextResponse.json(
       { error: "Failed to delete email campaign" },

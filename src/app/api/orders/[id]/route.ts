@@ -3,7 +3,7 @@ import { getCurrentUser, prisma } from "@/lib";
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -15,7 +15,7 @@ export async function GET(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
 
     // Users can only see their own orders, admins can see all
     const where: { id: string; userId?: string } = { id };
@@ -77,7 +77,7 @@ export async function GET(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     const user = await getCurrentUser();
@@ -97,12 +97,12 @@ export async function PATCH(
       );
     }
 
-    const { id } = params;
+    const { id } = await params;
     const updates = await request.json();
 
     // Validate updates
     const allowedFields = ['status', 'paymentStatus', 'notes', 'estimatedDelivery'] as const;
-    const validUpdates: Record<string, any> = {};
+    const validUpdates: Record<string, unknown> = {};
     
     for (const field of allowedFields) {
       if (updates[field] !== undefined) {

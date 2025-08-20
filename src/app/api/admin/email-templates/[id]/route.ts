@@ -25,13 +25,14 @@ const updateTemplateSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
     const template = await prisma.emailTemplate.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         creator: {
           select: {
@@ -57,7 +58,7 @@ export async function GET(
     }
     
     return NextResponse.json({ template });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching email template:", error);
     return NextResponse.json(
       { error: "Failed to fetch email template" },
@@ -68,17 +69,18 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
     const body = await request.json();
     const validatedData = updateTemplateSchema.parse(body);
     
     // Check if template exists
     const existingTemplate = await prisma.emailTemplate.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
     
     if (!existingTemplate) {
@@ -103,7 +105,7 @@ export async function PUT(
     }
     
     const updatedTemplate = await prisma.emailTemplate.update({
-      where: { id: params.id },
+      where: { id },
       data: validatedData,
       include: {
         creator: {
@@ -117,7 +119,7 @@ export async function PUT(
     });
     
     return NextResponse.json({ template: updatedTemplate });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating email template:", error);
     
     if (error instanceof z.ZodError) {
@@ -136,14 +138,16 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
+    
     // Check if template exists
     const existingTemplate = await prisma.emailTemplate.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         _count: {
           select: {
@@ -170,11 +174,11 @@ export async function DELETE(
     }
     
     await prisma.emailTemplate.delete({
-      where: { id: params.id }
+      where: { id }
     });
     
     return NextResponse.json({ message: "Email template deleted successfully" });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error deleting email template:", error);
     return NextResponse.json(
       { error: "Failed to delete email template" },

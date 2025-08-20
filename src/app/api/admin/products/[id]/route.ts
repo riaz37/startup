@@ -19,13 +19,14 @@ const updateProductSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
     const product = await prisma.product.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         category: {
           select: {
@@ -44,7 +45,7 @@ export async function GET(
     }
     
     return NextResponse.json(product);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching product:", error);
     return NextResponse.json(
       { error: "Failed to fetch product" },
@@ -55,17 +56,18 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
     const body = await request.json();
     const validatedData = updateProductSchema.parse(body);
     
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
     
     if (!existingProduct) {
@@ -125,7 +127,7 @@ export async function PUT(
     }
     
     const updatedProduct = await prisma.product.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...validatedData,
         slug
@@ -141,7 +143,7 @@ export async function PUT(
     });
     
     return NextResponse.json(updatedProduct);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating product:", error);
     
     if (error instanceof z.ZodError) {
@@ -160,14 +162,16 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
+    
     // Check if product exists
     const existingProduct = await prisma.product.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
     
     if (!existingProduct) {
@@ -179,7 +183,7 @@ export async function DELETE(
     
     // Check if product is being used in orders
     const orderCount = await prisma.orderItem.count({
-      where: { productId: params.id }
+      where: { productId: id }
     });
     
     if (orderCount > 0) {
@@ -190,11 +194,11 @@ export async function DELETE(
     }
     
     await prisma.product.delete({
-      where: { id: params.id }
+      where: { id }
     });
     
     return NextResponse.json({ message: "Product deleted successfully" });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error deleting product:", error);
     return NextResponse.json(
       { error: "Failed to delete product" },
