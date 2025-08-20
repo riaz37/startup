@@ -1,22 +1,23 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib";
 import { prisma } from "@/lib/database";
-import { sendEmail } from "@/lib/email";
+import { dynamicEmailService } from "@/lib/email";
 
 export async function POST(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
     const { searchParams } = new URL(request.url);
     const testMode = searchParams.get("test") === "true";
     const testEmail = searchParams.get("testEmail");
     
     // Get campaign details
     const campaign = await prisma.emailCampaign.findUnique({
-      where: { id: params.id },
+      where: { id },
       include: {
         template: true
       }
@@ -38,11 +39,11 @@ export async function POST(
     
     // Update campaign status to sending
     await prisma.emailCampaign.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: "SENDING" }
     });
     
-    let targetUsers: any[] = [];
+    let targetUsers: Array<{ id: string; email: string; name: string | null }> = [];
     
     // Get target users based on audience
     switch (campaign.targetAudience) {
@@ -75,8 +76,8 @@ export async function POST(
         
       case "FILTERED_USERS":
         if (campaign.targetFilters) {
-          const filters = campaign.targetFilters as any;
-          const where: any = { isActive: true };
+          const filters = campaign.targetFilters as Record<string, unknown>;
+          const where: Record<string, unknown> = { isActive: true };
           
           if (filters.role) {
             where.role = filters.role;
@@ -104,7 +105,7 @@ export async function POST(
     
     if (targetUsers.length === 0) {
       await prisma.emailCampaign.update({
-        where: { id: params.id },
+        where: { id },
         data: { status: "DRAFT" }
       });
       
@@ -134,13 +135,18 @@ export async function POST(
             content = content.replace(/\{\{userEmail\}\}/g, user.email);
             subject = subject.replace(/\{\{userName\}\}/g, user.name || "User");
             
-            // Send email
+            // Send email using the dynamic email service
             if (!testMode) {
-              await sendEmail({
-                to: user.email,
-                subject,
-                html: content
-              });
+              await dynamicEmailService.sendCustomEmail(
+                campaign.template.name,
+                {
+                  userName: user.name || "User",
+                  userEmail: user.email
+                },
+                user.email,
+                user.id === "test" ? undefined : user.id,
+                campaign.id
+              );
             }
             
             // Create delivery record
@@ -188,7 +194,7 @@ export async function POST(
     // Update campaign status
     const finalStatus = failureCount === 0 ? "COMPLETED" : "COMPLETED";
     await prisma.emailCampaign.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         status: finalStatus,
         totalSent: successCount + failureCount,
@@ -207,12 +213,13 @@ export async function POST(
       }
     });
     
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error sending email campaign:", error);
     
     // Reset campaign status on error
+    const { id } = await params;
     await prisma.emailCampaign.update({
-      where: { id: params.id },
+      where: { id },
       data: { status: "DRAFT" }
     });
     

@@ -17,13 +17,15 @@ const updateDiscountSchema = z.object({
 
 export async function GET(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
+    
     const discount = await prisma.discountConfig.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
     
     if (!discount) {
@@ -34,7 +36,7 @@ export async function GET(
     }
     
     return NextResponse.json(discount);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching discount:", error);
     return NextResponse.json(
       { error: "Failed to fetch discount" },
@@ -45,17 +47,18 @@ export async function GET(
 
 export async function PUT(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
     const body = await request.json();
     const validatedData = updateDiscountSchema.parse(body);
     
     // Check if discount exists
     const existingDiscount = await prisma.discountConfig.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
     
     if (!existingDiscount) {
@@ -100,7 +103,7 @@ export async function PUT(
     }
     
     const updatedDiscount = await prisma.discountConfig.update({
-      where: { id: params.id },
+      where: { id },
       data: {
         ...validatedData,
         startDate,
@@ -109,7 +112,7 @@ export async function PUT(
     });
     
     return NextResponse.json(updatedDiscount);
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating discount:", error);
     
     if (error instanceof z.ZodError) {
@@ -128,14 +131,16 @@ export async function PUT(
 
 export async function DELETE(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
+    
     // Check if discount exists
     const existingDiscount = await prisma.discountConfig.findUnique({
-      where: { id: params.id }
+      where: { id }
     });
     
     if (!existingDiscount) {
@@ -146,11 +151,11 @@ export async function DELETE(
     }
     
     await prisma.discountConfig.delete({
-      where: { id: params.id }
+      where: { id }
     });
     
     return NextResponse.json({ message: "Discount deleted successfully" });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error deleting discount:", error);
     return NextResponse.json(
       { error: "Failed to delete discount" },
@@ -161,17 +166,18 @@ export async function DELETE(
 
 export async function PATCH(
   request: NextRequest,
-  { params }: { params: { id: string } }
+  { params }: { params: Promise<{ id: string }> }
 ) {
   try {
     await requireAdmin();
     
+    const { id } = await params;
     const body = await request.json();
     
     // Handle toggle status
     if (body.action === 'toggle') {
       const discount = await prisma.discountConfig.findUnique({
-        where: { id: params.id }
+        where: { id }
       });
       
       if (!discount) {
@@ -182,7 +188,7 @@ export async function PATCH(
       }
       
       const updatedDiscount = await prisma.discountConfig.update({
-        where: { id: params.id },
+        where: { id },
         data: { isActive: !discount.isActive }
       });
       
@@ -193,7 +199,7 @@ export async function PATCH(
       { error: "Invalid action" },
       { status: 400 }
     );
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error updating discount:", error);
     return NextResponse.json(
       { error: "Failed to update discount" },
