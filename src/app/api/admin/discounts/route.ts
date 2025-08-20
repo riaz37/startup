@@ -92,7 +92,12 @@ export async function POST(request: NextRequest) {
     
     const discount = await prisma.discountConfig.create({
       data: {
-        ...validatedData,
+        name: validatedData.name,
+        description: validatedData.description,
+        discountType: validatedData.discountType,
+        discountValue: validatedData.discountValue,
+        minQuantity: validatedData.minQuantity,
+        maxQuantity: validatedData.maxQuantity,
         startDate,
         endDate,
         isActive: true

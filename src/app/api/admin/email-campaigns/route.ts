@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/database";
 import { z } from "zod";
+import { Prisma } from "@/generated/prisma";
 
 const emailCampaignSchema = z.object({
   name: z.string().min(1, "Campaign name is required"),
@@ -111,7 +112,12 @@ export async function POST(request: NextRequest) {
     
     const campaign = await prisma.emailCampaign.create({
       data: {
-        ...validatedData,
+        name: validatedData.name,
+        description: validatedData.description,
+        templateId: validatedData.templateId,
+        status: validatedData.status,
+        targetAudience: validatedData.targetAudience,
+        targetFilters: validatedData.targetFilters as Prisma.JsonValue,
         scheduledAt,
         createdBy: user.id
       },
