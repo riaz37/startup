@@ -207,7 +207,7 @@ export async function GET(request: NextRequest) {
     const conversionFunnel = await getConversionData();
 
     // Get additional insights
-    // @ts-expect-error - Prisma circular reference types
+   
     const userSegments = await prisma.user.groupBy({
       by: ['role'],
       _count: true,
@@ -216,7 +216,6 @@ export async function GET(request: NextRequest) {
       }
     });
 
-    // @ts-expect-error - Prisma circular reference types
     const deviceUsage = await prisma.analyticsEvent.groupBy({
       by: ['eventType'],
       where: {
