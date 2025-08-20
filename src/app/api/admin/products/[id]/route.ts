@@ -129,7 +129,17 @@ export async function PUT(
     const updatedProduct = await prisma.product.update({
       where: { id },
       data: {
-        ...validatedData,
+        name: validatedData.name,
+        description: validatedData.description,
+        categoryId: validatedData.categoryId,
+        unit: validatedData.unit,
+        unitSize: validatedData.unitSize,
+        mrp: validatedData.mrp,
+        sellingPrice: validatedData.sellingPrice,
+        minOrderQty: validatedData.minOrderQty,
+        maxOrderQty: validatedData.maxOrderQty,
+        imageUrl: validatedData.imageUrl,
+        isActive: validatedData.isActive,
         slug
       },
       include: {

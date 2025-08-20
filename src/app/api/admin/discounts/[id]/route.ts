@@ -105,7 +105,13 @@ export async function PUT(
     const updatedDiscount = await prisma.discountConfig.update({
       where: { id },
       data: {
-        ...validatedData,
+        name: validatedData.name,
+        description: validatedData.description,
+        discountType: validatedData.discountType,
+        discountValue: validatedData.discountValue,
+        minQuantity: validatedData.minQuantity,
+        maxQuantity: validatedData.maxQuantity,
+        isActive: validatedData.isActive,
         startDate,
         endDate,
       }
