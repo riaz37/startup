@@ -1,0 +1,61 @@
+services:
+  - type: web
+    name: sohozdaam-websocket
+    env: node
+    plan: starter
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: DATABASE_URL
+        sync: false
+      - key: NEXTAUTH_SECRET
+        sync: false
+      - key: NEXTAUTH_URL
+        sync: false
+      - key: SMTP_HOST
+        sync: false
+      - key: SMTP_PORT
+        sync: false
+      - key: SMTP_USER
+        sync: false
+      - key: SMTP_PASS
+        sync: false
+      - key: STRIPE_SECRET_KEY
+        sync: false
+      - key: STRIPE_WEBHOOK_SECRET
+        sync: false
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+      - key: CLOUDINARY_API_KEY
+        sync: false
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+      - key: REDIS_URL
+        sync: false
+    healthCheckPath: /health
+    autoDeploy: true
+    region: oregon
+    scaling:
+      minInstances: 1
+      maxInstances: 3
+    cors:
+      allowOrigins:
+        - https://shohozdaam.vercel.app
+        - https://your-domain.com
+        - http://localhost:3000
+      allowMethods:
+        - GET
+        - POST
+        - PUT
+        - DELETE
+        - OPTIONS
+      allowHeaders:
+        - Content-Type
+        - Authorization
+        - X-Requested-With
+      allowCredentials: true
+      maxAge: 86400 
