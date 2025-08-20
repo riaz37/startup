@@ -11,6 +11,7 @@ import {
   UserProfileCard, 
   RecentActivity 
 } from "@/components/dashboard";
+import { WebSocketStatus } from "@/components/common";
 import { PaymentHistory } from "@/components/payments/payment-history";
 import { 
   ShoppingCart, 
@@ -469,6 +470,7 @@ export default function DashboardPage() {
               memberSince={memberSince} 
             />
             <QuickActions actions={quickActions} />
+            <WebSocketStatus />
           </div>
 
           {/* Right Column - Recent Activity */}

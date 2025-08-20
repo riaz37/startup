@@ -28,6 +28,7 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const [isConnected, setIsConnected] = useState(false);
   const [lastMessage, setLastMessage] = useState<Record<string, unknown> | null>(null);
   const socketRef = useRef<Socket | null>(null);
+  const reconnectTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   const connect = useCallback(() => {
     if (!session?.user?.id || socketRef.current?.connected) {
@@ -35,14 +36,34 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     }
 
     try {
-      const socket = io(`${process.env.NEXT_PUBLIC_WEBSOCKET_URL || window.location.origin}/api/socket`, {
+      // Disconnect existing connection if any
+      if (socketRef.current) {
+        socketRef.current.disconnect();
+        socketRef.current = null;
+      }
+
+      // Clear any existing reconnect timeout
+      if (reconnectTimeoutRef.current) {
+        clearTimeout(reconnectTimeoutRef.current);
+        reconnectTimeoutRef.current = null;
+      }
+
+      // Connect to the external Socket.IO server
+      const socketUrl = process.env.NEXT_PUBLIC_WEBSOCKET_URL || window.location.origin;
+      console.log('Attempting to connect to WebSocket server:', socketUrl);
+      
+      const socket = io(socketUrl, {
         transports: ['websocket', 'polling'],
         autoConnect: false,
+        withCredentials: true,
+        timeout: 20000, // 20 second timeout
+        forceNew: true,
       });
 
       socketRef.current = socket;
 
       socket.on('connect', () => {
+        console.log('WebSocket connected successfully');
         setIsConnected(true);
         setError(null);
         
@@ -53,13 +74,42 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
         });
       });
 
-      socket.on('disconnect', () => {
+      socket.on('disconnect', (reason) => {
+        console.log('WebSocket disconnected:', reason);
         setIsConnected(false);
+        
+        // Attempt to reconnect if not manually disconnected
+        if (reason === 'io server disconnect' || reason === 'io client disconnect') {
+          // Server or client initiated disconnect, don't auto-reconnect
+          return;
+        }
+        
+        // Auto-reconnect for other disconnect reasons
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('Attempting to reconnect...');
+          connect();
+        }, 3000);
       });
 
       socket.on('connect_error', (error) => {
+        console.error('WebSocket connection error:', error);
         setError(error);
         setIsConnected(false);
+        
+        // Clear any existing reconnect timeout
+        if (reconnectTimeoutRef.current) {
+          clearTimeout(reconnectTimeoutRef.current);
+        }
+        
+        // Attempt to reconnect after error
+        reconnectTimeoutRef.current = setTimeout(() => {
+          console.log('Attempting to reconnect after error...');
+          connect();
+        }, 5000);
       });
 
       // Listen for all incoming events
@@ -70,16 +120,48 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
           timestamp: new Date().toISOString(),
         };
         setLastMessage(message);
+        console.log('WebSocket message received:', message);
       });
 
+      // Listen for specific events
+      socket.on('user:online', (data) => {
+        console.log('User online:', data);
+      });
+
+      socket.on('user:offline', (data) => {
+        console.log('User offline:', data);
+      });
+
+      socket.on('order:created', (data) => {
+        console.log('Order created:', data);
+      });
+
+      socket.on('order:updated', (data) => {
+        console.log('Order updated:', data);
+      });
+
+      socket.on('notification:new', (data) => {
+        console.log('New notification:', data);
+      });
+
+      // Connect the socket
+      console.log('Initiating WebSocket connection...');
       socket.connect();
+      
     } catch (error) {
+      console.error('Failed to create WebSocket connection:', error);
       setError(error as Error);
       setIsConnected(false);
     }
   }, [session]);
 
   const disconnect = useCallback(() => {
+    // Clear reconnect timeout
+    if (reconnectTimeoutRef.current) {
+      clearTimeout(reconnectTimeoutRef.current);
+      reconnectTimeoutRef.current = null;
+    }
+
     if (socketRef.current) {
       socketRef.current.disconnect();
       socketRef.current = null;
@@ -92,18 +174,24 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
   const sendMessage = useCallback((event: string, data: Record<string, unknown>) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit(event, data);
+    } else {
+      console.warn('Cannot send message: WebSocket not connected');
     }
   }, []);
 
   const joinRoom = useCallback((room: string) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('joinRoom', room);
+    } else {
+      console.warn('Cannot join room: WebSocket not connected');
     }
   }, []);
 
   const leaveRoom = useCallback((room: string) => {
     if (socketRef.current?.connected) {
       socketRef.current.emit('leaveRoom', room);
+    } else {
+      console.warn('Cannot leave room: WebSocket not connected');
     }
   }, []);
 
@@ -112,23 +200,15 @@ export function WebSocketProvider({ children }: WebSocketProviderProps) {
     if (status === 'loading') return; // Wait for session to load
 
     if (session?.user?.id && !isInitialized) {
+      console.log('Session available, initializing WebSocket...');
       connect();
       setIsInitialized(true);
-      
-      // Authenticate with the WebSocket server
-      setTimeout(() => {
-        if (isConnected) {
-          sendMessage('authenticate', {
-            userId: session.user.id,
-            role: session.user.role || 'USER'
-          });
-        }
-      }, 1000);
     } else if (!session?.user?.id && isInitialized) {
+      console.log('Session lost, disconnecting WebSocket...');
       disconnect();
       setIsInitialized(false);
     }
-  }, [session, status, isInitialized, connect, disconnect, isConnected, sendMessage]);
+  }, [session, status, isInitialized, connect, disconnect]);
 
   // Cleanup on unmount
   useEffect(() => {

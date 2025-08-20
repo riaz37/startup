@@ -89,25 +89,45 @@ export async function GET(request: NextRequest) {
       model: any, 
       dateField: string, 
       valueField: string, 
-      whereClause: Record<string, any>
+      whereClause: Record<string, unknown>
     ) => {
-      const data = await model.groupBy({
+      const groupByOptions: Record<string, unknown> = {
         by: [dateField],
         where: whereClause,
         _count: true,
-        _sum: valueField === 'total' ? { total: true } : undefined,
         orderBy: {
           [dateField]: sortOrder === 'desc' ? 'desc' : 'asc'
         }
-      });
+      };
 
-      return data.map((item: Record<string, any>) => ({
-        date: item[dateField].toISOString().split('T')[0],
-        [valueField]: item[valueField] || item._count || item._sum?.total || 0
-      }));
+      // Only add _sum if we need it for revenue calculations
+      if (valueField === 'total') {
+        groupByOptions._sum = { total: true };
+      }
+
+      const data = await model.groupBy(groupByOptions);
+
+      return data.map((item: Record<string, unknown>) => {
+        let value = 0;
+        
+        if (valueField === 'total' && (item._sum as any)?.total) {
+          value = (item._sum as any).total;
+        } else if (valueField === 'count') {
+          value = (item._count as number) || 0;
+        } else {
+          value = (item._count as number) || 0;
+        }
+
+        return {
+          date: (item[dateField] as Date).toISOString().split('T')[0],
+          [valueField]: value
+        };
+      });
     };
 
-    const [userTrends, orderTrends, revenueTrends] = await Promise.all([
+    const [userTrends, orderTrends, revenueTrends] =
+    
+    await Promise.all([
       getTrendData(prisma.user, 'createdAt', 'count', { createdAt: { gte: startDate } }),
       getTrendData(prisma.order, 'createdAt', 'count', { createdAt: { gte: startDate } }),
       getTrendData(prisma.order, 'createdAt', 'total', { 
@@ -187,6 +207,7 @@ export async function GET(request: NextRequest) {
     const conversionFunnel = await getConversionData();
 
     // Get additional insights
+    // @ts-expect-error - Prisma circular reference types
     const userSegments = await prisma.user.groupBy({
       by: ['role'],
       _count: true,
@@ -195,6 +216,7 @@ export async function GET(request: NextRequest) {
       }
     });
 
+    // @ts-expect-error - Prisma circular reference types
     const deviceUsage = await prisma.analyticsEvent.groupBy({
       by: ['eventType'],
       where: {
@@ -241,13 +263,13 @@ export async function GET(request: NextRequest) {
         })),
         userSegments: userSegments.map(segment => ({
           role: segment.role,
-          count: segment._count.id,
-          percentage: (segment._count.id / totalUsers) * 100
+          count: segment._count,
+          percentage: (segment._count / totalUsers) * 100
         })),
         deviceUsage: deviceUsage.map(device => ({
           device: device.eventType,
-          count: device._count.id,
-          percentage: (device._count.id / (deviceUsage.reduce((sum, d) => sum + d._count.id, 0))) * 100
+          count: device._count,
+          percentage: (device._count / (deviceUsage.reduce((sum, d) => sum + d._count, 0))) * 100
         }))
       },
       conversion: {
