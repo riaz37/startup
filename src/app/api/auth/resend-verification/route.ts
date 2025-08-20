@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import crypto from "crypto";
 import { prisma } from "@/lib";
-import { emailService } from "@/lib/email/email-service";
+import { dynamicEmailService } from "@/lib/email/dynamic-email-service";
 import { handleApiError, isZodError } from "@/lib/utils";
 import { z } from "zod";
 
@@ -59,7 +59,7 @@ export async function POST(request: NextRequest) {
 
     // Send verification email
     try {
-      await emailService.sendWelcomeEmail({
+      await dynamicEmailService.sendWelcomeEmail({
         to: email,
         userName: user.name || 'there',
         verificationUrl: `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}`

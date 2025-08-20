@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib";
 import { prisma } from "@/lib/database";
-import { z } from "z";
+import { z } from "zod";
 
 const updateProductSchema = z.object({
   name: z.string().min(1, "Product name is required").optional(),

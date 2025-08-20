@@ -1,7 +1,7 @@
 import Stripe from 'stripe';
 import { prisma } from '@/lib/database';
 import { OrderStatus, PaymentStatus } from '@/generated/prisma';
-import { emailService } from '@/lib/email/email-service';
+import { dynamicEmailService } from '@/lib/email/dynamic-email-service';
 
 // Initialize Stripe
 export const stripe = new Stripe(process.env.STRIPE_SECRET_KEY!, {
@@ -150,7 +150,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
     // Send email notifications
     await Promise.all([
       // Payment success email
-      emailService.sendPaymentSuccess({
+      dynamicEmailService.sendPaymentSuccess({
         to: order.user.email,
         userName: order.user.name,
         orderNumber: order.orderNumber,
@@ -160,7 +160,7 @@ async function handlePaymentSuccess(paymentIntent: Stripe.PaymentIntent) {
       }),
       
       // Order confirmation email
-      emailService.sendOrderConfirmation({
+      dynamicEmailService.sendOrderConfirmation({
         to: order.user.email,
         userName: order.user.name,
         orderNumber: order.orderNumber,

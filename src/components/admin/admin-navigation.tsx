@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { ThemeToggle } from "@/components/theme-toggle";
-import { ShoppingCart, Settings, Plus, Menu, X } from "lucide-react";
+import { ShoppingCart, Settings, Menu, X } from "lucide-react";
 
 interface AdminNavigationProps {
   user: {
@@ -34,52 +34,6 @@ export function AdminNavigation({ user }: AdminNavigationProps) {
                 {user.role}
               </Badge>
             </Link>
-
-            {/* Desktop Navigation Links */}
-            <div className="hidden lg:flex space-x-6">
-              <Link
-                href="/admin"
-                className="text-muted-foreground hover:text-foreground transition-colors mobile-touch-target px-3 py-2"
-              >
-                Dashboard
-              </Link>
-              <Link
-                href="/admin/orders"
-                className="text-muted-foreground hover:text-foreground transition-colors mobile-touch-target px-3 py-2"
-              >
-                Orders
-              </Link>
-              <Link
-                href="/admin/group-orders"
-                className="text-muted-foreground hover:text-foreground transition-colors mobile-touch-target px-3 py-2"
-              >
-                Group Orders
-              </Link>
-              <Link
-                href="/admin/group-orders/create"
-                className="text-muted-foreground hover:text-foreground transition-colors mobile-touch-target px-3 py-2"
-              >
-                Create Order
-              </Link>
-              <Link
-                href="/admin/products"
-                className="text-muted-foreground hover:text-foreground transition-colors mobile-touch-target px-3 py-2"
-              >
-                Products
-              </Link>
-              <Link
-                href="/admin/categories"
-                className="text-muted-foreground hover:text-foreground transition-colors mobile-touch-target px-3 py-2"
-              >
-                Categories
-              </Link>
-              <Link
-                href="/admin/price-management"
-                className="text-muted-foreground hover:text-foreground transition-colors mobile-touch-target px-3 py-2"
-              >
-                Price Management
-              </Link>
-            </div>
           </div>
 
           {/* Right Side Actions */}
@@ -140,59 +94,6 @@ export function AdminNavigation({ user }: AdminNavigationProps) {
                       </Badge>
                     </div>
                   </div>
-                </div>
-                
-                {/* Navigation Links */}
-                <div className="space-y-2">
-                  <Link
-                    href="/admin"
-                    className="block px-3 py-3 text-muted-foreground hover:text-foreground transition-colors mobile-touch-target rounded-lg hover:bg-muted"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Dashboard
-                  </Link>
-                  <Link
-                    href="/admin/orders"
-                    className="block px-3 py-3 text-muted-foreground hover:text-foreground transition-colors mobile-touch-target rounded-lg hover:bg-muted"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Orders
-                  </Link>
-                  <Link
-                    href="/admin/group-orders"
-                    className="block px-3 py-3 text-muted-foreground hover:text-foreground transition-colors mobile-touch-target rounded-lg hover:bg-muted"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Group Orders
-                  </Link>
-                  <Link
-                    href="/admin/group-orders/create"
-                    className="block px-3 py-3 text-muted-foreground hover:text-foreground transition-colors mobile-touch-target rounded-lg hover:bg-muted"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Create Order
-                  </Link>
-                  <Link
-                    href="/admin/products"
-                    className="block px-3 py-3 text-muted-foreground hover:text-foreground transition-colors mobile-touch-target rounded-lg hover:bg-muted"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Products
-                  </Link>
-                  <Link
-                    href="/admin/categories"
-                    className="block px-3 py-3 text-muted-foreground hover:text-foreground transition-colors mobile-touch-target rounded-lg hover:bg-muted"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Categories
-                  </Link>
-                  <Link
-                    href="/admin/price-management"
-                    className="block px-3 py-3 text-muted-foreground hover:text-foreground transition-colors mobile-touch-target rounded-lg hover:bg-muted"
-                    onClick={() => setIsMobileMenuOpen(false)}
-                  >
-                    Price Management
-                  </Link>
                 </div>
                 
                 {/* Mobile User Actions */}

@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib";
 import { prisma } from "@/lib";
-import { emailService } from "@/lib/email";
+import { dynamicEmailService } from "@/lib/email/dynamic-email-service";
 
 export async function POST(
   request: NextRequest,
@@ -88,7 +88,7 @@ export async function POST(
     // Send confirmation email
     try {
       if (order.groupOrder) {
-        await emailService.sendOrderConfirmation({
+        await dynamicEmailService.sendOrderConfirmation({
           to: order.user.email,
           userName: order.user.name,
           orderNumber: order.orderNumber,

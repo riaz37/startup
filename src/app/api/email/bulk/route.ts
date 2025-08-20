@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/database";
-import { emailService } from "@/lib/email/email-service";
+import { dynamicEmailService } from "@/lib/email/dynamic-email-service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +22,21 @@ export async function POST(request: NextRequest) {
         { error: "Subject and content are required" },
         { status: 400 }
       );
+    }
+
+    // Get template if templateId is provided
+    let template = null;
+    if (templateId) {
+      template = await prisma.emailTemplate.findUnique({
+        where: { id: templateId, isActive: true }
+      });
+      
+      if (!template) {
+        return NextResponse.json(
+          { error: "Template not found or inactive" },
+          { status: 400 }
+        );
+      }
     }
 
     // Get target users based on provided criteria
@@ -156,13 +171,34 @@ export async function POST(request: NextRequest) {
             }
 
             // Send email
-            const emailResult = await emailService.sendCustomEmail({
-              to: user.email,
-              subject: subject,
-              html: content,
-              userId: user.id,
-              campaignId: campaign.id
-            });
+            let emailResult;
+            
+            if (template) {
+              // Use template-based sending
+              emailResult = await dynamicEmailService.sendCustomEmail(
+                template.name,
+                {
+                  userName: user.name || 'User'
+                },
+                user.email,
+                user.id,
+                campaign.id
+              );
+            } else {
+              // Use raw content - we'll need to create a temporary delivery record
+              // For now, let's create a simple email sending method
+              emailResult = await dynamicEmailService.sendEmailWithTemplate(
+                'Custom Email',
+                {
+                  userName: user.name || 'User',
+                  subject: subject,
+                  content: content
+                },
+                user.email,
+                user.id,
+                campaign.id
+              );
+            }
 
             if (emailResult.success) {
               results.summary.sent++;
@@ -170,7 +206,7 @@ export async function POST(request: NextRequest) {
                 userId: user.id,
                 email: user.email,
                 status: 'sent',
-                emailId: emailResult.emailId
+                emailId: emailResult.emailId || 'unknown'
               });
             } else {
               results.summary.failed++;
@@ -178,7 +214,7 @@ export async function POST(request: NextRequest) {
                 userId: user.id,
                 email: user.email,
                 status: 'failed',
-                error: emailResult.error
+                error: emailResult.error?.toString() || 'Unknown error'
               });
             }
           } catch (error) {

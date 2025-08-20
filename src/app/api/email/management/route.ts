@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/auth";
 import { prisma } from "@/lib/database";
-import { emailService } from "@/lib/email/email-service";
+import { dynamicEmailService } from "@/lib/email/dynamic-email-service";
 
 export async function GET(request: NextRequest) {
   try {
@@ -13,7 +13,7 @@ export async function GET(request: NextRequest) {
     switch (action) {
       case "stats":
         // Get real email delivery statistics from database
-        const stats = await emailService.getEmailDeliveryStats();
+        const stats = await dynamicEmailService.getEmailDeliveryStats();
         return NextResponse.json({ stats });
       
       case "failed":
@@ -150,7 +150,7 @@ export async function POST(request: NextRequest) {
       
       case "test-connection":
         // Test SMTP connection using the email service
-        const connectionResult = await emailService.testConnection();
+        const connectionResult = await dynamicEmailService.testConnection();
         
         return NextResponse.json({
           message: "Connection test completed",
@@ -171,14 +171,14 @@ export async function POST(request: NextRequest) {
         
         switch (template) {
           case "welcome":
-            testResult = await emailService.sendWelcomeEmail({
+            testResult = await dynamicEmailService.sendWelcomeEmail({
               to: email,
               userName: "Test User",
             });
             break;
           
           case "order-confirmation":
-            testResult = await emailService.sendOrderConfirmation({
+            testResult = await dynamicEmailService.sendOrderConfirmation({
               to: email,
               userName: "Test User",
               orderNumber: "TEST-001",
@@ -193,7 +193,7 @@ export async function POST(request: NextRequest) {
             break;
           
           default:
-            testResult = await emailService.sendCustomEmail({
+            testResult = await dynamicEmailService.sendCustomEmail({
               to: email,
               subject: "Test Email from Sohozdaam",
               html: "<h1>Test Email</h1><p>This is a test email to verify the email system is working.</p>",

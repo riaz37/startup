@@ -1,14 +1,15 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib";
 import { prisma } from "@/lib/database";
-import { z } from "z";
+import { z } from "zod";
+import { Prisma } from "@/generated/prisma";
 
 const createProductSchema = z.object({
   name: z.string().min(1, "Product name is required"),
   description: z.string().min(1, "Description is required"),
   categoryId: z.string().min(1, "Category is required"),
   unit: z.string().min(1, "Unit is required"),
-  unitSize: z.string().min(1, "Unit size is required"),
+  unitSize: z.number().positive("Unit size must be positive"),
   mrp: z.number().positive("MRP must be positive"),
   sellingPrice: z.number().positive("Selling price must be positive"),
   minOrderQty: z.number().positive("Minimum order quantity must be positive"),
@@ -25,7 +26,7 @@ export async function GET(request: NextRequest) {
     const isActive = searchParams.get("isActive");
     const search = searchParams.get("search");
     
-    const where: any = {};
+    const where: Prisma.ProductWhereInput = {};
     
     if (categoryId) {
       where.categoryId = categoryId;
@@ -58,7 +59,7 @@ export async function GET(request: NextRequest) {
     });
     
     return NextResponse.json({ products });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error fetching products:", error);
     return NextResponse.json(
       { error: "Failed to fetch products" },
@@ -102,7 +103,16 @@ export async function POST(request: NextRequest) {
     
     const product = await prisma.product.create({
       data: {
-        ...validatedData,
+        name: validatedData.name,
+        description: validatedData.description,
+        categoryId: validatedData.categoryId,
+        unit: validatedData.unit,
+        unitSize: validatedData.unitSize,
+        mrp: validatedData.mrp,
+        sellingPrice: validatedData.sellingPrice,
+        minOrderQty: validatedData.minOrderQty,
+        maxOrderQty: validatedData.maxOrderQty,
+        imageUrl: validatedData.imageUrl,
         slug,
         isActive: true
       },
@@ -117,7 +127,7 @@ export async function POST(request: NextRequest) {
     });
     
     return NextResponse.json(product, { status: 201 });
-  } catch (error: any) {
+  } catch (error) {
     console.error("Error creating product:", error);
     
     if (error instanceof z.ZodError) {

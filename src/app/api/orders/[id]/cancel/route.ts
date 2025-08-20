@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getCurrentUser } from "@/lib";
 import { prisma } from "@/lib";
+import { dynamicEmailService } from "@/lib/email/dynamic-email-service";
 
 export async function POST(
   request: NextRequest,
@@ -127,8 +128,7 @@ export async function POST(
 
     // Send cancellation email
     try {
-      const { emailService } = await import("@/lib/email");
-      await emailService.sendCustomEmail({
+      await dynamicEmailService.sendCustomEmail({
         to: order.user.email,
         subject: `Order Cancelled - ${order.orderNumber}`,
         html: `

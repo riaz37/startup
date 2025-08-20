@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib";
 import { forgotPasswordSchema } from "@/lib";
-import { emailService } from "@/lib/email/email-service";
+import { dynamicEmailService } from "@/lib/email/dynamic-email-service";
 import { handleApiError, isZodError } from "@/lib/utils";
 import crypto from "crypto";
 
@@ -46,7 +46,7 @@ export async function POST(request: NextRequest) {
 
     // Send password reset email
     try {
-      await emailService.sendPasswordReset({
+      await dynamicEmailService.sendPasswordReset({
         to: user.email,
         userName: user.name || 'there',
         resetUrl: `${process.env.NEXTAUTH_URL}/auth/reset-password?token=${resetToken}`

@@ -2,6 +2,7 @@ import { prisma } from "./prisma";
 import { seedCategories } from "./seed-categories";
 import { seedGroupOrders } from "./seed-group-orders";
 import { seedProducts } from "./seed-products";
+import { seedEmailTemplates } from "./seed-email-templates";
 
 export async function seedDatabase() {
   try {
@@ -22,15 +23,22 @@ export async function seedDatabase() {
     await seedGroupOrders();
     console.log("");
 
+    // Step 4: Seed email templates
+    console.log("📧 Step 4: Seeding email templates...");
+    await seedEmailTemplates();
+    console.log("");
+
     console.log("🎉 Database seeding completed successfully!");
     
     // Display final summary
     const categoryCount = await prisma.category.count();
     const productCount = await prisma.product.count();
+    const templateCount = await prisma.emailTemplate.count();
     
     console.log(`\n📊 Final Database State:`);
     console.log(`   Categories: ${categoryCount}`);
     console.log(`   Products: ${productCount}`);
+    console.log(`   Email Templates: ${templateCount}`);
 
   } catch (error) {
     console.error("❌ Error during database seeding:", error);

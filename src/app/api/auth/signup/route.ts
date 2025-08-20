@@ -3,7 +3,7 @@ import bcrypt from "bcryptjs";
 import crypto from "crypto";
 import { prisma, signUpSchema } from "@/lib";
 import { handleApiError } from "@/lib/utils";
-import { emailService } from "@/lib/email/email-service";
+import { dynamicEmailService } from "@/lib/email/dynamic-email-service";
 
 export async function POST(request: NextRequest) {
   try {
@@ -14,7 +14,7 @@ export async function POST(request: NextRequest) {
     const { name, email, password } = validatedData;
 
     // Check if user already exists
-  const existingUser = await prisma.user.findUnique({
+    const existingUser = await prisma.user.findUnique({
       where: { email },
     });
 
@@ -65,10 +65,11 @@ export async function POST(request: NextRequest) {
 
     // Send verification email
     try {
-      await emailService.sendWelcomeEmail({
+      await dynamicEmailService.sendWelcomeEmail({
         to: email,
         userName: name,
-        verificationUrl: `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}`
+        verificationUrl: `${process.env.NEXTAUTH_URL}/api/auth/verify-email?token=${verificationToken}`,
+        userId: result.id
       });
     } catch (emailError) {
       console.error("Failed to send verification email:", emailError);

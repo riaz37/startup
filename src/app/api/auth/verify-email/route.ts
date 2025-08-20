@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "@/lib";
-import { emailService } from "@/lib/email/email-service";
+import { dynamicEmailService } from "@/lib/email/dynamic-email-service";
 import { handleApiError } from "@/lib/utils";
 
 export async function POST(request: NextRequest) {
@@ -53,7 +53,7 @@ export async function POST(request: NextRequest) {
 
     // Send welcome email
     try {
-      await emailService.sendWelcomeEmail({
+      await dynamicEmailService.sendWelcomeEmail({
         to: verificationRecord.user.email,
         userName: verificationRecord.user.name || 'there'
       });
@@ -117,7 +117,7 @@ export async function GET(request: NextRequest) {
 
     // Send welcome email
     try {
-      await emailService.sendWelcomeEmail({
+      await dynamicEmailService.sendWelcomeEmail({
         to: verificationRecord.user.email,
         userName: verificationRecord.user.name || 'there'
       });
