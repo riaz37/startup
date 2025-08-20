@@ -43,16 +43,38 @@ export class CartService {
     // Get from database
     const dbCart = await prisma.cart.findFirst({
       where: { userId },
-      include: { items: true },
+      include: { 
+        items: {
+          include: {
+            product: {
+              include: {
+                category: true
+              }
+            }
+          }
+        } 
+      },
     });
 
     if (dbCart && dbCart.userId) {
       const cart = this.mapDbCartToCart({
-        ...dbCart,
+        id: dbCart.id,
         userId: dbCart.userId,
+        totalItems: dbCart.totalItems,
+        subtotal: dbCart.subtotal,
+        totalDiscount: dbCart.totalDiscount,
+        totalAmount: dbCart.totalAmount,
+        createdAt: dbCart.createdAt,
+        updatedAt: dbCart.updatedAt,
         items: dbCart.items.map(item => ({
-          ...item,
-          orderType: item.orderType as "priority" | "group"
+          id: item.id,
+          productId: item.productId,
+          unitPrice: item.unitPrice,
+          quantity: item.quantity,
+          orderType: item.orderType as "priority" | "group",
+          groupOrderId: item.groupOrderId,
+          product: item.product,
+          groupOrder: undefined
         }))
       });
       // Cache in Redis
@@ -458,7 +480,7 @@ export class CartService {
    */
   private static mapDbCartToCart(dbCart: {
     id: string;
-    userId: string;
+    userId: string | null;
     totalItems: number;
     subtotal: number;
     totalDiscount: number;
@@ -493,7 +515,7 @@ export class CartService {
   }): Cart {
     return {
       id: dbCart.id,
-      userId: dbCart.userId,
+      userId: dbCart.userId || undefined,
       items: dbCart.items.map((item) => ({
         id: item.id,
         productId: item.productId,

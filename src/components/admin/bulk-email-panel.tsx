@@ -55,7 +55,7 @@ export function BulkEmailPanel() {
     templateId: "",
     userIds: [],
     userFilters: {
-      role: "",
+      role: "all",
       createdAfter: "",
       hasOrders: false,
       lastLoginAfter: ""
@@ -233,7 +233,7 @@ export function BulkEmailPanel() {
                     <SelectValue placeholder="All roles" />
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value="">All roles</SelectItem>
+                    <SelectItem value="all">All roles</SelectItem>
                     <SelectItem value="CUSTOMER">Customer</SelectItem>
                     <SelectItem value="ADMIN">Admin</SelectItem>
                     <SelectItem value="SUPER_ADMIN">Super Admin</SelectItem>
@@ -319,7 +319,7 @@ export function BulkEmailPanel() {
                 <SelectValue placeholder="No template (custom content)" />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="">No template (custom content)</SelectItem>
+                <SelectItem value="none">No template (custom content)</SelectItem>
                 {templates?.map((template) => (
                   <SelectItem key={template.id} value={template.id}>
                     {template.name}

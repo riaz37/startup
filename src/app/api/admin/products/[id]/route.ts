@@ -8,7 +8,7 @@ const updateProductSchema = z.object({
   description: z.string().min(1, "Description is required").optional(),
   categoryId: z.string().min(1, "Category is required").optional(),
   unit: z.string().min(1, "Unit is required").optional(),
-  unitSize: z.string().min(1, "Unit size is required").optional(),
+  unitSize: z.number().positive("Unit size must be positive").optional(),
   mrp: z.number().positive("MRP must be positive").optional(),
   sellingPrice: z.number().positive("Selling price must be positive").optional(),
   minOrderQty: z.number().positive("Minimum order quantity must be positive").optional(),

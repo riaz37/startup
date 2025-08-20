@@ -40,7 +40,7 @@ interface Product {
     name: string;
   };
   unit: string;
-  unitSize: string;
+  unitSize: number;
   mrp: number;
   sellingPrice: number;
   minOrderQty: number;
@@ -89,7 +89,7 @@ export function ProductManagementPanel() {
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('');
+  const [selectedCategory, setSelectedCategory] = useState('all');
   const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
   const [isCreateDialogOpen, setIsCreateDialogOpen] = useState(false);
   const [isEditDialogOpen, setIsEditDialogOpen] = useState(false);
@@ -158,7 +158,7 @@ export function ProductManagementPanel() {
       );
     }
 
-    if (selectedCategory) {
+    if (selectedCategory && selectedCategory !== 'all') {
       filtered = filtered.filter(product => product.category.id === selectedCategory);
     }
 
@@ -170,6 +170,7 @@ export function ProductManagementPanel() {
     try {
       const productData = {
         ...formData,
+        unitSize: parseFloat(formData.unitSize),
         mrp: parseFloat(formData.mrp),
         sellingPrice: parseFloat(formData.sellingPrice),
         minOrderQty: parseInt(formData.minOrderQty),
@@ -205,6 +206,7 @@ export function ProductManagementPanel() {
     try {
       const productData = {
         ...formData,
+        unitSize: parseFloat(formData.unitSize),
         mrp: parseFloat(formData.mrp),
         sellingPrice: parseFloat(formData.sellingPrice),
         minOrderQty: parseInt(formData.minOrderQty),
@@ -241,7 +243,7 @@ export function ProductManagementPanel() {
       description: product.description,
       categoryId: product.category.id,
       unit: product.unit,
-      unitSize: product.unitSize,
+      unitSize: product.unitSize.toString(),
       mrp: product.mrp.toString(),
       sellingPrice: product.sellingPrice.toString(),
       minOrderQty: product.minOrderQty.toString(),
@@ -487,7 +489,7 @@ export function ProductManagementPanel() {
                   <SelectValue placeholder="All Categories" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="">All Categories</SelectItem>
+                  <SelectItem value="all">All Categories</SelectItem>
                   {categories.map((category) => (
                     <SelectItem key={category.id} value={category.id}>
                       {category.name}

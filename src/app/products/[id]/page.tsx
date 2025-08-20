@@ -4,6 +4,7 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/database";
 import { PriceHistoryWrapper } from "@/components/products/price-history-wrapper";
 import { AvailableGroupOrders } from "@/components/products/available-group-orders";
+import { AddToCartButton } from "@/components/cart/add-to-cart-button";
 import { PageLayout, PageHeader, MainContainer } from "@/components/layout";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -262,15 +263,42 @@ export default async function ProductPage({
                       {product.maxOrderQty || "No limit"}
                     </span>
                   </div>
+                  
+                  {/* Add to Cart Button for Priority Orders */}
+                  <AddToCartButton
+                    product={{
+                      id: product.id,
+                      categoryId: product.category.id,
+                      name: product.name,
+                      slug: product.slug,
+                      description: product.description || undefined,
+                      imageUrl: product.imageUrl || undefined,
+                      unit: product.unit,
+                      unitSize: product.unitSize,
+                      mrp: product.mrp,
+                      sellingPrice: product.sellingPrice,
+                      isActive: true,
+                      minOrderQty: product.minOrderQty,
+                      maxOrderQty: product.maxOrderQty || undefined,
+                      createdAt: new Date().toISOString(),
+                      updatedAt: new Date().toISOString(),
+                      category: product.category,
+                    }}
+                    orderType="priority"
+                    className="mb-3"
+                  />
+                  
+                  {/* Alternative: Create Priority Order Link */}
                   <Button
-                    className="w-full bg-primary hover:bg-primary/90"
+                    variant="outline"
+                    className="w-full"
                     asChild
                   >
                     <Link
                       href={`/priority-orders/create?productId=${product.id}`}
                     >
-                      <ShoppingCart className="h-4 w-4 mr-2" />
-                      Add to Cart - Priority Order
+                      <Truck className="h-4 w-4 mr-2" />
+                      Create Priority Order
                     </Link>
                   </Button>
                 </div>
