@@ -1,5 +1,4 @@
-# Docker Compose configuration for Sohozdaam
-# Note: Redis has been removed from this project
+
 
 networks:
   sohozdaam-network:
