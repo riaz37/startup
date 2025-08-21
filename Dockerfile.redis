@@ -1,17 +1,13 @@
-# Redis Dockerfile for Sohozdaam Platform
+# Redis Dockerfile for Sohozdaam 
 FROM redis:7-alpine
 
 # Set working directory
 WORKDIR /data
 
-# Copy custom Redis configuration if needed
-# COPY redis.conf /usr/local/etc/redis/redis.conf
-
 # Expose Redis port
 EXPOSE 6379
 
-# Set environment variables
-ENV REDIS_PASSWORD="helloredis"
+# Set default environment variables (non-sensitive)
 ENV REDIS_MAXMEMORY="256mb"
 ENV REDIS_MAXMEMORY_POLICY="allkeys-lru"
 
@@ -25,13 +21,5 @@ RUN chown -R redis:redis /data
 HEALTHCHECK --interval=30s --timeout=3s --start-period=5s --retries=3 \
   CMD redis-cli ping || exit 1
 
-# Start Redis with custom configuration
-CMD ["redis-server", \
-     "--appendonly", "yes", \
-     "--bind", "0.0.0.0", \
-     "--protected-mode", "no", \
-     "--maxmemory", "${REDIS_MAXMEMORY}", \
-     "--maxmemory-policy", "${REDIS_MAXMEMORY_POLICY}", \
-     "--save", "900", "1", \
-     "--save", "300", "10", \
-     "--save", "60", "10000"] 
+# Start Redis with fixed configuration (no environment variable substitution in CMD)
+CMD ["redis-server", "--appendonly", "yes", "--bind", "0.0.0.0", "--protected-mode", "no", "--maxmemory", "256mb", "--maxmemory-policy", "allkeys-lru", "--save", "900", "1", "--save", "300", "10", "--save", "60", "10000"]
